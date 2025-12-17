@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { NumberInput } from './ui/number-input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
@@ -284,9 +285,8 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="targetAmount">Target Amount</Label>
-                  <Input
+                  <NumberInput
                     id="targetAmount"
-                    type="number"
                     step="0.01"
                     value={formData.targetAmount}
                     onChange={(e) => setFormData({ ...formData, targetAmount: e.target.value })}
@@ -297,9 +297,8 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
 
                 <div>
                   <Label htmlFor="currentAmount">Current Amount</Label>
-                  <Input
+                  <NumberInput
                     id="currentAmount"
-                    type="number"
                     step="0.01"
                     value={formData.currentAmount}
                     onChange={(e) => setFormData({ ...formData, currentAmount: e.target.value })}

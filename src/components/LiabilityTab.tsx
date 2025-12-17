@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { NumberInput } from './ui/number-input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Progress } from './ui/progress';
-import { CreditCard, Plus, Pencil, Trash2, TrendingDown, Calendar, DollarSign, AlertCircle, CheckCircle, Building } from 'lucide-react';
+import { CreditCard, Plus, Pencil, Trash2, TrendingDown, Calendar, DollarSign, AlertCircle, CheckCircle, Building, Calculator } from 'lucide-react';
 import { CURRENCY_SYMBOLS } from '../types';
 import { toast } from 'sonner@2.0.3';
 import { api } from '../utils/api';
@@ -56,6 +57,7 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
     emiAmount: '',
     startDate: new Date().toISOString().split('T')[0],
     tenure: '',
+    tenureUnit: 'months' as 'months' | 'years',
     accountId: 'none'
   });
 
@@ -81,6 +83,11 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Convert tenure to months if in years
+    const tenureInMonths = formData.tenureUnit === 'years' 
+      ? parseInt(formData.tenure) * 12 
+      : parseInt(formData.tenure);
+
     const liabilityData = {
       name: formData.name,
       type: formData.type,
@@ -89,7 +96,7 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
       interestRate: parseFloat(formData.interestRate),
       emiAmount: parseFloat(formData.emiAmount),
       startDate: formData.startDate,
-      tenure: parseInt(formData.tenure),
+      tenure: tenureInMonths,
       accountId: formData.accountId && formData.accountId !== 'none' ? formData.accountId : undefined
     };
 
@@ -132,6 +139,12 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
 
   const handleEdit = (liability: Liability) => {
     setEditingLiability(liability);
+    
+    // Smart tenure conversion: use years if it's a whole number, otherwise use months
+    const isWholeYears = liability.tenure % 12 === 0 && liability.tenure >= 12;
+    const tenureValue = isWholeYears ? liability.tenure / 12 : liability.tenure;
+    const tenureUnit = isWholeYears ? 'years' : 'months';
+    
     setFormData({
       name: liability.name,
       type: liability.type,
@@ -140,7 +153,8 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
       interestRate: liability.interestRate.toString(),
       emiAmount: liability.emiAmount.toString(),
       startDate: liability.startDate,
-      tenure: liability.tenure.toString(),
+      tenure: tenureValue.toString(),
+      tenureUnit: tenureUnit,
       accountId: liability.accountId || 'none'
     });
     setIsAddDialogOpen(true);
@@ -156,16 +170,94 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
       emiAmount: '',
       startDate: new Date().toISOString().split('T')[0],
       tenure: '',
+      tenureUnit: 'months',
       accountId: 'none'
     });
     setEditingLiability(null);
   };
 
+  // Auto-calculate outstanding amount and EMI
+  const calculateLoanDetails = () => {
+    const principal = parseFloat(formData.principal);
+    const interestRate = parseFloat(formData.interestRate);
+    const tenureValue = parseInt(formData.tenure);
+    const startDate = formData.startDate;
+
+    if (!principal || !interestRate || !tenureValue) {
+      toast.error('Please enter Principal, Interest Rate, and Tenure first');
+      return;
+    }
+
+    // Convert tenure to months if needed
+    const tenureInMonths = formData.tenureUnit === 'years' ? tenureValue * 12 : tenureValue;
+    const tenureInYears = tenureInMonths / 12;
+
+    // Calculate total interest (Simple Interest for the full tenure)
+    const totalInterest = principal * (interestRate / 100) * tenureInYears;
+    
+    // Total amount to be repaid
+    const totalAmount = principal + totalInterest;
+    
+    // Monthly EMI
+    const monthlyEMI = totalAmount / tenureInMonths;
+
+    // Calculate months already paid
+    const startDateObj = new Date(startDate);
+    const today = new Date();
+    let monthsPaid = 0;
+    
+    if (startDateObj <= today) {
+      const yearsDiff = today.getFullYear() - startDateObj.getFullYear();
+      const monthsDiff = today.getMonth() - startDateObj.getMonth();
+      const daysDiff = today.getDate() - startDateObj.getDate();
+      
+      monthsPaid = yearsDiff * 12 + monthsDiff;
+      if (daysDiff < 0) {
+        monthsPaid--;
+      }
+      monthsPaid = Math.max(0, Math.min(monthsPaid, tenureInMonths));
+    }
+
+    // Calculate current outstanding
+    const amountPaid = monthlyEMI * monthsPaid;
+    const currentOutstanding = Math.max(0, totalAmount - amountPaid);
+
+    // Update form with calculated values
+    setFormData({
+      ...formData,
+      outstanding: currentOutstanding.toFixed(2),
+      emiAmount: monthlyEMI.toFixed(2)
+    });
+
+    toast.success(`Calculated: EMI ₹${monthlyEMI.toFixed(2)}, Outstanding ₹${currentOutstanding.toFixed(2)} (${monthsPaid} months paid)`);
+  };
+
   const calculateMonthsPaid = (liability: Liability) => {
     const startDate = new Date(liability.startDate);
     const today = new Date();
-    const monthsPaid = (today.getFullYear() - startDate.getFullYear()) * 12 + 
-                       (today.getMonth() - startDate.getMonth());
+    
+    // If start date is in the future, no months have been paid yet
+    if (startDate > today) {
+      return 0;
+    }
+    
+    // Calculate the number of complete months elapsed since start date
+    let monthsPaid = 0;
+    const yearsDiff = today.getFullYear() - startDate.getFullYear();
+    const monthsDiff = today.getMonth() - startDate.getMonth();
+    const daysDiff = today.getDate() - startDate.getDate();
+    
+    monthsPaid = yearsDiff * 12 + monthsDiff;
+    
+    // Only count the current month if we've passed the start day
+    if (daysDiff < 0) {
+      monthsPaid--;
+    }
+    
+    // Ensure we don't go negative
+    monthsPaid = Math.max(0, monthsPaid);
+    
+    // Cap at total tenure
     return Math.min(monthsPaid, liability.tenure);
   };
 
@@ -432,22 +524,18 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Principal Amount</Label>
-                <Input
-                  type="number"
-                  step="0.01"
+                <NumberInput
                   value={formData.principal}
-                  onChange={(e) => setFormData({ ...formData, principal: e.target.value })}
+                  onChange={(value) => setFormData({ ...formData, principal: value })}
                   placeholder="0.00"
                   required
                 />
               </div>
               <div>
                 <Label>Outstanding</Label>
-                <Input
-                  type="number"
-                  step="0.01"
+                <NumberInput
                   value={formData.outstanding}
-                  onChange={(e) => setFormData({ ...formData, outstanding: e.target.value })}
+                  onChange={(value) => setFormData({ ...formData, outstanding: value })}
                   placeholder="0.00"
                   required
                 />
@@ -457,22 +545,18 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Interest Rate (%)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
+                <NumberInput
                   value={formData.interestRate}
-                  onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })}
+                  onChange={(value) => setFormData({ ...formData, interestRate: value })}
                   placeholder="0.00"
                   required
                 />
               </div>
               <div>
                 <Label>Monthly EMI</Label>
-                <Input
-                  type="number"
-                  step="0.01"
+                <NumberInput
                   value={formData.emiAmount}
-                  onChange={(e) => setFormData({ ...formData, emiAmount: e.target.value })}
+                  onChange={(value) => setFormData({ ...formData, emiAmount: value })}
                   placeholder="0.00"
                   required
                 />
@@ -490,15 +574,37 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
                 />
               </div>
               <div>
-                <Label>Tenure (Months)</Label>
-                <Input
-                  type="number"
-                  value={formData.tenure}
-                  onChange={(e) => setFormData({ ...formData, tenure: e.target.value })}
-                  placeholder="60"
-                  required
-                />
+                <Label>Tenure</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={formData.tenure}
+                    onChange={(e) => setFormData({ ...formData, tenure: e.target.value })}
+                    placeholder={formData.tenureUnit === 'years' ? '5' : '60'}
+                    required
+                    className="flex-1"
+                  />
+                  <Select 
+                    value={formData.tenureUnit} 
+                    onValueChange={(value: 'months' | 'years') => setFormData({ ...formData, tenureUnit: value })}
+                  >
+                    <SelectTrigger className="w-[110px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="months">Months</SelectItem>
+                      <SelectItem value="years">Years</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={calculateLoanDetails} className="flex-1">
+                <Calculator className="w-4 h-4 mr-2" />
+                Calculate EMI & Outstanding
+              </Button>
             </div>
 
             {accounts.length > 0 && (

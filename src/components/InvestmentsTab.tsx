@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { NumberInput } from './ui/number-input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { Plus, TrendingUp, TrendingDown, DollarSign, RefreshCw, Search, Loader2, Calendar } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, RefreshCw, Search, Loader2, Calendar, Edit, X, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { searchSymbols, getPopularSymbols, fetchHistoricalPrice, fetchCurrentPrice, refreshPrices, detectUserLocation, getStocksByExchange } from '../utils/stockData';
 import { api } from '../utils/api';
+import { Account, CURRENCY_SYMBOLS } from '../types';
 
 interface Investment {
   id: string;
@@ -28,11 +30,17 @@ interface InvestmentsTabProps {
   userId: string;
   expenses?: any[];
   incomes?: any[];
+  accounts?: Account[];
+  onCreateIncome?: (data: any) => Promise<void>;
 }
 
-export function InvestmentsTab({ currency, userId, expenses = [], incomes = [] }: InvestmentsTabProps) {
+export function InvestmentsTab({ currency, userId, expenses = [], incomes = [], accounts = [], onCreateIncome }: InvestmentsTabProps) {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false);
+  const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<string>('');
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [symbolSuggestions, setSymbolSuggestions] = useState<any[]>([]);
@@ -236,6 +244,111 @@ export function InvestmentsTab({ currency, userId, expenses = [], incomes = [] }
       toast.error('Failed to refresh prices');
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  // Edit investment
+  const handleEditInvestment = (investment: Investment) => {
+    setSelectedInvestment(investment);
+    setFormData({
+      symbol: investment.symbol,
+      name: investment.name,
+      type: investment.type,
+      quantity: investment.quantity.toString(),
+      buyPrice: investment.buyPrice.toString(),
+      currentPrice: investment.currentPrice.toString(),
+      purchaseDate: investment.purchaseDate,
+      exchange: 'NSE',
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  // Update investment
+  const handleUpdateInvestment = async () => {
+    if (!selectedInvestment || !formData.symbol || !formData.name || !formData.quantity || !formData.buyPrice || !formData.currentPrice || !formData.purchaseDate) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    const investmentData = {
+      symbol: formData.symbol.toUpperCase(),
+      name: formData.name,
+      type: formData.type,
+      quantity: parseFloat(formData.quantity),
+      buyPrice: parseFloat(formData.buyPrice),
+      currentPrice: parseFloat(formData.currentPrice),
+      purchaseDate: formData.purchaseDate,
+      currency: currency
+    };
+
+    try {
+      const response = await api.updateInvestment(userId, selectedInvestment.id, investmentData);
+      if (response.success) {
+        setInvestments(investments.map(inv => 
+          inv.id === selectedInvestment.id ? { ...inv, ...investmentData } : inv
+        ));
+        setIsEditDialogOpen(false);
+        setSelectedInvestment(null);
+        resetForm();
+        toast.success('Investment updated successfully!');
+      } else {
+        throw new Error(response.error || 'Failed to update investment');
+      }
+    } catch (error) {
+      console.error('Error updating investment:', error);
+      toast.error('Failed to update investment');
+    }
+  };
+
+  // Open close dialog
+  const handleOpenCloseDialog = (investment: Investment) => {
+    setSelectedInvestment(investment);
+    setSelectedAccount(accounts.length > 0 ? accounts[0].id : '');
+    setIsCloseDialogOpen(true);
+  };
+
+  // Close/Exit investment
+  const handleCloseInvestment = async () => {
+    if (!selectedInvestment || !selectedAccount) {
+      toast.error('Please select an account');
+      return;
+    }
+
+    const currentValue = selectedInvestment.currentPrice * selectedInvestment.quantity;
+    const gainLoss = currentValue - (selectedInvestment.buyPrice * selectedInvestment.quantity);
+
+    try {
+      // Create income transaction for the proceeds
+      if (onCreateIncome) {
+        await onCreateIncome({
+          source: `Sold ${selectedInvestment.symbol} (${selectedInvestment.quantity} ${selectedInvestment.type === 'stock' ? 'shares' : 'units'})`,
+          amount: currentValue,
+          date: new Date().toISOString().split('T')[0],
+          category: gainLoss >= 0 ? 'Capital Gain' : 'Capital Loss',
+          accountId: selectedAccount,
+          description: `Closed investment position. ${gainLoss >= 0 ? 'Profit' : 'Loss'}: ${CURRENCY_SYMBOLS[currency]}${Math.abs(gainLoss).toFixed(2)}`
+        });
+      }
+
+      // Delete investment
+      const response = await api.deleteInvestment(userId, selectedInvestment.id);
+      if (response.success) {
+        setInvestments(investments.filter(inv => inv.id !== selectedInvestment.id));
+        setIsCloseDialogOpen(false);
+        setSelectedInvestment(null);
+        setSelectedAccount('');
+        
+        toast.success(
+          gainLoss >= 0 
+            ? `Investment closed! Profit: ${CURRENCY_SYMBOLS[currency]}${gainLoss.toFixed(2)}` 
+            : `Investment closed. Loss: ${CURRENCY_SYMBOLS[currency]}${Math.abs(gainLoss).toFixed(2)}`
+        );
+      } else {
+        throw new Error(response.error || 'Failed to close investment');
+      }
+    } catch (error) {
+      console.error('Error closing investment:', error);
+      toast.error('Failed to close investment');
     }
   };
 
@@ -506,7 +619,7 @@ export function InvestmentsTab({ currency, userId, expenses = [], incomes = [] }
               const gainLossPercent = totalCost === 0 ? 0 : (gainLoss / totalCost) * 100;
 
               return (
-                <div key={inv.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                <div key={inv.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
@@ -524,21 +637,42 @@ export function InvestmentsTab({ currency, userId, expenses = [], incomes = [] }
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Avg: {CURRENCY_SYMBOLS[currency] || '$'}{inv.buyPrice.toFixed(2)} → Current: {CURRENCY_SYMBOLS[currency] || '$'}{inv.currentPrice.toFixed(2)}
-                    </p>
-                    <div className="flex items-center gap-2 justify-end mt-1">
-                      <p className={gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        {gainLoss >= 0 ? '+' : ''}{CURRENCY_SYMBOLS[currency] || '$'}{gainLoss.toFixed(2)}
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Avg: {CURRENCY_SYMBOLS[currency] || '$'}{inv.buyPrice.toFixed(2)} → Current: {CURRENCY_SYMBOLS[currency] || '$'}{inv.currentPrice.toFixed(2)}
                       </p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        gainLoss >= 0 
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                          : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                      }`}>
-                        {gainLossPercent >= 0 ? '+' : ''}{gainLossPercent.toFixed(2)}%
-                      </span>
+                      <div className="flex items-center gap-2 justify-end mt-1">
+                        <p className={gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}>
+                          {gainLoss >= 0 ? '+' : ''}{CURRENCY_SYMBOLS[currency] || '$'}{gainLoss.toFixed(2)}
+                        </p>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          gainLoss >= 0 
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                        }`}>
+                          {gainLossPercent >= 0 ? '+' : ''}{gainLossPercent.toFixed(2)}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditInvestment(inv)}
+                        className="h-9 px-3"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenCloseDialog(inv)}
+                        className="h-9 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -690,8 +824,7 @@ export function InvestmentsTab({ currency, userId, expenses = [], incomes = [] }
 
             <div>
               <Label>Quantity/Units</Label>
-              <Input
-                type="number"
+              <NumberInput
                 value={formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                 placeholder="Number of shares/units"
@@ -709,7 +842,7 @@ export function InvestmentsTab({ currency, userId, expenses = [], incomes = [] }
                   </span>
                 )}
               </Label>
-              <Input
+              <NumberInput
                 type="number"
                 value={formData.buyPrice}
                 onChange={(e) => setFormData({ ...formData, buyPrice: e.target.value })}
@@ -729,7 +862,7 @@ export function InvestmentsTab({ currency, userId, expenses = [], incomes = [] }
                   </span>
                 )}
               </Label>
-              <Input
+              <NumberInput
                 type="number"
                 value={formData.currentPrice}
                 onChange={(e) => setFormData({ ...formData, currentPrice: e.target.value })}
@@ -745,6 +878,277 @@ export function InvestmentsTab({ currency, userId, expenses = [], incomes = [] }
               </Button>
               <Button onClick={handleAddInvestment} className="flex-1" disabled={isLoadingPrice}>
                 Add Investment
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Investment Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+        setIsEditDialogOpen(open);
+        if (!open) resetForm();
+      }}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Investment</DialogTitle>
+            <DialogDescription>
+              Update details of an existing investment
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Type</Label>
+                <Select value={formData.type} onValueChange={(value: any) => {
+                  setFormData({ ...formData, type: value });
+                  if (value === 'stock' && isIndianUser) {
+                    setSymbolSuggestions(getStocksByExchange(formData.exchange));
+                  } else {
+                    setSymbolSuggestions(getPopularSymbols(value, currency));
+                  }
+                }}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="stock">Stock</SelectItem>
+                    <SelectItem value="mutual_fund">Mutual Fund</SelectItem>
+                    <SelectItem value="sip">SIP</SelectItem>
+                    <SelectItem value="crypto">Cryptocurrency</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {isIndianUser && formData.type === 'stock' && (
+                <div>
+                  <Label>Exchange</Label>
+                  <Select value={formData.exchange} onValueChange={(value: any) => {
+                    setFormData({ ...formData, exchange: value });
+                    setSymbolSuggestions(getStocksByExchange(value));
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NSE">NSE (National Stock Exchange)</SelectItem>
+                      <SelectItem value="BSE">BSE (Bombay Stock Exchange)</SelectItem>
+                      <SelectItem value="NASDAQ">NASDAQ (US)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <Label>Symbol/Code</Label>
+              <div className="relative">
+                <Input
+                  value={formData.symbol}
+                  onChange={(e) => handleSymbolSearch(e.target.value)}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => {
+                    setTimeout(() => setShowSuggestions(false), 200);
+                  }}
+                  placeholder="Search for symbol..."
+                />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              </div>
+              
+              {showSuggestions && symbolSuggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {symbolSuggestions.map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectSymbol(suggestion);
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{suggestion.symbol}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{suggestion.name}</p>
+                        </div>
+                        <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
+                          {suggestion.exchange}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Label>Name</Label>
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Apple Inc."
+              />
+            </div>
+
+            <div>
+              <Label className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Purchase Date
+              </Label>
+              <Input
+                type="date"
+                value={formData.purchaseDate}
+                onChange={(e) => handlePurchaseDateChange(e.target.value)}
+                max={new Date().toISOString().split('T')[0]}
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Buy price will be fetched based on this date
+              </p>
+            </div>
+
+            <div>
+              <Label>Quantity/Units</Label>
+              <NumberInput
+                value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                placeholder="Number of shares/units"
+                step="0.01"
+              />
+            </div>
+
+            <div>
+              <Label className="flex items-center justify-between">
+                <span>Buy Price (Avg)</span>
+                {isLoadingPrice && (
+                  <span className="text-xs text-blue-600 flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Fetching...
+                  </span>
+                )}
+              </Label>
+              <NumberInput
+                type="number"
+                value={formData.buyPrice}
+                onChange={(e) => setFormData({ ...formData, buyPrice: e.target.value })}
+                placeholder="Auto-filled based on purchase date"
+                step="0.01"
+                disabled={isLoadingPrice}
+              />
+            </div>
+
+            <div>
+              <Label className="flex items-center justify-between">
+                <span>Current Price</span>
+                {isLoadingPrice && (
+                  <span className="text-xs text-blue-600 flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Fetching...
+                  </span>
+                )}
+              </Label>
+              <NumberInput
+                type="number"
+                value={formData.currentPrice}
+                onChange={(e) => setFormData({ ...formData, currentPrice: e.target.value })}
+                placeholder="Auto-filled from market"
+                step="0.01"
+                disabled={isLoadingPrice}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="flex-1">
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateInvestment} className="flex-1" disabled={isLoadingPrice}>
+                Update Investment
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Close Investment Dialog */}
+      <Dialog open={isCloseDialogOpen} onOpenChange={(open) => {
+        setIsCloseDialogOpen(open);
+        if (!open) {
+          setSelectedInvestment(null);
+          setSelectedAccount('');
+        }
+      }}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Close Investment</DialogTitle>
+            <DialogDescription>
+              Exit an existing investment and record the proceeds
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            {selectedInvestment && (
+              <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                      <span className="text-sm">{selectedInvestment.symbol.substring(0, 2)}</span>
+                    </div>
+                    <div>
+                      <h4>{selectedInvestment.symbol}</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {selectedInvestment.name} • {selectedInvestment.quantity} {selectedInvestment.type === 'stock' ? 'shares' : 'units'}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500">
+                        Purchased: {new Date(selectedInvestment.purchaseDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Avg: {CURRENCY_SYMBOLS[currency] || '$'}{selectedInvestment.buyPrice.toFixed(2)} → Current: {CURRENCY_SYMBOLS[currency] || '$'}{selectedInvestment.currentPrice.toFixed(2)}
+                  </p>
+                  <div className="flex items-center gap-2 justify-end mt-1">
+                    <p className={totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      {totalGainLoss >= 0 ? '+' : ''}{CURRENCY_SYMBOLS[currency] || '$'}{totalGainLoss.toFixed(2)}
+                    </p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      totalGainLoss >= 0 
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                        : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                    }`}>
+                      {totalGainLoss >= 0 ? '+' : ''}{totalGainLoss.toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <Label>Account</Label>
+              <Select value={selectedAccount} onValueChange={(value: any) => {
+                setSelectedAccount(value);
+              }}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map(account => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button variant="outline" onClick={() => setIsCloseDialogOpen(false)} className="flex-1">
+                Cancel
+              </Button>
+              <Button onClick={handleCloseInvestment} className="flex-1">
+                Close Investment
               </Button>
             </div>
           </div>

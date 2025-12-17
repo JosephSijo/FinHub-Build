@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { NumberInput } from './ui/number-input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
@@ -318,10 +319,9 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           <div>
             <Label>Amount</Label>
             <div className="flex gap-2">
-              <Input
-                type="number"
+              <NumberInput
                 value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, amount: value })}
                 placeholder="0.00"
                 step="any"
                 min="0"
@@ -444,7 +444,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               </Button>
             </div>
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-              💡 Tip: Use commas to add multiple tags at once (e.g., "urgent, important")
+              ��� Tip: Use commas to add multiple tags at once (e.g., "urgent, important")
             </p>
             {formData.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">

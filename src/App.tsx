@@ -31,6 +31,7 @@ import { QuoteOfTheDay } from "./components/QuoteOfTheDay";
 import { CurrencyConverter } from "./components/CurrencyConverter";
 import { InvestmentsTab } from "./components/InvestmentsTab";
 import { LiabilityTab } from "./components/LiabilityTab";
+import { LiabilityDashboard } from "./components/LiabilityDashboard";
 import { MoreTab } from "./components/MoreTab";
 import { NotificationsPanel } from "./components/NotificationsPanel";
 import { AchievementDetailDialog } from "./components/AchievementDetailDialog";
@@ -1087,6 +1088,12 @@ export default function App() {
               liabilities={liabilities}
               emergencyFundAmount={emergencyFundAmount}
             />
+            {liabilities.length > 0 && (
+              <LiabilityDashboard
+                liabilities={liabilities}
+                currency={settings.currency}
+              />
+            )}
             <FinancialHealthScore
               score={healthScore.score}
               savingsRate={healthScore.savingsRate}

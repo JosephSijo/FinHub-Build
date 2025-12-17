@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Input } from './ui/input';
+import { NumberInput } from './ui/number-input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Card } from './ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Plus, Trash2, Edit, CreditCard, Building2 } from 'lucide-react';
 import { Account, ACCOUNT_COLORS, ACCOUNT_ICONS, CURRENCY_SYMBOLS } from '../types';
 import { toast } from 'sonner@2.0.3';
@@ -228,12 +229,11 @@ export function AccountsManager({
 
             <div>
               <Label htmlFor="balance">Current Balance</Label>
-              <Input
+              <NumberInput
                 id="balance"
-                type="number"
                 step="0.01"
                 value={formData.balance}
-                onChange={(e) => setFormData({ ...formData, balance: parseFloat(e.target.value) || 0 })}
+                onChange={(value) => setFormData({ ...formData, balance: value })}
                 placeholder="0.00"
               />
             </div>
