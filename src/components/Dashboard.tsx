@@ -5,6 +5,7 @@ import { Sparkles, TrendingUp, TrendingDown, DollarSign, CreditCard, Users, Load
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Expense, Income, Debt, CURRENCY_SYMBOLS } from '../types';
 import { api } from '../utils/api';
+import { getBudgetPacingStatus, getHaloClasses } from '../utils/budgetUtils';
 
 type TimeRange = 'this-month' | 'last-month' | 'last-3-months' | 'all';
 type ChartType = 'pie' | 'bar' | 'line';
@@ -39,7 +40,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const filterByTimeRange = (date: string): boolean => {
     const itemDate = new Date(date);
     const now = new Date();
-    
+
     switch (timeRange) {
       case 'this-month':
         return itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
@@ -80,29 +81,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const getMonthlyData = () => {
     const months = [];
     const now = new Date();
-    
+
     for (let i = 5; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthName = date.toLocaleString('default', { month: 'short' });
       const year = date.getFullYear();
-      
+
       const monthExpenses = expenses.filter(e => {
         const expenseDate = new Date(e.date);
         return expenseDate.getMonth() === date.getMonth() && expenseDate.getFullYear() === date.getFullYear();
       }).reduce((sum, e) => sum + e.amount, 0);
-      
+
       const monthIncomes = incomes.filter(i => {
         const incomeDate = new Date(i.date);
         return incomeDate.getMonth() === date.getMonth() && incomeDate.getFullYear() === date.getFullYear();
       }).reduce((sum, i) => sum + i.amount, 0);
-      
+
       months.push({
         month: `${monthName} ${year}`,
         income: monthIncomes,
         expenses: monthExpenses
       });
     }
-    
+
     return months;
   };
 
@@ -133,17 +134,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const loadAIFeedback = async () => {
     setIsLoadingFeedback(true);
     try {
-      const topCategory = categoryData.length > 0 
-        ? categoryData.sort((a, b) => b.value - a.value)[0].name 
+      const topCategory = categoryData.length > 0
+        ? categoryData.sort((a, b) => b.value - a.value)[0].name
         : 'N/A';
-      
+
       const response = await api.getDashboardFeedback({
         totalIncome,
         totalExpenses,
         spendingPercentage,
         topCategory
       });
-      
+
       if (response.success && response.feedback) {
         setAiFeedback(response.feedback);
       }
@@ -198,13 +199,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Income</p>
-              <p className="text-2xl text-green-600 mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Income (Money In)</p>
+              <p className="text-2xl text-emerald-600 mt-1">
                 {CURRENCY_SYMBOLS[currency]}{totalIncome.toLocaleString()}
               </p>
             </div>
-            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-green-600" />
+            <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/20 rounded-full flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-emerald-600" />
             </div>
           </div>
         </Card>
@@ -213,12 +214,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Net Balance</p>
-              <p className={`text-2xl mt-1 ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <p className={`text-2xl mt-1 ${netBalance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-rose-600'}`}>
                 {CURRENCY_SYMBOLS[currency]}{netBalance.toLocaleString()}
               </p>
             </div>
-            <div className={`w-12 h-12 ${netBalance >= 0 ? 'bg-green-100 dark:bg-green-900/20' : 'bg-red-100 dark:bg-red-900/20'} rounded-full flex items-center justify-center`}>
-              <DollarSign className={`w-6 h-6 ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${getHaloClasses(getBudgetPacingStatus(totalIncome, totalExpenses))}`}>
+              <DollarSign className="w-6 h-6 text-gray-700 dark:text-gray-200" />
             </div>
           </div>
         </Card>
@@ -244,13 +245,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Expenses</p>
-              <p className="text-2xl text-red-600 mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Expense (Money Out)</p>
+              <p className="text-2xl text-rose-600 mt-1">
                 {CURRENCY_SYMBOLS[currency]}{totalExpenses.toLocaleString()}
               </p>
             </div>
-            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
-              <TrendingDown className="w-6 h-6 text-red-600" />
+            <div className="w-12 h-12 bg-rose-50 dark:bg-rose-900/20 rounded-full flex items-center justify-center">
+              <TrendingDown className="w-6 h-6 text-rose-600" />
             </div>
           </div>
         </Card>
@@ -288,13 +289,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Active Debts</p>
-              <p className="text-2xl text-yellow-600 mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Debt (IOU)</p>
+              <p className="text-2xl text-amber-600 mt-1">
                 {CURRENCY_SYMBOLS[currency]}{totalDebts.toLocaleString()}
               </p>
             </div>
-            <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center">
-              <Users className="w-6 h-6 text-yellow-600" />
+            <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/20 rounded-full flex items-center justify-center">
+              <Users className="w-6 h-6 text-amber-600" />
             </div>
           </div>
         </Card>
@@ -427,15 +428,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       animationDuration={800}
                     >
                       {categoryData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
+                        <Cell
+                          key={`cell-${index}`}
                           fill={COLORS[index % COLORS.length]}
                           strokeWidth={2}
                           stroke="#fff"
                         />
                       ))}
                     </Pie>
-                    <Tooltip 
+                    <Tooltip
                       formatter={(value: number) => `${CURRENCY_SYMBOLS[currency]}${value.toLocaleString()}`}
                       contentStyle={{
                         backgroundColor: 'rgba(255, 255, 255, 0.98)',
@@ -449,11 +450,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         fontWeight: 500
                       }}
                     />
-                    <Legend 
-                      verticalAlign="bottom" 
+                    <Legend
+                      verticalAlign="bottom"
                       align="center"
                       height={70}
-                      wrapperStyle={{ 
+                      wrapperStyle={{
                         paddingTop: '25px',
                         fontSize: '13px'
                       }}
@@ -466,19 +467,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         return `${value} (${percentage}%)`;
                       }}
                     />
-                    </PieChart>
+                  </PieChart>
                 ) : categoryChartType === 'bar' ? (
-                <BarChart data={categoryData}>
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip formatter={(value: number) => `${CURRENCY_SYMBOLS[currency]}${value.toLocaleString()}`} />
-                  <Bar dataKey="value" fill="#3b82f6">
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              ) : (
+                  <BarChart data={categoryData}>
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip formatter={(value: number) => `${CURRENCY_SYMBOLS[currency]}${value.toLocaleString()}`} />
+                    <Bar dataKey="value" fill="#3b82f6">
+                      {categoryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                ) : (
                   <LineChart data={categoryData}>
                     <XAxis dataKey="name" />
                     <YAxis />
