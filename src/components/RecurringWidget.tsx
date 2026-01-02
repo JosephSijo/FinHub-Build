@@ -1,24 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Calendar, ArrowRight, Sparkles } from 'lucide-react';
 import { api } from '../utils/api';
-import { RecurringTransaction, Account } from '../types';
+import { RecurringTransaction, Liability } from '../types';
+import { formatCurrency } from '../utils/numberFormat';
 
 interface RecurringWidgetProps {
   userId: string;
-  accounts: Account[];
+  liabilities?: Liability[];
   currency: string;
   onNavigate: () => void;
 }
 
-export function RecurringWidget({ userId, accounts, currency, onNavigate }: RecurringWidgetProps) {
+export function RecurringWidget({ userId, liabilities = [], currency, onNavigate }: RecurringWidgetProps) {
   const [recurring, setRecurring] = useState<RecurringTransaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadRecurring();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const loadRecurring = async () => {
@@ -44,21 +45,23 @@ export function RecurringWidget({ userId, accounts, currency, onNavigate }: Recu
     }
   };
 
+  const totalLiabilityEMI = liabilities.reduce((sum, l) => sum + l.emiAmount, 0);
+
   const totalMonthlyExpenses = recurring
     .filter(r => r.type === 'expense')
-    .reduce((sum, r) => sum + getMonthlyAmount(r.amount, r.frequency), 0);
+    .reduce((sum, r) => sum + getMonthlyAmount(r.amount, r.frequency), 0) + totalLiabilityEMI;
 
   const totalMonthlyIncome = recurring
     .filter(r => r.type === 'income')
     .reduce((sum, r) => sum + getMonthlyAmount(r.amount, r.frequency), 0);
 
-  const subscriptions = recurring.filter(r => 
-    r.type === 'expense' && 
+  const subscriptions = recurring.filter(r =>
+    r.type === 'expense' &&
     (r.description?.toLowerCase().includes('subscription') ||
-     r.description?.toLowerCase().includes('netflix') ||
-     r.description?.toLowerCase().includes('spotify') ||
-     r.description?.toLowerCase().includes('prime') ||
-     r.description?.toLowerCase().includes('gym'))
+      r.description?.toLowerCase().includes('netflix') ||
+      r.description?.toLowerCase().includes('spotify') ||
+      r.description?.toLowerCase().includes('prime') ||
+      r.description?.toLowerCase().includes('gym'))
   );
 
   if (loading) {
@@ -72,31 +75,12 @@ export function RecurringWidget({ userId, accounts, currency, onNavigate }: Recu
     );
   }
 
-  if (recurring.length === 0) {
-    return (
-      <Card className="p-6">
-        <div className="flex items-start gap-3">
-          <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div className="flex-1">
-            <h3 className="mb-2">Recurring Transactions</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              No recurring transactions yet. Set up subscriptions, salary, or recurring bills.
-            </p>
-            <Button size="sm" variant="outline" onClick={onNavigate}>
-              Set Up Recurring
-            </Button>
-          </div>
-        </div>
-      </Card>
-    );
-  }
-
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Calendar className="w-5 h-5" />
-          <h3>Recurring & Subscriptions</h3>
+          <h3 className="truncate">Recurring & Subscriptions</h3>
         </div>
         <Button size="sm" variant="ghost" onClick={onNavigate}>
           View All
@@ -105,49 +89,49 @@ export function RecurringWidget({ userId, accounts, currency, onNavigate }: Recu
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Monthly Out</p>
-          <p className="text-red-600">
-            {currency === 'INR' ? '₹' : '$'}{totalMonthlyExpenses.toFixed(0)}
+        <div className="p-3 bg-destructive/10 rounded-lg min-w-0">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 truncate">Monthly Out</p>
+          <p className="text-destructive font-bold truncate">
+            {formatCurrency(totalMonthlyExpenses, currency)}
           </p>
         </div>
-        <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Monthly In</p>
-          <p className="text-green-600">
-            {currency === 'INR' ? '₹' : '$'}{totalMonthlyIncome.toFixed(0)}
+        <div className="p-3 bg-success/10 rounded-lg min-w-0">
+          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">Monthly Income</p>
+          <p className="text-success font-bold truncate">
+            {formatCurrency(totalMonthlyIncome, currency)}
           </p>
         </div>
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-400">Total Recurring</span>
+          <span className="text-gray-600 dark:text-gray-400">Recurring Bills</span>
           <span>{recurring.length}</span>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-600 dark:text-gray-400">Loan EMIs (Linked)</span>
+          <span>{liabilities.length}</span>
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="text-gray-600 dark:text-gray-400">Subscriptions</span>
           <span>{subscriptions.length}</span>
         </div>
-        {totalMonthlyIncome > 0 && (
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-400">Net Monthly</span>
-            <span className={totalMonthlyIncome - totalMonthlyExpenses >= 0 ? 'text-green-600' : 'text-red-600'}>
-              {totalMonthlyIncome - totalMonthlyExpenses >= 0 ? '+' : ''}
-              {currency === 'INR' ? '₹' : '$'}
-              {(totalMonthlyIncome - totalMonthlyExpenses).toFixed(0)}
-            </span>
-          </div>
-        )}
+        <span className={`block text-right text-sm font-medium pt-2 border-t border-gray-100 dark:border-gray-800 ${totalMonthlyIncome - totalMonthlyExpenses >= 0 ? 'text-[#81C784]' : 'text-[#E57373]'}`}>
+          Net: {formatCurrency(totalMonthlyIncome - totalMonthlyExpenses, currency)}
+        </span>
       </div>
 
-      {totalMonthlyExpenses > totalMonthlyIncome && totalMonthlyIncome > 0 && (
-        <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex items-start gap-2">
-          <Sparkles className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-          <p className="text-xs text-yellow-900 dark:text-yellow-100">
-            Your recurring expenses exceed income. Consider reviewing subscriptions.
-          </p>
-        </div>
-      )}
-    </Card>
+
+      {
+        totalMonthlyExpenses > totalMonthlyIncome && totalMonthlyIncome > 0 && (
+          <div className="mt-3 p-3 bg-[#E57373]/10 rounded-lg flex items-start gap-2">
+            <Sparkles className="w-4 h-4 text-[#E57373] mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-[#E57373]">
+              Your recurring expenses exceed income. Consider reviewing subscriptions.
+            </p>
+          </div>
+        )
+      }
+    </Card >
   );
 }

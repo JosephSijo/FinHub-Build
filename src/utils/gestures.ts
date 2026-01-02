@@ -98,7 +98,7 @@ export function usePullToRefresh(
     // If pulling down at top of page
     if (deltaY > 0 && element.scrollTop === 0) {
       e.preventDefault();
-      
+
       // Visual feedback could be added here
       if (deltaY > 100 && !refreshTriggered) {
         refreshTriggered = true;
@@ -108,6 +108,7 @@ export function usePullToRefresh(
 
   const handleTouchEnd = async () => {
     if (refreshTriggered) {
+      if (window.navigator.vibrate) window.navigator.vibrate(25);
       await onRefresh();
     }
     isPulling = false;
@@ -129,7 +130,7 @@ export function usePullToRefresh(
 export function useEdgeSwipe(
   onLeftEdgeSwipe: () => void,
   onRightEdgeSwipe: () => void,
-  edgeThreshold: number = 20
+  edgeThreshold: number = 30
 ) {
   let startX = 0;
 
@@ -142,20 +143,24 @@ export function useEdgeSwipe(
     const deltaX = currentX - startX;
 
     // Left edge swipe (swipe right from left edge)
-    if (startX < edgeThreshold && deltaX > 50) {
+    if (startX < edgeThreshold && deltaX > 30) {
+      if (e.cancelable) e.preventDefault();
+      if (window.navigator.vibrate) window.navigator.vibrate(20);
       onLeftEdgeSwipe();
       startX = window.innerWidth; // Prevent multiple triggers
     }
 
     // Right edge swipe (swipe left from right edge)
-    if (startX > window.innerWidth - edgeThreshold && deltaX < -50) {
+    if (startX > window.innerWidth - edgeThreshold && deltaX < -30) {
+      if (e.cancelable) e.preventDefault();
+      if (window.navigator.vibrate) window.navigator.vibrate(20);
       onRightEdgeSwipe();
       startX = 0; // Prevent multiple triggers
     }
   };
 
-  document.addEventListener('touchstart', handleTouchStart);
-  document.addEventListener('touchmove', handleTouchMove);
+  document.addEventListener('touchstart', handleTouchStart, { passive: true });
+  document.addEventListener('touchmove', handleTouchMove, { passive: false });
 
   return () => {
     document.removeEventListener('touchstart', handleTouchStart);

@@ -8,7 +8,7 @@ interface PullToRefreshProps {
 }
 
 export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
-  const [startY, setStartY] = useState(0);
+  const startY = useRef(0);
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -17,21 +17,43 @@ export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (containerRef.current && containerRef.current.scrollTop === 0) {
-      setStartY(e.touches[0].clientY);
+      startY.current = e.touches[0].clientY;
     }
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (startY === 0) return;
-    
-    const currentY = e.touches[0].clientY;
-    const distance = currentY - startY;
+  useEffect(() => {
+    const handleTouchMove = (e: TouchEvent) => {
+      if (startY.current === 0) return;
 
-    if (distance > 0 && containerRef.current && containerRef.current.scrollTop === 0) {
-      e.preventDefault();
-      setPullDistance(Math.min(distance, threshold * 1.5));
+      const currentY = e.touches[0].clientY;
+      const distance = currentY - startY.current;
+
+      if (distance > 0 && containerRef.current && containerRef.current.scrollTop === 0) {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        const newDistance = Math.min(distance, threshold * 1.5);
+
+        // Haptic feedback when crossing threshold
+        if (newDistance >= threshold && pullDistance < threshold) {
+          if (window.navigator.vibrate) window.navigator.vibrate(10);
+        }
+
+        setPullDistance(newDistance);
+      }
+    };
+
+    const element = containerRef.current;
+    if (element) {
+      element.addEventListener('touchmove', handleTouchMove, { passive: false });
     }
-  };
+
+    return () => {
+      if (element) {
+        element.removeEventListener('touchmove', handleTouchMove);
+      }
+    };
+  }, []);
 
   const handleTouchEnd = async () => {
     if (pullDistance >= threshold && !isRefreshing) {
@@ -39,9 +61,9 @@ export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
       await onRefresh();
       setIsRefreshing(false);
     }
-    
+
     setPullDistance(0);
-    setStartY(0);
+    startY.current = 0;
   };
 
   return (
@@ -49,7 +71,6 @@ export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
       ref={containerRef}
       className="relative overflow-y-auto"
       onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
       {/* Pull to refresh indicator */}
@@ -77,15 +98,15 @@ export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
             }}
           >
             <RefreshCw
-              className="w-6 h-6 text-blue-600 dark:text-blue-400"
+              className="w-6 h-6 text-[#0A84FF]"
             />
           </motion.div>
-          <span className="text-xs text-gray-600 dark:text-gray-400">
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8E8E93]">
             {isRefreshing
-              ? 'Refreshing...'
+              ? 'Synchronizing...'
               : pullDistance >= threshold
-              ? 'Release to refresh'
-              : 'Pull to refresh'}
+                ? 'Relinquish to Sync'
+                : 'Pull to Synchronize'}
           </span>
         </div>
       </motion.div>

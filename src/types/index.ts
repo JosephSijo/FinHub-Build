@@ -1,12 +1,16 @@
-// Account types
 export interface Account {
   id: string;
   name: string;
-  type: 'bank' | 'credit_card';
+  type: 'bank' | 'credit_card' | 'cash' | 'investment';
   balance: number;
   color: string;
   icon: string;
   createdAt: string;
+  // Credit Card Specific
+  creditLimit?: number;
+  safeLimitPercentage?: number; // e.g., 30 for 30%
+  serviceChargePercentage?: number; // e.g., 2.5 for 2.5%
+  statementDate?: number; // Day of month 1-31
 }
 
 // Core transaction types
@@ -21,6 +25,11 @@ export interface Expense {
   isRecurring?: boolean;
   endDate?: string;
   createdAt: string;
+  // Credit Card Justification
+  isIncomeGenerating?: boolean;
+  justification?: string;
+  serviceChargeAmount?: number;
+  isInternalTransfer?: boolean;
 }
 
 export interface Income {
@@ -33,6 +42,7 @@ export interface Income {
   isRecurring?: boolean;
   endDate?: string;
   createdAt: string;
+  isInternalTransfer?: boolean;
 }
 
 export interface Debt {
@@ -44,8 +54,11 @@ export interface Debt {
   status: 'pending' | 'settled';
   tags: string[];
   accountId: string;
+  dueDate?: string;
   createdAt: string;
 }
+
+export type GoalType = 'growth' | 'stability' | 'protection' | 'other';
 
 export interface Goal {
   id: string;
@@ -54,6 +67,8 @@ export interface Goal {
   currentAmount: number;
   targetDate: string;
   emoji: string;
+  type?: GoalType; // Defaults to 'growth' if undefined
+  status?: 'active' | 'completed' | 'leaking'; // Defaults to 'active'
   createdAt: string;
 }
 
@@ -65,6 +80,15 @@ export interface UserSettings {
   name: string;
   photoURL: string;
   notificationsEnabled: boolean;
+  roundUpEnabled: boolean;
+  apiKeys?: {
+    openai?: string;
+    anthropic?: string;
+    gemini?: string;
+    deepseek?: string;
+    perplexity?: string;
+  };
+  aiProvider?: string;
 }
 
 // AI Context
@@ -74,6 +98,13 @@ export interface AIContext {
   activeDebts: number;
   goalsCount: number;
   recentTransactions: any[];
+  expenses: Expense[];
+  incomes: Income[];
+  accounts: Account[];
+  investments: Investment[];
+  savingsRate: number;
+  healthScore: number;
+  brainSummary?: string;
 }
 
 // Categories for Money Out
@@ -91,6 +122,7 @@ export const MONEY_OUT_CATEGORIES = [
   { value: 'EMI', emoji: '🏦' },
   { value: 'Subscription', emoji: '📺' },
   { value: 'Personal IOU', emoji: '🤝' },
+  { value: 'Transfer', emoji: '🔄' },
   { value: 'Other', emoji: '📦' }
 ];
 
@@ -103,6 +135,7 @@ export const MONEY_IN_SOURCES = [
   { value: 'Freelance', emoji: '💻' },
   { value: 'Investment', emoji: '📈' },
   { value: 'Gift', emoji: '🎁' },
+  { value: 'Transfer', emoji: '🔄' },
   { value: 'Other', emoji: '💰' }
 ];
 
@@ -172,19 +205,38 @@ export interface Investment {
   id: string;
   symbol: string;
   name: string;
-  type: 'stock' | 'mutual_fund' | 'sip' | 'crypto';
+  type: 'stock' | 'mutual_fund' | 'sip' | 'crypto' | 'physical_asset';
   quantity: number;
   buyPrice: number;
   currentPrice?: number;
+  totalYield?: number; // Dividends, Interest, or extra generated cash
+  isPhysicalAsset?: boolean;
+  accountId?: string; // ID of the holding account (for Source Independence)
   purchaseDate: string;
   currency: string;
   createdAt: string;
 }
 
+// Liability
+export interface Liability {
+  id: string;
+  name: string;
+  type: 'home_loan' | 'car_loan' | 'personal_loan' | 'credit_card' | 'education_loan' | 'other';
+  principal: number;
+  outstanding: number;
+  interestRate: number;
+  emiAmount: number;
+  startDate: string;
+  tenure: number; // in months
+  accountId?: string;
+}
+
 // Notification
 export interface Notification {
   id: string;
-  type: 'achievement' | 'goal' | 'alert' | 'insight';
+  type: 'achievement' | 'goal' | 'alert' | 'insight' | 'reminder';
+  priority: 'high' | 'medium' | 'low';
+  category: 'reminders' | 'transactions' | 'achievements' | 'insights';
   title: string;
   message: string;
   timestamp: Date;

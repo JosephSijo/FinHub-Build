@@ -1,3 +1,4 @@
+/* eslint-disable react/forbid-component-props, react/forbid-dom-props */
 import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -5,12 +6,12 @@ import { Input } from './ui/input';
 import { NumberInput } from './ui/number-input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Progress } from './ui/progress';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Checkbox } from './ui/checkbox';
-import { Pencil, Trash2, Plus, Target, DollarSign, Wallet, Shield } from 'lucide-react';
-import { Goal, CURRENCY_SYMBOLS, Account } from '../types';
-import { toast } from 'sonner@2.0.3';
+import { Pencil, Trash2, Plus, Target, DollarSign, Wallet } from 'lucide-react';
+import { Goal, Account } from '../types';
+import { toast } from 'sonner';
+import { formatCurrency } from '../utils/numberFormat';
 
 interface GoalsTrackerProps {
   goals: Goal[];
@@ -41,8 +42,8 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    targetAmount: '',
-    currentAmount: '',
+    targetAmount: 0,
+    currentAmount: 0,
     targetDate: '',
     emoji: '🎯'
   });
@@ -59,17 +60,17 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
       setEditingGoal(goal);
       setFormData({
         name: goal.name,
-        targetAmount: goal.targetAmount.toString(),
-        currentAmount: goal.currentAmount.toString(),
-        targetDate: goal.targetDate,
-        emoji: goal.emoji
+        targetAmount: goal.targetAmount,
+        currentAmount: goal.currentAmount,
+        targetDate: goal.targetDate || '',
+        emoji: goal.emoji || '🎯'
       });
     } else {
       setEditingGoal(null);
       setFormData({
         name: '',
-        targetAmount: '',
-        currentAmount: '0',
+        targetAmount: 0,
+        currentAmount: 0,
         targetDate: '',
         emoji: '🎯'
       });
@@ -79,11 +80,11 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data = {
       name: formData.name,
-      targetAmount: parseFloat(formData.targetAmount),
-      currentAmount: parseFloat(formData.currentAmount),
+      targetAmount: formData.targetAmount,
+      currentAmount: formData.currentAmount,
       targetDate: formData.targetDate,
       emoji: formData.emoji
     };
@@ -109,9 +110,9 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
 
   const handleAddFunds = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedGoal) return;
-    
+
     const amount = parseFloat(fundsData.amount);
     if (isNaN(amount) || amount <= 0) {
       toast.error('Please enter a valid amount');
@@ -125,7 +126,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
         toast.error('Insufficient balance in selected account');
         return;
       }
-      
+
       // Deduct from account
       if (onDeductFromAccount) {
         onDeductFromAccount(fundsData.accountId, amount);
@@ -137,7 +138,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
       currentAmount: selectedGoal.currentAmount + amount
     });
 
-    toast.success(`Added ${CURRENCY_SYMBOLS[currency]}${amount} to ${selectedGoal.name}!`);
+    toast.success(`Added ${formatCurrency(amount, currency)} to ${selectedGoal.name}!`);
     setIsFundsDialogOpen(false);
   };
 
@@ -147,230 +148,264 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
 
   // Get goal-related transactions
   const goalTransactions = [
-    ...expenses.filter(e => 
+    ...expenses.filter(e =>
       (e.tags && Array.isArray(e.tags) && e.tags.some((tag: string) => tag?.toLowerCase().includes('goal'))) ||
       (e.description && e.description.toLowerCase().includes('goal'))
     ),
-    ...incomes.filter(i => 
+    ...incomes.filter(i =>
       (i.tags && Array.isArray(i.tags) && i.tags.some((tag: string) => tag?.toLowerCase().includes('goal'))) ||
       (i.source && i.source.toLowerCase().includes('goal'))
     )
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 
   return (
-    <div className="space-y-6">
-      {/* Goal Allocation Summary */}
-      {goals.length > 0 && (
-        <Card className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-2 border-purple-200 dark:border-purple-800">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                <Target className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <h3 className="text-purple-900 dark:text-purple-100">Goals Fund Allocated</h3>
-                <p className="text-sm text-purple-700 dark:text-purple-300">
-                  {activeGoalsCount} active goal{activeGoalsCount !== 1 ? 's' : ''} in progress
-                </p>
-              </div>
+    <div className="space-y-6 pb-20">
+      {/* Goal Allocation Summary Card (Segmented Stack Pattern) */}
+      <div className="segmented-stack">
+        {/* stack-cap */}
+        <div className="stack-cap">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-[#30D158]/10 rounded-xl flex items-center justify-center border border-[#30D158]/20">
+              <Target className="w-5 h-5 text-[#30D158]" />
             </div>
-            <div className="text-right">
-              <p className="text-2xl text-purple-600 dark:text-purple-400">
-                {CURRENCY_SYMBOLS[currency]}{totalGoalAllocated.toLocaleString()}
-              </p>
-              <p className="text-xs text-purple-600 dark:text-purple-400">
-                Total Allocated
-              </p>
+            <div>
+              <p className="text-label text-[10px]">Capital Accumulation</p>
+              <h3 className="text-balance text-lg text-slate-100">
+                {formatCurrency(totalGoalAllocated, currency)}
+              </h3>
             </div>
           </div>
-          
-          {/* Recent Goal Transactions */}
-          {goalTransactions.length > 0 && (
-            <div className="pt-4 border-t border-purple-200 dark:border-purple-700">
-              <p className="text-xs text-purple-700 dark:text-purple-300 mb-3">Recent Goal Transactions:</p>
-              <div className="space-y-2">
-                {goalTransactions.map((transaction, idx) => {
-                  const isExpense = 'description' in transaction;
-                  return (
-                    <div key={idx} className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-lg">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate">
-                          {isExpense ? transaction.description : transaction.source}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(transaction.date).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <p className={`text-sm whitespace-nowrap ml-3 ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
-                        {isExpense ? '-' : '+'}{CURRENCY_SYMBOLS[currency]}{transaction.amount.toLocaleString()}
+          <div className="text-right">
+            <p className="text-label text-[10px] opacity-60">Active Targets</p>
+            <p className="text-balance text-sm text-[#30D158]">
+              {activeGoalsCount} <span className="text-[10px] opacity-60 uppercase font-black tracking-widest">Milestones</span>
+            </p>
+          </div>
+        </div>
+
+        {/* stack-body */}
+        <div className="stack-body py-4 px-6">
+          {/* Recent Goal Activity */}
+          {goalTransactions.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-label text-[8px] opacity-50 uppercase font-black tracking-widest mb-3">Audit Trail</p>
+              {goalTransactions.map((transaction: any, idx) => {
+                const isExpense = 'description' in transaction;
+                return (
+                  <div key={`${transaction.id || idx}-${idx}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors px-2 -mx-2 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-200 truncate">
+                        {isExpense ? transaction.description : transaction.source}
+                      </p>
+                      <p className="text-label text-[8px] mt-0.5 opacity-50">
+                        {new Date(transaction.date).toLocaleDateString()}
                       </p>
                     </div>
-                  );
-                })}
-              </div>
+                    <p className={`text-balance text-xs font-bold ${isExpense ? 'text-[#FF453A]' : 'text-[#30D158]'}`}>
+                      {isExpense ? '-' : '+'}{formatCurrency(transaction.amount, currency)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-8 text-center">
+              <p className="text-[10px] text-slate-600 uppercase font-black tracking-widest">No recent goal movements</p>
             </div>
           )}
-        </Card>
-      )}
-
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2>Savings Goals</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Track your progress toward financial milestones
-          </p>
         </div>
-        <div className="flex gap-2">
+
+        {/* stack-footer */}
+        <div className="stack-footer">
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={() => {
-              // This will be handled in App.tsx
               if ((window as any).showFundAllocation) {
                 (window as any).showFundAllocation('goal');
               }
             }}
-            className="gap-2"
+            className="w-full h-10 text-xs font-bold text-slate-400 hover:text-slate-100 hover:bg-white/5 flex items-center justify-center transition-all bg-black/20"
           >
-            <Target className="w-4 h-4" />
-            Allocate Funds
-          </Button>
-          <Button onClick={() => handleOpenDialog()}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Goal
+            <Wallet className="w-4 h-4 mr-2" />
+            Allocate Excess Capital to Goals
           </Button>
         </div>
       </div>
 
+      {/* Header & Actions - Aligned with Growth Tab design */}
+      <div className="flex items-center justify-between px-2">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold text-slate-100 tracking-tight truncate">Saving Milestones</h2>
+          <p className="text-xs text-slate-500 mt-1 truncate">Track progress toward long-term targets</p>
+        </div>
+        <Button
+          onClick={() => handleOpenDialog()}
+          className="bg-[#0A84FF] hover:bg-[#007AFF] text-white rounded-xl h-12 px-6 border-none shadow-lg shadow-blue-600/10 flex items-center gap-2 group transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0"
+        >
+          <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
+          <span className="font-bold hidden sm:inline">New Goal</span>
+          <span className="font-bold sm:hidden">Add</span>
+        </Button>
+      </div>
+
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingGoal ? 'Edit Goal' : 'Create New Goal'}</DialogTitle>
-              <DialogDescription>
-                Set a savings goal and track your progress
-              </DialogDescription>
-            </DialogHeader>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-[#1C1C1E] border-[#38383A] text-white p-8 custom-scrollbar">
+          <DialogHeader>
+            <DialogTitle>{editingGoal ? 'Edit Goal' : 'Create New Goal'}</DialogTitle>
+            <DialogDescription>
+              Set a savings goal and track your progress
+            </DialogDescription>
+          </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              <div>
-                <Label>Select Emoji</Label>
-                <div className="grid grid-cols-6 gap-2 mt-2">
-                  {emojis.map(emoji => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, emoji })}
-                      className={`text-3xl p-2 rounded-lg border-2 transition-all ${
-                        formData.emoji === emoji
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-110'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-blue-300'
+          <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+            <div>
+              <Label className="text-label text-[10px] mb-3 block">Select Emoji</Label>
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-2">
+                {emojis.map(emoji => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, emoji })}
+                    className={`text-2xl sm:text-3xl p-3 rounded-2xl border transition-all ${formData.emoji === emoji
+                      ? 'border-[#0A84FF] bg-[#0A84FF]/10 scale-105'
+                      : 'border-[#38383A] bg-[#2C2C2E] hover:border-[#8E8E93]'
                       }`}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
+                  >
+                    {emoji}
+                  </button>
+                ))}
               </div>
+            </div>
 
+            <div>
+              <Label htmlFor="goal-name" className="text-label text-[10px] mb-3 block">Goal Name</Label>
+              <Input
+                id="goal-name"
+                name="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white placeholder:text-slate-600 focus:border-[#0A84FF]/50 transition-colors"
+                placeholder="e.g., Vacation Fund, Emergency Fund"
+                required
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">Goal Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Vacation Fund, Emergency Fund"
+                <Label htmlFor="targetAmount" className="text-label text-[10px] mb-3 block">Target Amount</Label>
+                <NumberInput
+                  id="targetAmount"
+                  name="targetAmount"
+                  step="0.01"
+                  value={formData.targetAmount}
+                  onChange={(val: string) => setFormData({ ...formData, targetAmount: parseFloat(val) || 0 })}
+                  className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
+                  placeholder="0.00"
                   required
+                  autoComplete="off"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="targetAmount">Target Amount</Label>
-                  <NumberInput
-                    id="targetAmount"
-                    step="0.01"
-                    value={formData.targetAmount}
-                    onChange={(e) => setFormData({ ...formData, targetAmount: e.target.value })}
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="currentAmount">Current Amount</Label>
-                  <NumberInput
-                    id="currentAmount"
-                    step="0.01"
-                    value={formData.currentAmount}
-                    onChange={(e) => setFormData({ ...formData, currentAmount: e.target.value })}
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-              </div>
-
               <div>
-                <Label htmlFor="targetDate">Target Date</Label>
-                <Input
-                  id="targetDate"
-                  type="date"
-                  value={formData.targetDate}
-                  onChange={(e) => setFormData({ ...formData, targetDate: e.target.value })}
+                <Label htmlFor="currentAmount" className="text-label text-[10px] mb-3 block">Current Amount</Label>
+                <NumberInput
+                  id="currentAmount"
+                  name="currentAmount"
+                  step="0.01"
+                  value={formData.currentAmount}
+                  onChange={(val: string) => setFormData({ ...formData, currentAmount: parseFloat(val) || 0 })}
+                  className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
+                  placeholder="0.00"
                   required
+                  autoComplete="off"
                 />
               </div>
+            </div>
 
-              <div className="flex gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1">
-                  Cancel
-                </Button>
-                <Button type="submit" className="flex-1">
-                  {editingGoal ? 'Update Goal' : 'Create Goal'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+            <div>
+              <Label htmlFor="targetDate" className="text-label text-[10px] mb-3 block">Target Date</Label>
+              <Input
+                id="targetDate"
+                name="targetDate"
+                type="date"
+                value={formData.targetDate}
+                onChange={(e) => setFormData({ ...formData, targetDate: e.target.value })}
+                className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
+                required
+              />
+            </div>
+
+            <div className="flex gap-3 pt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                className="flex-1 h-12 rounded-xl border-[#38383A] text-slate-400 hover:bg-white/5 hover:text-white"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 h-12 rounded-xl bg-[#0A84FF] hover:bg-[#007AFF] text-white border-none shadow-lg shadow-blue-600/10"
+              >
+                {editingGoal ? 'Update Goal' : 'Create Goal'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {goals.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Target className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h3 className="mb-2">No Goals Yet</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Set your first savings goal to start your journey!
-          </p>
-          <Button onClick={() => handleOpenDialog()}>
-            <Plus className="w-4 h-4 mr-2" />
-            Create Your First Goal
-          </Button>
-        </Card>
+        <div
+          onClick={() => handleOpenDialog()}
+          className="group cursor-pointer p-12 bg-slate-800/10 border-2 border-dashed border-slate-700/30 rounded-[32px] hover:border-slate-600/50 hover:bg-slate-800/20 transition-all duration-300 flex flex-col items-center justify-center space-y-4"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-slate-800/50 flex items-center justify-center border border-white/5 opacity-50 group-hover:scale-105 transition-transform">
+            <Target className="w-8 h-8 text-slate-500" />
+          </div>
+          <div className="text-center">
+            <h3 className="text-slate-200 font-bold text-lg">No goals tracked yet. Want to see your future here?</h3>
+            <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mt-2 font-black">Tap to Define Savings Target</p>
+          </div>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {goals.map(goal => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {goals.map((goal, idx) => {
             const progress = (goal.currentAmount / goal.targetAmount) * 100;
             const isCompleted = progress >= 100;
             const daysLeft = Math.ceil((new Date(goal.targetDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+            const progressStyle = { '--progress-width': `${Math.min(100, progress)}%` } as React.CSSProperties;
 
             return (
-              <Card key={goal.id} className={`p-6 ${isCompleted ? 'border-green-500 dark:border-green-600' : ''}`}>
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="text-4xl">{goal.emoji}</div>
-                    <div>
-                      <h3 className="text-lg">{goal.name}</h3>
+              <Card key={`${goal.id}-${idx}`} className={`p-6 bg-[#1C1C1E] border-white/5 rounded-[28px] border hover:bg-[#2C2C2E] transition-all duration-300 group ${isCompleted ? 'ring-2 ring-[#30D158]/20' : ''}`}>
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-slate-800 border border-white/5 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform text-3xl">
+                      {goal.emoji}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-base font-bold text-slate-100 truncate">
+                        {goal.name || 'Unnamed Goal'}
+                      </h3>
                       {isCompleted ? (
-                        <p className="text-xs text-green-600 dark:text-green-500">✓ Goal Completed!</p>
+                        <p className="text-label text-[8px] text-[#30D158] mt-1 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#30D158] animate-pulse" />
+                          Target Reached
+                        </p>
                       ) : (
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          {daysLeft > 0 ? `${daysLeft} days left` : 'Overdue'}
+                        <p className={`text-label text-[8px] mt-1 ${daysLeft > 0 ? 'text-[#8E8E93]' : 'text-[#FF453A]'}`}>
+                          {daysLeft > 0 ? `${daysLeft} days remaining` : 'Schedule Slip'}
                         </p>
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleOpenDialog(goal)}
+                      className="w-8 h-8 p-0 rounded-lg hover:bg-blue-500/10 hover:text-blue-400 text-slate-500"
                     >
                       <Pencil className="w-4 h-4" />
                     </Button>
@@ -378,24 +413,48 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={() => onDeleteGoal(goal.id)}
+                      className="w-8 h-8 p-0 rounded-lg hover:bg-rose-500/10 hover:text-rose-400 text-slate-500"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
 
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Progress</span>
-                    <span>{Math.min(100, progress).toFixed(0)}%</span>
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between items-end">
+                    <div className="flex flex-col">
+                      <span className="text-label text-[8px] opacity-60 mb-0.5">Funded</span>
+                      <span className="text-balance text-lg text-slate-100 leading-none">
+                        {formatCurrency(goal.currentAmount, currency)}
+                      </span>
+                    </div>
+                    <div className="text-right flex flex-col items-end">
+                      <span className="text-label text-[8px] opacity-60 mb-0.5">Target</span>
+                      <span className="text-balance text-xs text-[#8E8E93] leading-none">
+                        {formatCurrency(goal.targetAmount, currency)}
+                      </span>
+                    </div>
                   </div>
-                  <Progress value={Math.min(100, progress)} className="h-3" />
-                  <div className="flex justify-between text-sm">
-                    <span className="text-green-600">
-                      {CURRENCY_SYMBOLS[currency]}{goal.currentAmount.toLocaleString()}
+
+                  <div className="relative h-1.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
+                    {(() => {
+                      const barProps = { style: progressStyle };
+                      return (
+                        <div
+                          className={`h-full rounded-full transition-all duration-1000 w-[var(--progress-width)] ${isCompleted ? 'bg-[#30D158] shadow-[0_0_10px_rgba(48,209,88,0.3)]' : 'bg-[#0A84FF] shadow-[0_0_10px_rgba(10,132,255,0.3)]'
+                            }`}
+                          {...barProps}
+                        />
+                      );
+                    })()}
+                  </div>
+
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                    <span className={isCompleted ? 'text-emerald-500' : 'text-blue-500'}>
+                      {Math.min(100, progress).toFixed(0)}% Progress
                     </span>
-                    <span className="text-gray-600 dark:text-gray-400">
-                      of {CURRENCY_SYMBOLS[currency]}{goal.targetAmount.toLocaleString()}
+                    <span className="text-slate-600">
+                      {goal.targetDate ? `By ${new Date(goal.targetDate).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}` : ''}
                     </span>
                   </div>
                 </div>
@@ -403,12 +462,10 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
                 {!isCompleted && (
                   <Button
                     onClick={() => handleOpenFundsDialog(goal)}
-                    variant="outline"
-                    className="w-full bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 hover:from-green-100 hover:to-blue-100 dark:hover:from-green-900/30 dark:hover:to-blue-900/30 border-2 border-green-200 dark:border-green-800"
-                    size="sm"
+                    className="w-full bg-[#30D158]/10 hover:bg-[#30D158] text-[#30D158] hover:text-white border border-[#30D158]/20 hover:border-[#30D158] rounded-xl font-bold py-6 transition-all"
                   >
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    Add Funds
+                    <Plus className="w-5 h-5 mr-2" />
+                    Capitalize
                   </Button>
                 )}
               </Card>
@@ -419,7 +476,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
 
       {/* Add Funds Dialog */}
       <Dialog open={isFundsDialogOpen} onOpenChange={setIsFundsDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-[#1C1C1E] border-[#38383A] text-white p-8 custom-scrollbar">
           <DialogHeader>
             <DialogTitle>Add Funds to {selectedGoal?.name}</DialogTitle>
             <DialogDescription>
@@ -427,61 +484,64 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleAddFunds} className="space-y-4 mt-4">
+          <form onSubmit={handleAddFunds} className="space-y-6 mt-6">
             <div>
-              <Label htmlFor="amount" className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                Amount
+              <Label htmlFor="fund-amount" className="text-label text-[10px] mb-3 flex items-center gap-2">
+                <DollarSign className="w-3 h-3 text-[#30D158]" />
+                Contribution Amount
               </Label>
               <Input
-                id="amount"
+                id="fund-amount"
+                name="amount"
                 type="number"
                 step="0.01"
                 value={fundsData.amount}
                 onChange={(e) => setFundsData({ ...fundsData, amount: e.target.value })}
-                placeholder="Enter amount to add"
-                className="text-lg mt-2"
+                placeholder="0.00"
+                className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white text-lg placeholder:text-slate-600"
                 required
                 autoFocus
+                autoComplete="off"
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {CURRENCY_SYMBOLS[currency]}{fundsData.amount || '0'} will be added to your goal
+              <p className="text-[10px] text-slate-500 mt-2 italic px-1">
+                {formatCurrency(fundsData.amount || 0, currency)} will be added to your milestone
               </p>
             </div>
 
             {accounts.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2 bg-[#2C2C2E] p-4 rounded-xl border border-[#38383A]">
                   <Checkbox
                     id="deduct"
                     checked={fundsData.deductFromAccount}
-                    onCheckedChange={(checked) => 
-                      setFundsData({ ...fundsData, deductFromAccount: checked as boolean })
+                    onCheckedChange={(checked: boolean) =>
+                      setFundsData({ ...fundsData, deductFromAccount: checked })
                     }
+                    className="border-slate-500 data-[state=checked]:bg-[#30D158] data-[state=checked]:border-[#30D158]"
                   />
-                  <Label htmlFor="deduct" className="flex items-center gap-2 cursor-pointer">
-                    <Wallet className="w-4 h-4" />
-                    Deduct from account balance
+                  <Label htmlFor="deduct" className="text-xs font-bold text-slate-200 cursor-pointer flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-slate-500" />
+                    Deduct from Liquidity Node
                   </Label>
                 </div>
 
                 {fundsData.deductFromAccount && (
-                  <div>
-                    <Label htmlFor="account">Select Account</Label>
-                    <Select 
-                      value={fundsData.accountId} 
-                      onValueChange={(value) => setFundsData({ ...fundsData, accountId: value })}
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                    <Label htmlFor="fund-account" className="text-label text-[10px] mb-3 block">Source Account</Label>
+                    <Select
+                      value={fundsData.accountId}
+                      onValueChange={(value: string) => setFundsData({ ...fundsData, accountId: value })}
                     >
-                      <SelectTrigger className="mt-2">
+                      <SelectTrigger id="fund-account" name="accountId" className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white">
                         <SelectValue placeholder="Choose account" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-[#1C1C1E] border-[#38383A] text-white">
                         {accounts.map(account => (
                           <SelectItem key={account.id} value={account.id}>
                             <div className="flex items-center justify-between w-full">
                               <span>{account.icon} {account.name}</span>
-                              <span className="text-sm text-gray-500 ml-4">
-                                {CURRENCY_SYMBOLS[currency]}{account.balance.toFixed(2)}
+                              <span className="text-[10px] text-slate-500 ml-4 font-mono">
+                                {formatCurrency(account.balance, currency)}
                               </span>
                             </div>
                           </SelectItem>
@@ -489,9 +549,8 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
                       </SelectContent>
                     </Select>
                     {fundsData.accountId && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Available: {CURRENCY_SYMBOLS[currency]}
-                        {accounts.find(a => a.id === fundsData.accountId)?.balance.toFixed(2) || '0'}
+                      <p className="text-[10px] text-slate-500 mt-2 italic px-1">
+                        Available Liquidity: {formatCurrency(accounts.find(a => a.id === fundsData.accountId)?.balance || 0, currency)}
                       </p>
                     )}
                   </div>
@@ -499,20 +558,20 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
               </div>
             )}
 
-            <div className="flex gap-2 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setIsFundsDialogOpen(false)} 
-                className="flex-1"
+            <div className="flex gap-3 pt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsFundsDialogOpen(false)}
+                className="flex-1 h-12 rounded-xl border-[#38383A] text-slate-400 hover:bg-white/5 hover:text-white"
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+              <Button
+                type="submit"
+                className="flex-1 h-12 rounded-xl bg-[#30D158] hover:bg-[#28B54C] text-white border-none shadow-lg shadow-green-600/10"
               >
-                Add Funds
+                Capitalize Milestone
               </Button>
             </div>
           </form>

@@ -235,11 +235,16 @@ export const api = {
   },
 
   async processRecurring(userId: string) {
-    const response = await fetch(`${API_BASE}/user/${userId}/recurring/process`, {
-      method: 'POST',
-      headers
-    });
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE}/user/${userId}/recurring/process`, {
+        method: 'POST',
+        headers
+      });
+      return response.json();
+    } catch (e) {
+      console.warn("Failed to process recurring transactions", e);
+      return { success: false };
+    }
   },
 
   // Investments

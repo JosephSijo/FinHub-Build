@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -6,32 +6,14 @@ import { NumberInput } from './ui/number-input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Progress } from './ui/progress';
-import { CreditCard, Plus, Pencil, Trash2, TrendingDown, Calendar, DollarSign, AlertCircle, CheckCircle, Building, Calculator } from 'lucide-react';
-import { CURRENCY_SYMBOLS } from '../types';
-import { toast } from 'sonner@2.0.3';
-import { api } from '../utils/api';
+import { CreditCard, Plus, Pencil, Trash2, Calculator } from 'lucide-react';
+import { Liability } from '../types';
+import { toast } from 'sonner';
+import { formatCurrency } from '../utils/numberFormat';
+import { motion } from 'framer-motion';
+import { useFinance } from '../context/FinanceContext';
 
-interface Liability {
-  id: string;
-  name: string;
-  type: 'home_loan' | 'car_loan' | 'personal_loan' | 'credit_card' | 'education_loan' | 'other';
-  principal: number;
-  outstanding: number;
-  interestRate: number;
-  emiAmount: number;
-  startDate: string;
-  tenure: number; // in months
-  accountId?: string;
-}
 
-interface LiabilityTabProps {
-  currency: string;
-  userId: string;
-  expenses?: any[];
-  incomes?: any[];
-  accounts?: any[];
-}
 
 const LIABILITY_TYPES = [
   { value: 'home_loan', label: '🏠 Home Loan', icon: '🏠' },
@@ -42,11 +24,23 @@ const LIABILITY_TYPES = [
   { value: 'other', label: '📋 Other', icon: '📋' }
 ];
 
-export function LiabilityTab({ currency, userId, expenses = [], incomes = [], accounts = [] }: LiabilityTabProps) {
-  const [liabilities, setLiabilities] = useState<Liability[]>([]);
+interface LiabilityTabProps {
+  currency: string;
+  expenses?: any[];
+  accounts?: any[];
+}
+
+export function LiabilityTab({ currency, expenses = [], accounts = [] }: LiabilityTabProps) {
+  const {
+    liabilities,
+    isLoading: isGlobalLoading,
+    createLiability,
+    updateLiability,
+    deleteLiability
+  } = useFinance();
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingLiability, setEditingLiability] = useState<Liability | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -61,31 +55,12 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
     accountId: 'none'
   });
 
-  useEffect(() => {
-    loadLiabilities();
-  }, [userId]);
-
-  const loadLiabilities = async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.getLiabilities(userId);
-      if (response.success) {
-        setLiabilities(response.liabilities || []);
-      }
-    } catch (error) {
-      console.error('Error loading liabilities:', error);
-      toast.error('Failed to load liabilities');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Convert tenure to months if in years
-    const tenureInMonths = formData.tenureUnit === 'years' 
-      ? parseInt(formData.tenure) * 12 
+    const tenureInMonths = formData.tenureUnit === 'years'
+      ? parseInt(formData.tenure) * 12
       : parseInt(formData.tenure);
 
     const liabilityData = {
@@ -102,49 +77,30 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
 
     try {
       if (editingLiability) {
-        const response = await api.updateLiability(userId, editingLiability.id, liabilityData);
-        if (response.success) {
-          setLiabilities(liabilities.map(l => l.id === editingLiability.id ? response.liability : l));
-          toast.success('Liability updated successfully!');
-        }
+        await updateLiability(editingLiability.id, liabilityData);
       } else {
-        const response = await api.createLiability(userId, liabilityData);
-        if (response.success) {
-          setLiabilities([...liabilities, response.liability]);
-          toast.success('Liability added successfully!');
-        }
+        await createLiability(liabilityData);
       }
       resetForm();
       setIsAddDialogOpen(false);
     } catch (error) {
       console.error('Error saving liability:', error);
-      toast.error('Failed to save liability');
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this liability?')) return;
-
-    try {
-      const response = await api.deleteLiability(userId, id);
-      if (response.success) {
-        setLiabilities(liabilities.filter(l => l.id !== id));
-        toast.success('Liability deleted successfully!');
-      }
-    } catch (error) {
-      console.error('Error deleting liability:', error);
-      toast.error('Failed to delete liability');
-    }
+    await deleteLiability(id);
   };
 
   const handleEdit = (liability: Liability) => {
     setEditingLiability(liability);
-    
+
     // Smart tenure conversion: use years if it's a whole number, otherwise use months
     const isWholeYears = liability.tenure % 12 === 0 && liability.tenure >= 12;
     const tenureValue = isWholeYears ? liability.tenure / 12 : liability.tenure;
     const tenureUnit = isWholeYears ? 'years' : 'months';
-    
+
     setFormData({
       name: liability.name,
       type: liability.type,
@@ -178,154 +134,136 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
 
   // Auto-calculate outstanding amount and EMI
   const calculateLoanDetails = () => {
-    const principal = parseFloat(formData.principal);
-    const interestRate = parseFloat(formData.interestRate);
-    const tenureValue = parseInt(formData.tenure);
-    const startDate = formData.startDate;
+    const principalVal = parseFloat(formData.principal);
+    const rateVal = parseFloat(formData.interestRate);
+    const tenureVal = parseInt(formData.tenure);
+    const startStr = formData.startDate;
 
-    if (!principal || !interestRate || !tenureValue) {
+    if (!principalVal || !rateVal || !tenureVal) {
       toast.error('Please enter Principal, Interest Rate, and Tenure first');
       return;
     }
 
-    // Convert tenure to months if needed
-    const tenureInMonths = formData.tenureUnit === 'years' ? tenureValue * 12 : tenureValue;
-    const tenureInYears = tenureInMonths / 12;
+    const tMonths = formData.tenureUnit === 'years' ? tenureVal * 12 : tenureVal;
+    const rMonthly = rateVal / 12 / 100;
 
-    // Calculate total interest (Simple Interest for the full tenure)
-    const totalInterest = principal * (interestRate / 100) * tenureInYears;
-    
-    // Total amount to be repaid
-    const totalAmount = principal + totalInterest;
-    
-    // Monthly EMI
-    const monthlyEMI = totalAmount / tenureInMonths;
-
-    // Calculate months already paid
-    const startDateObj = new Date(startDate);
-    const today = new Date();
-    let monthsPaid = 0;
-    
-    if (startDateObj <= today) {
-      const yearsDiff = today.getFullYear() - startDateObj.getFullYear();
-      const monthsDiff = today.getMonth() - startDateObj.getMonth();
-      const daysDiff = today.getDate() - startDateObj.getDate();
-      
-      monthsPaid = yearsDiff * 12 + monthsDiff;
-      if (daysDiff < 0) {
-        monthsPaid--;
-      }
-      monthsPaid = Math.max(0, Math.min(monthsPaid, tenureInMonths));
+    let emiResult = 0;
+    if (rMonthly === 0) {
+      emiResult = principalVal / tMonths;
+    } else {
+      emiResult = (principalVal * rMonthly * Math.pow(1 + rMonthly, tMonths)) / (Math.pow(1 + rMonthly, tMonths) - 1);
     }
 
-    // Calculate current outstanding
-    const amountPaid = monthlyEMI * monthsPaid;
-    const currentOutstanding = Math.max(0, totalAmount - amountPaid);
+    const startObj = new Date(startStr);
+    const nowObj = new Date();
+    let paidCount = 0;
 
-    // Update form with calculated values
+    if (startObj <= nowObj) {
+      const yDiff = nowObj.getFullYear() - startObj.getFullYear();
+      const mDiff = nowObj.getMonth() - startObj.getMonth();
+      const dDiff = nowObj.getDate() - startObj.getDate();
+
+      paidCount = yDiff * 12 + mDiff;
+      if (dDiff < 0) paidCount--;
+      paidCount = Math.max(0, Math.min(paidCount, tMonths));
+    }
+
+    let outResult = 0;
+    if (rMonthly === 0) {
+      outResult = principalVal - (emiResult * paidCount);
+    } else {
+      outResult = principalVal * (Math.pow(1 + rMonthly, tMonths) - Math.pow(1 + rMonthly, paidCount)) / (Math.pow(1 + rMonthly, tMonths) - 1);
+    }
+
     setFormData({
       ...formData,
-      outstanding: currentOutstanding.toFixed(2),
-      emiAmount: monthlyEMI.toFixed(2)
+      outstanding: Math.max(0, outResult).toFixed(2),
+      emiAmount: emiResult.toFixed(2)
     });
 
-    toast.success(`Calculated: EMI ₹${monthlyEMI.toFixed(2)}, Outstanding ₹${currentOutstanding.toFixed(2)} (${monthsPaid} months paid)`);
+    toast.success(`Calculated (Reducing Balance): EMI ₹${emiResult.toFixed(2)}, Outstanding ₹${outResult.toFixed(2)}`);
   };
 
   const calculateMonthsPaid = (liability: Liability) => {
-    const startDate = new Date(liability.startDate);
-    const today = new Date();
-    
-    // If start date is in the future, no months have been paid yet
-    if (startDate > today) {
-      return 0;
-    }
-    
-    // Calculate the number of complete months elapsed since start date
-    let monthsPaid = 0;
-    const yearsDiff = today.getFullYear() - startDate.getFullYear();
-    const monthsDiff = today.getMonth() - startDate.getMonth();
-    const daysDiff = today.getDate() - startDate.getDate();
-    
-    monthsPaid = yearsDiff * 12 + monthsDiff;
-    
-    // Only count the current month if we've passed the start day
-    if (daysDiff < 0) {
-      monthsPaid--;
-    }
-    
-    // Ensure we don't go negative
-    monthsPaid = Math.max(0, monthsPaid);
-    
-    // Cap at total tenure
-    return Math.min(monthsPaid, liability.tenure);
+    const lStart = new Date(liability.startDate);
+    const lNow = new Date();
+
+    if (lStart > lNow) return 0;
+
+    let mElapsed = 0;
+    const yD = lNow.getFullYear() - lStart.getFullYear();
+    const mD = lNow.getMonth() - lStart.getMonth();
+    const dD = lNow.getDate() - lStart.getDate();
+
+    mElapsed = yD * 12 + mD;
+    if (dD < 0) mElapsed--;
+    mElapsed = Math.max(0, mElapsed);
+
+    return Math.min(mElapsed, liability.tenure);
   };
 
-  const totalOutstanding = liabilities.reduce((sum, l) => sum + l.outstanding, 0);
   const totalEMI = liabilities.reduce((sum, l) => sum + l.emiAmount, 0);
-  const totalPrincipal = liabilities.reduce((sum, l) => sum + l.principal, 0);
-  const totalPaid = totalPrincipal - totalOutstanding;
 
   // Get EMI-related transactions from expenses
-  const emiTransactions = expenses.filter(e => 
-    e.category === 'EMI' || 
+  const emiTransactions = expenses.filter((e: any) =>
+    e.category === 'EMI' ||
     e.tags?.includes('emi') ||
     e.tags?.includes('loan') ||
     (e.description && (
       e.description.toLowerCase().includes('emi') ||
       e.description.toLowerCase().includes('loan payment')
     ))
-  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+  ).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 
-  const totalEMIPaid = emiTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const totalEMIPaid = emiTransactions.reduce((sum: number, t: any) => sum + t.amount, 0);
 
   return (
     <div className="space-y-6">
       {/* Mini Dashboard */}
       {emiTransactions.length > 0 && (
-        <Card className="p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border-2 border-orange-200 dark:border-orange-800">
+        <Card className="p-4 bg-[#1C1C1E] border border-white/5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-                <CreditCard className="w-6 h-6 text-orange-600" />
+              <div className="w-12 h-12 bg-[#0A84FF]/10 border border-[#0A84FF]/20 rounded-2xl flex items-center justify-center">
+                <CreditCard className="w-6 h-6 text-[#0A84FF]" />
               </div>
               <div>
-                <h3 className="text-orange-900 dark:text-orange-100">EMI Payments</h3>
-                <p className="text-sm text-orange-700 dark:text-orange-300">
-                  Recent loan transactions
+                <h3 className="text-label text-[9px] mb-1">Liability Flow</h3>
+                <p className="text-[10px] text-slate-500 font-bold">
+                  Institutional Debt Streams
                 </p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-right">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total EMI/Month</p>
-                <p className="text-xl text-red-600 dark:text-red-400">
-                  {CURRENCY_SYMBOLS[currency]}{totalEMI.toLocaleString()}
+                <p className="text-label text-[8px] mb-1 opacity-60">Total EMI/Month</p>
+                <p className="text-balance text-xl text-[#FF453A]">
+                  {formatCurrency(totalEMI, currency)}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Recent Payments</p>
-                <p className="text-xl text-orange-600 dark:text-orange-400">
-                  {CURRENCY_SYMBOLS[currency]}{totalEMIPaid.toLocaleString()}
+                <p className="text-label text-[8px] mb-1 opacity-60">Capital Outflow</p>
+                <p className="text-balance text-xl text-[#FF9F0A]">
+                  {formatCurrency(totalEMIPaid, currency)}
                 </p>
               </div>
             </div>
           </div>
-          
+
           {/* Recent EMI Transactions */}
-          <div className="pt-4 border-t border-orange-200 dark:border-orange-700">
-            <p className="text-xs text-orange-700 dark:text-orange-300 mb-3">Recent EMI Payments:</p>
+          <div className="pt-4 border-t border-white/5">
+            <p className="text-label text-[8px] mb-3 opacity-60">Transactional History:</p>
             <div className="space-y-2">
-              {emiTransactions.map((transaction, idx) => (
-                <div key={idx} className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-lg">
+              {emiTransactions.map((transaction: any, idx: number) => (
+                <div key={idx} className="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-white/5">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate">{transaction.description}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs font-bold text-slate-100 truncate">{transaction.description}</p>
+                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mt-1">
                       {transaction.category} • {new Date(transaction.date).toLocaleDateString()}
                     </p>
                   </div>
-                  <p className="text-sm text-red-600 whitespace-nowrap ml-3">
-                    -{CURRENCY_SYMBOLS[currency]}{transaction.amount.toLocaleString()}
+                  <p className="text-balance text-sm text-[#FF453A] whitespace-nowrap ml-3">
+                    -{formatCurrency(transaction.amount, currency)}
                   </p>
                 </div>
               ))}
@@ -334,159 +272,137 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
         </Card>
       )}
 
-      {/* Info Banner */}
-      <Card className="p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-        <div className="flex gap-3">
-          <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <h4 className="text-blue-900 dark:text-blue-100">What are Liabilities?</h4>
-            <p className="text-sm text-blue-800 dark:text-blue-200 mt-1">
-              Liabilities are institutional loans (Home, Car, Personal, Credit Card) with EMI payments. 
-              For personal money borrowed/lent to friends or family, use <strong>Personal IOUs</strong> from the + button.
-            </p>
-          </div>
+      {/* Header - Standardized Layout */}
+      <div className="flex items-center justify-between px-2">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold text-slate-100 tracking-tight truncate">Liabilities & Loans</h2>
+          <p className="text-xs text-slate-500 mt-1 truncate">Manage institutional loans and EMIs</p>
         </div>
-      </Card>
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2>Liabilities & Loans</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Track and manage all your institutional loans and EMIs
-          </p>
-        </div>
-        <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Liability
+        <Button
+          onClick={() => { resetForm(); setIsAddDialogOpen(true); }}
+          className="bg-[#0A84FF] hover:bg-[#007AFF] text-white rounded-xl h-12 px-6 border-none shadow-lg shadow-blue-600/10 flex items-center gap-2 group transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0"
+        >
+          <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
+          <span className="font-bold hidden sm:inline">Add Liability</span>
+          <span className="font-bold sm:hidden">Add</span>
         </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <TrendingDown className="w-6 h-6 text-red-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Outstanding</p>
-              <h3 className="text-red-600">{CURRENCY_SYMBOLS[currency]}{totalOutstanding.toLocaleString()}</h3>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Monthly EMI</p>
-              <h3 className="text-orange-600">{CURRENCY_SYMBOLS[currency]}{totalEMI.toLocaleString()}</h3>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Paid</p>
-              <h3 className="text-green-600">{CURRENCY_SYMBOLS[currency]}{totalPaid.toLocaleString()}</h3>
-            </div>
-          </div>
-        </Card>
-      </div>
-
       {/* Liabilities List */}
-      <Card className="p-6">
-        <h3 className="mb-4">Active Liabilities</h3>
+      <div>
+        <h3 className={`text-label text-[10px] mb-4 ${liabilities.length === 0 ? 'opacity-40' : ''}`}>Institutional Debt Portfolio</h3>
 
-        {liabilities.length === 0 ? (
-          <div className="text-center py-12">
-            <CreditCard className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600 dark:text-gray-400">No liabilities yet</p>
-            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-              Add your loans and track EMI payments
-            </p>
-            <Button className="mt-4" onClick={() => setIsAddDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Your First Liability
-            </Button>
+        {isGlobalLoading ? (
+          <div className="space-y-4">
+            {[1, 2].map((i) => (
+              <div key={i} className="p-5 bg-slate-800/20 border border-white/5 rounded-[24px] animate-pulse">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-slate-800 rounded-2xl" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-slate-800 rounded w-1/4" />
+                    <div className="h-3 bg-slate-800 rounded w-1/3" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-4 mb-6">
+                  {[1, 2, 3, 4].map((j) => (
+                    <div key={j} className="h-12 bg-slate-800/50 rounded-xl" />
+                  ))}
+                </div>
+                <div className="h-2 bg-slate-800 rounded-full w-full" />
+              </div>
+            ))}
+          </div>
+        ) : liabilities.length === 0 ? (
+          <div
+            onClick={() => setIsAddDialogOpen(true)}
+            className="group cursor-pointer p-12 bg-slate-800/10 border-2 border-dashed border-slate-700/30 rounded-[32px] hover:border-slate-600/50 hover:bg-slate-800/20 transition-all duration-300 flex flex-col items-center justify-center space-y-4"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-slate-800/50 flex items-center justify-center border border-white/5 opacity-50 group-hover:scale-105 transition-transform text-slate-500">
+              <CreditCard className="w-8 h-8" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-slate-200 font-bold text-lg">No liabilities tracked yet. Want to manage your debt flow?</h3>
+              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mt-2 font-black">Tap to Initialize Liability Tracker</p>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
             {liabilities.map((liability) => {
               const monthsPaid = calculateMonthsPaid(liability);
-              const progress = (monthsPaid / liability.tenure) * 100;
+              const progress = liability.principal > 0
+                ? ((liability.principal - liability.outstanding) / liability.principal) * 100
+                : 0;
               const typeInfo = LIABILITY_TYPES.find(t => t.value === liability.type);
 
               return (
-                <div key={liability.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                        <span className="text-xl">{typeInfo?.icon}</span>
+                <div key={liability.id} className="p-5 bg-[#1C1C1E] border border-white/5 rounded-[28px] group hover:bg-[#2C2C2E] transition-all">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-center">
+                        <span className="text-2xl">{typeInfo?.icon}</span>
                       </div>
                       <div>
-                        <h4>{liability.name}</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <h4 className="font-bold text-slate-100">{liability.name}</h4>
+                        <p className="text-label text-[10px]">
                           {typeInfo?.label.replace(/^\S+ /, '')} • {liability.interestRate}% interest
                         </p>
                       </div>
                     </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(liability)}>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(liability)} className="text-slate-400 hover:text-white hover:bg-white/5">
                         <Pencil className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(liability.id)}>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(liability.id)} className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10">
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                    <div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Principal</p>
-                      <p className="text-sm">{CURRENCY_SYMBOLS[currency]}{liability.principal.toLocaleString()}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-black/40 p-3 rounded-2xl border border-white/5">
+                      <p className="text-label text-[8px] mb-1 opacity-60">Principal</p>
+                      <p className="text-balance text-sm text-slate-200">{formatCurrency(liability.principal, currency)}</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Outstanding</p>
-                      <p className="text-sm text-red-600">{CURRENCY_SYMBOLS[currency]}{liability.outstanding.toLocaleString()}</p>
+                    <div className="bg-black/40 p-3 rounded-2xl border border-white/5">
+                      <p className="text-label text-[8px] mb-1 opacity-60">Outstanding</p>
+                      <p className="text-balance text-sm text-[#FF453A]">{formatCurrency(liability.outstanding, currency)}</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Monthly EMI</p>
-                      <p className="text-sm text-orange-600">{CURRENCY_SYMBOLS[currency]}{liability.emiAmount.toLocaleString()}</p>
+                    <div className="bg-black/40 p-3 rounded-2xl border border-white/5">
+                      <p className="text-label text-[8px] mb-1 opacity-60">Monthly EMI</p>
+                      <p className="text-balance text-sm text-[#FF9F0A]">{formatCurrency(liability.emiAmount, currency)}</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Tenure</p>
-                      <p className="text-sm">{monthsPaid} / {liability.tenure} months</p>
+                    <div className="bg-black/40 p-3 rounded-2xl border border-white/5">
+                      <p className="text-label text-[8px] mb-1 opacity-60">Tenure</p>
+                      <p className="text-balance text-sm text-slate-200">{monthsPaid} / {liability.tenure} mo</p>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
-                      <span>Repayment Progress</span>
-                      <span>{progress.toFixed(1)}%</span>
+                    <div className="flex justify-between text-label text-[8px] opacity-60">
+                      <span>Repayment Momentum</span>
+                      <span className="text-[#30D158]">{progress.toFixed(1)}%</span>
                     </div>
-                    <Progress value={progress} className="h-2" />
+                    <div className="h-1 w-full bg-black/40 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progress}%` }}
+                        className="h-full bg-gradient-to-r from-[#30D158] to-[#0A84FF]"
+                      />
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
         )}
-      </Card>
+      </div>
 
       {/* Add/Edit Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
         setIsAddDialogOpen(open);
         if (!open) resetForm();
       }}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-[#1C1C1E] border-[#38383A] text-white p-8 custom-scrollbar">
           <DialogHeader>
             <DialogTitle>{editingLiability ? 'Edit' : 'Add'} Liability</DialogTitle>
             <DialogDescription>
@@ -494,24 +410,28 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <form onSubmit={handleSubmit} className="space-y-6 mt-6">
             <div>
-              <Label>Liability Name</Label>
+              <Label htmlFor="liability-name" className="text-label text-[10px] mb-3 block">Liability Name</Label>
               <Input
+                id="liability-name"
+                name="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g., Home Loan - HDFC"
+                className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white placeholder:text-slate-600 focus:border-[#0A84FF]/50 transition-colors"
                 required
+                autoComplete="off"
               />
             </div>
 
             <div>
-              <Label>Type</Label>
+              <Label htmlFor="liability-type" className="text-label text-[10px] mb-3 block">Debt Category</Label>
               <Select value={formData.type} onValueChange={(value: any) => setFormData({ ...formData, type: value })}>
-                <SelectTrigger>
+                <SelectTrigger id="liability-type" name="type" className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-[#1C1C1E] border-[#38383A] text-white">
                   {LIABILITY_TYPES.map((type) => (
                     <SelectItem key={type.value} value={type.value}>
                       {type.label}
@@ -523,75 +443,98 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Principal Amount</Label>
+                <Label htmlFor="liability-principal" className="text-label text-[10px] mb-3 block">Principal Amount</Label>
                 <NumberInput
+                  id="liability-principal"
+                  name="principal"
                   value={formData.principal}
                   onChange={(value) => setFormData({ ...formData, principal: value })}
+                  className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
                   placeholder="0.00"
                   required
+                  autoComplete="off"
                 />
               </div>
               <div>
-                <Label>Outstanding</Label>
+                <Label htmlFor="liability-outstanding" className="text-label text-[10px] mb-3 block">Outstanding</Label>
                 <NumberInput
+                  id="liability-outstanding"
+                  name="outstanding"
                   value={formData.outstanding}
                   onChange={(value) => setFormData({ ...formData, outstanding: value })}
+                  className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
                   placeholder="0.00"
                   required
+                  autoComplete="off"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Interest Rate (%)</Label>
+                <Label htmlFor="liability-rate" className="text-label text-[10px] mb-3 block">Interest Rate (%)</Label>
                 <NumberInput
+                  id="liability-rate"
+                  name="interestRate"
                   value={formData.interestRate}
                   onChange={(value) => setFormData({ ...formData, interestRate: value })}
+                  className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
                   placeholder="0.00"
                   required
+                  autoComplete="off"
                 />
               </div>
               <div>
-                <Label>Monthly EMI</Label>
+                <Label htmlFor="liability-emi" className="text-label text-[10px] mb-3 block">Monthly EMI</Label>
                 <NumberInput
+                  id="liability-emi"
+                  name="emiAmount"
                   value={formData.emiAmount}
                   onChange={(value) => setFormData({ ...formData, emiAmount: value })}
+                  className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
                   placeholder="0.00"
                   required
+                  autoComplete="off"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Start Date</Label>
+                <Label htmlFor="liability-start-date" className="text-label text-[10px] mb-3 block">Start Date</Label>
                 <Input
+                  id="liability-start-date"
+                  name="startDate"
                   type="date"
                   value={formData.startDate}
                   onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
                   required
+                  autoComplete="off"
                 />
               </div>
               <div>
-                <Label>Tenure</Label>
+                <Label htmlFor="liability-tenure" className="text-label text-[10px] mb-3 block">Tenure</Label>
                 <div className="flex gap-2">
                   <Input
+                    id="liability-tenure"
+                    name="tenure"
                     type="number"
                     value={formData.tenure}
                     onChange={(e) => setFormData({ ...formData, tenure: e.target.value })}
                     placeholder={formData.tenureUnit === 'years' ? '5' : '60'}
                     required
-                    className="flex-1"
+                    className="flex-1 bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
+                    autoComplete="off"
                   />
-                  <Select 
-                    value={formData.tenureUnit} 
+                  <Select
+                    value={formData.tenureUnit}
                     onValueChange={(value: 'months' | 'years') => setFormData({ ...formData, tenureUnit: value })}
                   >
-                    <SelectTrigger className="w-[110px]">
+                    <SelectTrigger id="liability-tenure-unit" name="tenureUnit" className="w-[110px] bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-[#1C1C1E] border-[#38383A] text-white">
                       <SelectItem value="months">Months</SelectItem>
                       <SelectItem value="years">Years</SelectItem>
                     </SelectContent>
@@ -600,23 +543,28 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
               </div>
             </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={calculateLoanDetails} className="flex-1">
+            <div className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={calculateLoanDetails}
+                className="w-full h-12 rounded-xl border-[#38383A] text-slate-400 hover:bg-[#0A84FF]/10 hover:text-[#0A84FF] transition-all"
+              >
                 <Calculator className="w-4 h-4 mr-2" />
-                Calculate EMI & Outstanding
+                Auto-Calculate EMI & Outstanding
               </Button>
             </div>
 
             {accounts.length > 0 && (
               <div>
-                <Label>Linked Account (Optional)</Label>
+                <Label htmlFor="liability-account" className="text-label text-[10px] mb-3 block">Linked Liquidity Node (Optional)</Label>
                 <Select value={formData.accountId} onValueChange={(value) => setFormData({ ...formData, accountId: value })}>
-                  <SelectTrigger>
+                  <SelectTrigger id="liability-account" name="accountId" className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white">
                     <SelectValue placeholder="Select account" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {accounts.map((account) => (
+                  <SelectContent className="bg-[#1C1C1E] border-[#38383A] text-white">
+                    <SelectItem value="none">Standalone (No Linking)</SelectItem>
+                    {accounts.map((account: any) => (
                       <SelectItem key={account.id} value={account.id}>
                         {account.icon} {account.name}
                       </SelectItem>
@@ -626,12 +574,20 @@ export function LiabilityTab({ currency, userId, expenses = [], incomes = [], ac
               </div>
             )}
 
-            <div className="flex gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1">
+            <div className="flex gap-3 pt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddDialogOpen(false)}
+                className="flex-1 h-12 rounded-xl border-[#38383A] text-slate-400 hover:bg-white/5 hover:text-white"
+              >
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1">
-                {editingLiability ? 'Update' : 'Add'} Liability
+              <Button
+                type="submit"
+                className="flex-1 h-12 rounded-xl bg-[#0A84FF] hover:bg-[#007AFF] text-white border-none shadow-lg shadow-blue-600/10 font-bold"
+              >
+                {editingLiability ? 'Update' : 'Initialize'} Liability
               </Button>
             </div>
           </form>

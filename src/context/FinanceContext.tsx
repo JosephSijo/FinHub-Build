@@ -11,11 +11,14 @@ import {
     Account,
     Notification,
     Investment,
-    RecurringTransaction,
     CURRENCY_SYMBOLS,
-    Achievement
+    Liability,
+    RecurringTransaction,
+    AuthUser
 } from '../types';
 import { checkAchievements, getAchievement } from '../utils/achievements';
+import { generateGurujiInsights, createInsightNotification } from '../utils/insights';
+import { autoCategorize } from '../utils/autoCategorize';
 
 // Constants for LocalStorage keys
 const STORAGE_KEYS = {
@@ -26,30 +29,45 @@ const STORAGE_KEYS = {
     GOALS: 'finbase_goals',
     ACCOUNTS: 'finbase_accounts',
     INVESTMENTS: 'finbase_investments',
-    LIABILITIES: 'finbase_liabilities', // Added based on App.tsx usage
+    LIABILITIES: 'finbase_liabilities',
     NOTIFICATIONS: 'finbase_notifications',
-    EMERGENCY_FUND: 'finbase_emergency_fund'
+    EMERGENCY_FUND: 'finbase_emergency_fund',
+    RECURRING: 'finbase_recurring',
+    AUTH: 'finbase_auth'
 };
 
 interface FinanceContextType {
     // State
     userId: string;
     settings: UserSettings;
+    currency: string; // Add currency directly for easier access
     expenses: Expense[];
     incomes: Income[];
     debts: Debt[];
     goals: Goal[];
     accounts: Account[];
     investments: Investment[];
-    liabilities: any[]; // Using any as defined in App.tsx originally, but should type this properly later
+    liabilities: Liability[];
+    recurringTransactions: RecurringTransaction[];
     notifications: Notification[];
     emergencyFundAmount: number;
     isLoading: boolean;
     isRefreshing: boolean;
 
+    // Auth State
+    authStatus: 'guest' | 'authenticating' | 'authenticated';
+    currentUser: AuthUser | null;
+    isAwaitingPin: boolean;
+
     // Actions
     refreshData: () => Promise<void>;
     updateSettings: (updates: Partial<UserSettings>) => Promise<void>;
+
+    // Auth Actions
+    checkIdentity: (mobile: string) => Promise<boolean>;
+    login: (pin: string) => Promise<boolean>;
+    signup: (mobile: string, pin: string, name: string) => Promise<boolean>;
+    logout: () => void;
 
     // CRUD Actions
     createExpense: (data: any) => Promise<void>;
@@ -73,11 +91,40 @@ interface FinanceContextType {
     updateAccount: (id: string, data: any) => Promise<void>;
     deleteAccount: (id: string) => Promise<void>;
 
+    // Liabilities
+    createLiability: (data: Omit<Liability, 'id'>) => Promise<void>;
+    updateLiability: (id: string, data: Partial<Liability>) => Promise<void>;
+    deleteLiability: (id: string) => Promise<void>;
+
+    // Investments
+    createInvestment: (data: any, sourceAccountId?: string) => Promise<void>;
+    updateInvestment: (id: string, data: any) => Promise<void>;
+    deleteInvestment: (id: string) => Promise<void>;
+
+    // Recurring
+    createRecurringTransaction: (data: any) => Promise<void>;
+    deleteRecurringTransaction: (id: string) => Promise<void>;
+    processRecurringTransactions: () => Promise<void>;
+
     setEmergencyFundAmount: (amount: number | ((prev: number) => number)) => void; // Allow direct setting for now to match App.tsx usage
     setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>; // Expose setter for now
 
     // Helpers
     applyTheme: (theme: "light" | "dark" | "system") => void;
+
+    // Fund Allocation
+    isFundAllocationOpen: boolean;
+    fundAllocationType: 'goal' | 'emergency';
+    openFundAllocation: (type: 'goal' | 'emergency') => void;
+    closeFundAllocation: () => void;
+    performFundAllocation: (data: {
+        accountId: string;
+        destinationId: string;
+        amount: number;
+        destinationType: 'goal' | 'emergency';
+    }) => Promise<void>;
+    deductFromAccount: (accountId: string, amount: number) => Promise<void>;
+    transferFunds: (sourceId: string, destinationId: string, amount: number) => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -103,6 +150,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         name: "",
         photoURL: "",
         notificationsEnabled: false,
+        roundUpEnabled: true,
+        aiProvider: "openai",
     });
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [incomes, setIncomes] = useState<Income[]>([]);
@@ -110,9 +159,57 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [goals, setGoals] = useState<Goal[]>([]);
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [investments, setInvestments] = useState<Investment[]>([]);
-    const [liabilities, setLiabilities] = useState<any[]>([]);
+    const [liabilities, setLiabilities] = useState<Liability[]>([]);
+    const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [emergencyFundAmount, setEmergencyFundAmount] = useState(0);
+
+    // Auth State
+    const [authStatus, setAuthStatus] = useState<'guest' | 'authenticating' | 'authenticated'>('guest');
+    const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+    const [isAwaitingPin, setIsAwaitingPin] = useState(false);
+    const [pendingMobile, setPendingMobile] = useState('');
+
+    // Pre-defined users for Beta/Demo
+    const DEMO_USERS = [
+        {
+            mobile: '9447147230',
+            pin: '2255',
+            name: 'tin2mon FinHub Node // 0x50.3',
+            userId: 'tin2mon-prod-001'
+        }
+    ];
+
+    // Notification Helper with Deduplication and Pruning
+    const addNotifications = (newNotifs: Notification | Notification[]) => {
+        const toAdd = Array.isArray(newNotifs) ? newNotifs : [newNotifs];
+
+        setNotifications(prev => {
+            const filtered = toAdd.filter(notif => {
+                // Deduplicate by ID
+                const idExists = prev.some(p => p.id === notif.id);
+                if (idExists) return false;
+
+                // Deduplicate by Content (avoid spamming similar insights/alerts in a short window)
+                const similarExists = prev.some(p =>
+                    p.type === notif.type &&
+                    p.message === notif.message &&
+                    !p.read &&
+                    (new Date().getTime() - new Date(p.timestamp).getTime() < 1000 * 60 * 60 * 24) // 24h window
+                );
+                return !similarExists;
+            });
+
+            if (filtered.length === 0) return prev;
+
+            // Merge, Sort by timestamp descending, and Prune to top 100
+            const combined = [...filtered, ...prev].sort((a, b) =>
+                new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+
+            return combined.slice(0, 100);
+        });
+    };
 
     // Check for new achievements
     useEffect(() => {
@@ -150,15 +247,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     if (achievement) {
                         // Create notification
                         const notification: Notification = {
-                            id: `notif_${Date.now()}_${achievementId}`,
+                            id: `notif_${achievementId}`,
                             type: 'achievement',
+                            priority: 'low',
+                            category: 'achievements',
                             title: 'Achievement Unlocked!',
                             message: `${achievement.icon} ${achievement.name}`,
                             timestamp: new Date(),
                             read: false,
                             achievementId: achievementId
                         };
-                        setNotifications((prev: Notification[]) => [notification, ...prev]);
+                        addNotifications(notification);
 
                         toast.success(
                             `Achievement Unlocked: ${achievement.icon} ${achievement.name}!`,
@@ -174,6 +273,123 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     unlockedAchievements: [...settings.unlockedAchievements, ...newAchievements],
                 });
             }
+
+            // Check for Guruji Insights (Spike detection)
+            // Limit to once per session or just check on significant changes
+            // For now, we'll check on expense changes and deduplicate by content roughly (or just rely on the user clearing them)
+            // A simple refinement: check if we already have a recent unread insight about the same thing? 
+            // For MVP, just generating them is fine, but let's avoid duplicates in the same batch.
+
+            const insightMessages = generateGurujiInsights({ expenses, goals, userName: settings.name || 'Friend' });
+
+            if (insightMessages.length > 0) {
+                const newInsightNotifs: Notification[] = [];
+
+                insightMessages.forEach(msg => {
+                    const notif = createInsightNotification(msg);
+                    notif.priority = 'low';
+                    notif.category = 'insights';
+                    newInsightNotifs.push(notif);
+                    toast(notif.title, { description: notif.message, icon: '🧘' });
+                });
+
+                if (newInsightNotifs.length > 0) {
+                    addNotifications(newInsightNotifs);
+                }
+            }
+
+            checkSmartDues();
+        };
+
+        const checkSmartDues = () => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // 1. Calculate Liquid Balance (Bank/Cash - Goal/Emergency Reservations)
+            const totalLiquidBank = accounts.reduce((sum, acc) => sum + (acc.type === 'bank' || acc.type === 'cash' ? acc.balance : 0), 0);
+            const totalReserved = goals.reduce((sum, g) => sum + g.currentAmount, 0) + emergencyFundAmount;
+            const availableLiquidity = Math.max(0, totalLiquidBank - totalReserved);
+
+            const upcomingDues: { name: string, amount: number, dueDate: Date, type: string }[] = [];
+
+            // 2. Scan Liabilities (Loans)
+            liabilities.forEach(l => {
+                const start = new Date(l.startDate);
+                // Simple assumption: due on the same day as startDate every month
+                const dueThisMonth = new Date(today.getFullYear(), today.getMonth(), start.getDate());
+
+                // If it's already passed this month, look at next month
+                if (dueThisMonth < today) {
+                    dueThisMonth.setMonth(dueThisMonth.getMonth() + 1);
+                }
+
+                const diffDays = Math.ceil((dueThisMonth.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+                if (diffDays <= 7) {
+                    upcomingDues.push({ name: l.name, amount: l.emiAmount, dueDate: dueThisMonth, type: 'EMI' });
+                }
+            });
+
+            // 3. Scan Recurring Transactions (Subscriptions/Bills)
+            recurringTransactions.forEach(r => {
+                if (r.type === 'expense') {
+                    const start = new Date(r.startDate);
+                    let nextDue: Date;
+
+                    if (r.frequency === 'monthly') {
+                        nextDue = new Date(today.getFullYear(), today.getMonth(), start.getDate());
+                        if (nextDue < today) nextDue.setMonth(nextDue.getMonth() + 1);
+                    } else if (r.frequency === 'weekly') {
+                        const daysUntilDue = (start.getDay() - today.getDay() + 7) % 7;
+                        nextDue = new Date(today.getTime() + daysUntilDue * 24 * 60 * 60 * 1000);
+                        if (nextDue < today) nextDue.setDate(nextDue.getDate() + 7);
+                    } else {
+                        // Simplification for daily/yearly
+                        return;
+                    }
+
+                    const diffDays = Math.ceil((nextDue.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    if (diffDays <= 7) {
+                        upcomingDues.push({ name: r.description || 'Subscription', amount: r.amount, dueDate: nextDue, type: 'Bill' });
+                    }
+                }
+            });
+
+            // 4. Generate Smart Alerts
+            upcomingDues.forEach(due => {
+                const isLiquidityBreach = availableLiquidity < due.amount;
+                const daysLeft = Math.ceil((due.dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+                if (isLiquidityBreach && daysLeft <= 3) {
+                    // CRITICAL SMART ALERT
+                    const alert: Notification = {
+                        id: `smart_breach_${due.name}_${due.dueDate.toISOString().split('T')[0]}`,
+                        type: 'alert',
+                        priority: 'high',
+                        category: 'reminders',
+                        title: 'Liquid Stability Warning',
+                        message: `Critical: Your '${due.name}' due on ${due.dueDate.toLocaleDateString()} (₹${due.amount}) exceeds current liquid cash (₹${availableLiquidity}). Clear assets or increase bank balance immediately.`,
+                        timestamp: new Date(),
+                        read: false
+                    };
+                    addNotifications(alert);
+                    toast.error(alert.title, { description: alert.message, duration: 10000 });
+                } else if (daysLeft <= 1) {
+                    // Standard Reminder
+                    const reminder: Notification = {
+                        id: `reminder_${due.name}_${due.dueDate.toISOString().split('T')[0]}`,
+                        type: 'reminder',
+                        priority: 'medium',
+                        category: 'reminders',
+                        title: `${due.type} Due Soon`,
+                        message: `Reminder: '${due.name}' payment of ₹${due.amount} is due tomorrow (${due.dueDate.toLocaleDateString()}).`,
+                        timestamp: new Date(),
+                        read: false
+                    };
+                    addNotifications(reminder);
+                    toast.info(reminder.title, { description: reminder.message });
+                }
+            });
         };
 
         checkForAchievements();
@@ -201,6 +417,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     useEffect(() => localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts)), [accounts]);
     useEffect(() => localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify(investments)), [investments]);
     useEffect(() => localStorage.setItem(STORAGE_KEYS.LIABILITIES, JSON.stringify(liabilities)), [liabilities]);
+    useEffect(() => localStorage.setItem(STORAGE_KEYS.RECURRING, JSON.stringify(recurringTransactions)), [recurringTransactions]);
     useEffect(() => localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications)), [notifications]);
     useEffect(() => localStorage.setItem(STORAGE_KEYS.EMERGENCY_FUND, JSON.stringify(emergencyFundAmount)), [emergencyFundAmount]);
 
@@ -239,10 +456,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (storedLiabilities) setLiabilities(JSON.parse(storedLiabilities));
 
             const storedNotifications = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
-            if (storedNotifications) setNotifications(JSON.parse(storedNotifications));
+            if (storedNotifications) {
+                const parsed: Notification[] = JSON.parse(storedNotifications);
+                // Deduplicate and Prune on load
+                const unique = parsed.filter((v, i, a) => a.findIndex(t => t.id === v.id || (t.message === v.message && t.type === v.type)) === i);
+                setNotifications(unique.slice(0, 100));
+            }
 
             const storedEmergencyFund = localStorage.getItem(STORAGE_KEYS.EMERGENCY_FUND);
             if (storedEmergencyFund) setEmergencyFundAmount(JSON.parse(storedEmergencyFund));
+
+            const storedRecurring = localStorage.getItem(STORAGE_KEYS.RECURRING);
+            if (storedRecurring) setRecurringTransactions(JSON.parse(storedRecurring));
 
         } catch (e) {
             console.error("Error loading specific local data:", e);
@@ -251,7 +476,35 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // 2. Fetch from API (Sync)
         await fetchFromApi();
 
+        // 3. Subscription Migration (One-time or periodic scan)
+        const hasMigrationRun = localStorage.getItem('finbase_subscription_migration_v1');
+        if (!hasMigrationRun) {
+            runCategorizationMigration();
+            localStorage.setItem('finbase_subscription_migration_v1', 'true');
+        }
+
         setIsLoading(false);
+    };
+
+    const runCategorizationMigration = () => {
+        setExpenses(prev => {
+            let updated = false;
+            const next = prev.map(e => {
+                const genericCategories = ['other', 'bills & utilities', 'entertainment', '', undefined];
+                if (genericCategories.includes(e.category?.toLowerCase())) {
+                    const suggestion = autoCategorize(e.description);
+                    if (suggestion && suggestion.category === 'Subscription' && e.category !== 'Subscription') {
+                        updated = true;
+                        return { ...e, category: 'Subscription' };
+                    }
+                }
+                return e;
+            });
+            if (updated) {
+                toast.info("Intelligence protocol active: Categorized existing service providers as Subscriptions.");
+            }
+            return next;
+        });
     };
 
     const fetchFromApi = async () => {
@@ -270,20 +523,29 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 debtsRes,
                 goalsRes,
                 liabilitiesRes,
-                investmentsRes
+                investmentsRes,
+                recurringRes
             ] = await Promise.all([
-                api.getSettings(userId).catch(e => ({ success: false })),
-                api.getAccounts(userId).catch(e => ({ success: false })),
-                api.getExpenses(userId).catch(e => ({ success: false })),
-                api.getIncomes(userId).catch(e => ({ success: false })),
-                api.getDebts(userId).catch(e => ({ success: false })),
-                api.getGoals(userId).catch(e => ({ success: false })),
-                api.getLiabilities(userId).catch(e => ({ success: false })),
-                api.getInvestments(userId).catch(e => ({ success: false })),
+                api.getSettings(userId).catch(() => ({ success: false, settings: undefined })),
+                api.getAccounts(userId).catch(() => ({ success: false, accounts: [] })),
+                api.getExpenses(userId).catch(() => ({ success: false, expenses: [] })),
+                api.getIncomes(userId).catch(() => ({ success: false, incomes: [] })),
+                api.getDebts(userId).catch(() => ({ success: false, debts: [] })),
+                api.getGoals(userId).catch(() => ({ success: false, goals: [] })),
+                api.getLiabilities(userId).catch(() => ({ success: false, liabilities: [] })),
+                api.getInvestments(userId).catch(() => ({ success: false, investments: [] })),
+                api.getRecurring(userId).catch(() => ({ success: false, recurring: [] })),
             ]);
 
-            if (settingsRes.success) {
-                setSettings(settingsRes.settings);
+            if (settingsRes.success && settingsRes.settings) {
+                // Merge server settings with local settings to preserve local-only fields like aiProvider and apiKeys
+                setSettings(prev => ({
+                    ...prev,
+                    ...settingsRes.settings,
+                    // Specifically preserve these if missing from server response
+                    aiProvider: settingsRes.settings.aiProvider || prev.aiProvider,
+                    apiKeys: { ...prev.apiKeys, ...settingsRes.settings.apiKeys }
+                }));
                 applyTheme(settingsRes.settings.theme);
             }
             if (accountsRes.success) setAccounts(accountsRes.accounts || []);
@@ -292,7 +554,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (debtsRes.success) setDebts(debtsRes.debts || []);
             if (goalsRes.success) setGoals(goalsRes.goals || []);
             if (liabilitiesRes.success) setLiabilities(liabilitiesRes.liabilities || []);
-            if (investmentsRes.success && investmentsRes.investments) setInvestments(investmentsRes.investments);
+            if (investmentsRes.success) setInvestments(investmentsRes.investments || []);
+            if (recurringRes.success) setRecurringTransactions(recurringRes.recurring || []);
 
             toast.success("Sync complete");
 
@@ -319,6 +582,100 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     // ------------------------------------------------------------------
+    // Auth Actions
+    // ------------------------------------------------------------------
+
+    const checkIdentity = async (mobile: string) => {
+        setPendingMobile(mobile);
+        // Simulate API check
+        const isExistingUser = DEMO_USERS.some(u => u.mobile === mobile) ||
+            localStorage.getItem(`finbase_user_${mobile}`) !== null;
+
+        setIsAwaitingPin(true);
+        return isExistingUser;
+    };
+
+    const login = async (pin: string) => {
+        // Authenticating state triggers LoadingSprite
+        setAuthStatus('authenticating');
+
+        // Artificial delay for Loading Sprite showcase
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        const demoUser = DEMO_USERS.find(u => u.mobile === pendingMobile && u.pin === pin);
+
+        let authenticatedUser: AuthUser | null = null;
+
+        if (demoUser) {
+            authenticatedUser = {
+                id: demoUser.userId,
+                mobile: demoUser.mobile,
+                name: demoUser.name
+            };
+        } else {
+            const storedUser = localStorage.getItem(`finbase_user_${pendingMobile}`);
+            if (storedUser) {
+                const parsed = JSON.parse(storedUser);
+                if (parsed.pin === pin) {
+                    authenticatedUser = {
+                        id: parsed.userId,
+                        mobile: parsed.mobile,
+                        name: parsed.name
+                    };
+                }
+            }
+        }
+
+        if (authenticatedUser) {
+            setCurrentUser(authenticatedUser);
+            localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(authenticatedUser));
+            setAuthStatus('authenticated');
+            setIsAwaitingPin(false);
+            return true;
+        } else {
+            setAuthStatus('guest'); // Reset to guest on failure
+            return false;
+        }
+    };
+
+    const signup = async (mobile: string, pin: string, name: string) => {
+        setAuthStatus('authenticating');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        const newUser: AuthUser & { pin: string } = {
+            id: `user_${Date.now()}`,
+            mobile,
+            name,
+            pin
+        };
+
+        localStorage.setItem(`finbase_user_${mobile}`, JSON.stringify(newUser));
+        const authUser: AuthUser = { id: newUser.id, mobile: newUser.mobile, name: newUser.name };
+        setCurrentUser(authUser);
+        localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(authUser));
+        setAuthStatus('authenticated');
+        setIsAwaitingPin(false);
+        return true;
+    };
+
+    const logout = () => {
+        setCurrentUser(null);
+        setAuthStatus('guest');
+        setIsAwaitingPin(false);
+        setPendingMobile('');
+        localStorage.removeItem(STORAGE_KEYS.AUTH);
+    };
+
+    // Auto-login from storage
+    useEffect(() => {
+        const storedAuth = localStorage.getItem(STORAGE_KEYS.AUTH);
+        if (storedAuth) {
+            setCurrentUser(JSON.parse(storedAuth));
+            setAuthStatus('authenticated');
+        }
+    }, []);
+
+    // ------------------------------------------------------------------
     // Actions
     // ------------------------------------------------------------------
 
@@ -331,7 +688,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
             const response = await api.updateSettings(userId, updates);
             if (response.success) {
-                setSettings(response.settings); // Confirm with server state
+                // Merge response with existing state to avoid losing local-only fields
+                setSettings(prev => ({
+                    ...prev,
+                    ...response.settings,
+                    aiProvider: response.settings.aiProvider || prev.aiProvider,
+                    apiKeys: { ...prev.apiKeys, ...response.settings.apiKeys }
+                }));
             } else {
                 throw new Error(response.error);
             }
@@ -344,9 +707,199 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // --- Expenses ---
     const createExpense = async (data: any) => {
         try {
-            const response = await api.createExpense(userId, data);
+            // 1. Calculate Available to Spend (Global Check)
+            // Re-calculate strictly to ensure latest state
+            const totalBankBalance = accounts.reduce((sum, acc) => sum + (acc.type !== 'credit_card' ? acc.balance : 0), 0);
+            const shadowWalletTotal = goals.reduce((sum, g) => sum + g.currentAmount, 0) + emergencyFundAmount;
+
+            // Calculate recurring commitments (simplified for now: sum of EMI + assuming some recurring ops)
+            //Ideally this comes from a hook, but calculating inline for atomicity
+            const totalCommitments = liabilities.reduce((sum, l) => sum + l.emiAmount, 0);
+
+            const availableToSpend = Math.max(0, totalBankBalance - shadowWalletTotal - totalCommitments);
+
+            let expenseAmount = data.amount;
+
+            // LEAKAGE PROTOCOL
+            if (expenseAmount > availableToSpend) {
+                const deficit = expenseAmount - availableToSpend;
+                console.warn(`⚠️ Leakage Detected! Deficit: ${deficit}. Initiating Shadow Wallet Protocol.`);
+
+                let remainingDeficit = deficit;
+                const assetsToDrain: { id: string, type: 'goal' | 'emergency', currentAmount: number, priority: number, name: string }[] = [];
+
+                // 2. Identify and Sort Liquid Assets
+                // Priority: 1. Growth (Drain First), 2. Stability, 3. Protection (Drain Last)
+                goals.forEach(g => {
+                    const type = g.type || 'growth';
+                    let priority = 1; // Default/Growth
+                    if (type === 'stability') priority = 2;
+                    if (type === 'protection') priority = 3;
+
+                    if (g.currentAmount > 0) {
+                        assetsToDrain.push({
+                            id: g.id,
+                            type: 'goal',
+                            currentAmount: g.currentAmount,
+                            priority,
+                            name: g.name
+                        });
+                    }
+                });
+
+                if (emergencyFundAmount > 0) {
+                    assetsToDrain.push({
+                        id: 'emergency-fund',
+                        type: 'emergency',
+                        currentAmount: emergencyFundAmount,
+                        priority: 3, // Protection/Highest Importance -> Drain Last
+                        name: 'Emergency Fund'
+                    });
+                }
+
+                // Sort: Drain lower priority (Start of array) first. 
+                // Wait... Requirement: "Subtract from Growth... then Stability... then Protection"
+                // So Growth is "First to be sacrificed".
+                // Priority 1 (Growth) < Priority 3 (Protection).
+                assetsToDrain.sort((a, b) => a.priority - b.priority);
+
+                // 3. Drain Logic
+                const updatesToPerform: Promise<any>[] = [];
+                const notificationsToSend: Notification[] = [];
+
+                for (const asset of assetsToDrain) {
+                    if (remainingDeficit <= 0) break;
+
+                    const amountToTake = Math.min(asset.currentAmount, remainingDeficit);
+                    remainingDeficit -= amountToTake;
+
+                    if (asset.type === 'goal') {
+                        const newAmount = asset.currentAmount - amountToTake;
+                        // Determine new status: if taking anything, it's leaking.
+                        updatesToPerform.push(updateGoal(asset.id, {
+                            currentAmount: newAmount,
+                            status: 'leaking'
+                        }));
+
+                        // Check if we already notified about this wallet today? 
+                        // Simplified: Just add notification now, debounce locally if needed.
+                        notificationsToSend.push({
+                            id: `leak_${asset.id}_${new Date().toISOString().split('T')[0]}`, // ID based on day
+                            type: 'alert',
+                            priority: 'medium',
+                            category: 'transactions',
+                            title: 'Shadow Wallet Leakage',
+                            message: `₹${amountToTake} spent reduced your '${asset.name}' reserve.`,
+                            timestamp: new Date(),
+                            read: false
+                        });
+
+                    } else if (asset.type === 'emergency') {
+                        updatesToPerform.push(Promise.resolve(setEmergencyFundAmount(prev => prev - amountToTake))); // Local update wrapper
+                        // Also persist to storage? updateGoal handles it, but emergency fund is raw state.
+                        // We manually trigger the storage effect by setting state.
+
+                        notificationsToSend.push({
+                            id: `leak_emergency_${new Date().toISOString().split('T')[0]}`, // ID based on day
+                            type: 'alert',
+                            priority: 'medium',
+                            category: 'transactions',
+                            title: 'Emergency Fund Alert',
+                            message: `Warning: ₹${amountToTake} withdrawn from Emergency Fund to cover spending.`,
+                            timestamp: new Date(),
+                            read: false
+                        });
+                    }
+                }
+
+                // Execute Drains
+                await Promise.all(updatesToPerform);
+
+                // Send Notifications (Unique only)
+                if (notificationsToSend.length > 0) {
+                    addNotifications(notificationsToSend);
+                    notificationsToSend.forEach(n => toast.error(n.title, { description: n.message }));
+                }
+            }
+
+            // 4. Credit Card Interaction Logic
+            const targetAccount = accounts.find(a => a.id === data.accountId);
+            let processedData = { ...data };
+
+            if (targetAccount?.type === 'credit_card') {
+                // Calculate Service Charges
+                const serviceChargeRate = targetAccount.serviceChargePercentage || 0;
+                if (serviceChargeRate > 0) {
+                    const charge = (data.amount * serviceChargeRate) / 100;
+                    processedData.serviceChargeAmount = charge;
+                    // Note: We don't automatically add charge to amount here, 
+                    // we just track it. The user might want it separate.
+                    console.log(`Credit Service Charge: ${charge}`);
+                }
+
+                // Safe Limit Monitoring
+                const creditLimit = targetAccount.creditLimit || 0;
+                const safePercentage = targetAccount.safeLimitPercentage || 30; // Default to 30% if not set
+                const safeLimit = (creditLimit * safePercentage) / 100;
+
+                // Assuming account.balance for CC represents current usage (spent amount)
+                const currentUsage = Math.abs(targetAccount.balance);
+                const projectedUsage = currentUsage + data.amount;
+
+                if (projectedUsage > safeLimit && creditLimit > 0) {
+                    if (!data.isIncomeGenerating) {
+                        toast.warning("High Interest Risk Detected", {
+                            description: `This transaction puts your CC usage at ${((projectedUsage / creditLimit) * 100).toFixed(1)}%, exceeding your ${safePercentage}% safe limit with no income-justification.`,
+                            duration: 6000
+                        });
+
+                        // Create a system notification for the breach
+                        const breachNotif: Notification = {
+                            id: `cc_limit_${targetAccount.id}_${new Date().toISOString().split('T')[0]}`, // Daily breach limit
+                            type: 'alert',
+                            priority: 'medium',
+                            category: 'transactions',
+                            title: 'Credit Stability Breach',
+                            message: `Card '${targetAccount.name}' usage protocol exceeded ${safePercentage}% threshold. Avoid non-essential outflow.`,
+                            timestamp: new Date(),
+                            read: false
+                        };
+                        addNotifications(breachNotif);
+                    } else {
+                        toast.info("Strategic Credit Utilization", {
+                            description: "Limit exceeded, but marked as income-generating. Proceed with caution."
+                        });
+                    }
+                }
+            }
+
+            // 5. Subscription Auto-Detect (Future Entries Protection)
+            if (!processedData.category || processedData.category === 'Other') {
+                const suggestion = autoCategorize(processedData.description);
+                if (suggestion && suggestion.category === 'Subscription') {
+                    processedData.category = 'Subscription';
+                    processedData.tags = Array.from(new Set([...(processedData.tags || []), 'auto-detected']));
+                }
+            }
+
+            // 6. Proceed with Expense Creation (Normal Flow)
+            const response = await api.createExpense(userId, processedData);
             if (response.success) {
                 setExpenses(prev => [...prev, response.expense]);
+
+                // Update account balance
+                if (targetAccount) {
+                    const balanceChange = data.amount + (processedData.serviceChargeAmount || 0);
+                    // For Credit Cards: balance represents usage (debt), so we add the expense amount.
+                    // For Bank/Cash: balance represents current funds, so we subtract the expense amount.
+                    const newBalance = targetAccount.type === 'credit_card'
+                        ? targetAccount.balance + balanceChange
+                        : targetAccount.balance - balanceChange;
+
+                    await updateAccount(targetAccount.id, {
+                        balance: newBalance
+                    });
+                }
 
                 if (data.isRecurring) {
                     const recurringData = {
@@ -383,6 +936,30 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
             const response = await api.updateExpense(userId, id, data);
             if (response.success) {
+                const oldExpense = expenses.find(e => e.id === id);
+                if (oldExpense) {
+                    // 1. Reverse old expense effect
+                    const oldAccount = accounts.find(a => a.id === oldExpense.accountId);
+                    if (oldAccount) {
+                        const amount = oldExpense.amount + (oldExpense.serviceChargeAmount || 0);
+                        const oldBalance = oldAccount.type === 'credit_card'
+                            ? oldAccount.balance - amount
+                            : oldAccount.balance + amount;
+                        await updateAccount(oldAccount.id, { balance: oldBalance });
+                    }
+
+                    // 2. Apply new expense effect (using latest state of accounts after reversal)
+                    // Note: We need to find the account again or use the updated response accountId
+                    const newExpense = response.expense;
+                    const newAccount = accounts.find(a => a.id === newExpense.accountId);
+                    if (newAccount) {
+                        const amount = newExpense.amount + (newExpense.serviceChargeAmount || 0);
+                        const newBalance = newAccount.type === 'credit_card'
+                            ? newAccount.balance + amount
+                            : newAccount.balance - amount;
+                        await updateAccount(newAccount.id, { balance: newBalance });
+                    }
+                }
                 setExpenses(prev => prev.map(e => e.id === id ? response.expense : e));
                 toast.success("Expense updated");
             }
@@ -397,6 +974,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
             const response = await api.deleteExpense(userId, id);
             if (response.success) {
+                const expense = expenses.find(e => e.id === id);
+                if (expense) {
+                    const targetAccount = accounts.find(a => a.id === expense.accountId);
+                    if (targetAccount) {
+                        const amount = expense.amount + (expense.serviceChargeAmount || 0);
+                        const newBalance = targetAccount.type === 'credit_card'
+                            ? targetAccount.balance - amount // Restore credit card limit (reduce usage)
+                            : targetAccount.balance + amount; // Restore bank balance
+
+                        await updateAccount(targetAccount.id, { balance: newBalance });
+                    }
+                }
                 setExpenses(prev => prev.filter(e => e.id !== id));
                 toast.success("Expense deleted");
             }
@@ -412,6 +1001,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             const response = await api.createIncome(userId, data);
             if (response.success) {
                 setIncomes(prev => [...prev, response.income]);
+
+                // Update account balance
+                const targetAccount = accounts.find(a => a.id === data.accountId);
+                if (targetAccount) {
+                    // For Credit Cards: Income reduces usage (debt).
+                    // For Bank/Cash: Income increases funds.
+                    const newBalance = targetAccount.type === 'credit_card'
+                        ? targetAccount.balance - data.amount
+                        : targetAccount.balance + data.amount;
+
+                    await updateAccount(targetAccount.id, {
+                        balance: newBalance
+                    });
+                }
+
                 if (data.isRecurring) {
                     const recurringData = {
                         type: 'income',
@@ -444,6 +1048,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
             const response = await api.updateIncome(userId, id, data);
             if (response.success) {
+                const oldIncome = incomes.find(i => i.id === id);
+                if (oldIncome) {
+                    // 1. Reverse old income effect
+                    const oldAccount = accounts.find(a => a.id === oldIncome.accountId);
+                    if (oldAccount) {
+                        const oldBalance = oldAccount.type === 'credit_card'
+                            ? oldAccount.balance + oldIncome.amount
+                            : oldAccount.balance - oldIncome.amount;
+                        await updateAccount(oldAccount.id, { balance: oldBalance });
+                    }
+
+                    // 2. Apply new income effect
+                    const newIncome = response.income;
+                    const newAccount = accounts.find(a => a.id === newIncome.accountId);
+                    if (newAccount) {
+                        const newBalance = newAccount.type === 'credit_card'
+                            ? newAccount.balance - newIncome.amount
+                            : newAccount.balance + newIncome.amount;
+                        await updateAccount(newAccount.id, { balance: newBalance });
+                    }
+                }
                 setIncomes(prev => prev.map(i => i.id === id ? response.income : i));
                 toast.success("Income updated");
             }
@@ -457,6 +1082,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
             const response = await api.deleteIncome(userId, id);
             if (response.success) {
+                const income = incomes.find(i => i.id === id);
+                if (income) {
+                    const targetAccount = accounts.find(a => a.id === income.accountId);
+                    if (targetAccount) {
+                        const newBalance = targetAccount.type === 'credit_card'
+                            ? targetAccount.balance + income.amount // Reverse income effect on CC (increase usage)
+                            : targetAccount.balance - income.amount; // Reverse income effect on bank
+
+                        await updateAccount(targetAccount.id, { balance: newBalance });
+                    }
+                }
                 setIncomes(prev => prev.filter(i => i.id !== id));
                 toast.success("Income deleted");
             }
@@ -472,6 +1108,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             const response = await api.createDebt(userId, data);
             if (response.success) {
                 setDebts(prev => [...prev, response.debt]);
+
+                // Update account balance
+                const targetAccount = accounts.find(a => a.id === data.accountId);
+                if (targetAccount) {
+                    // Type: 'borrowed' -> Cash increases, 'lent' -> Cash decreases
+                    const balanceChange = data.type === 'borrowed' ? data.amount : -data.amount;
+
+                    // CC Consideration: Borrowing to CC is weird but theoretically possible (cash advance).
+                    // Lending from CC is also possible.
+                    const newBalance = targetAccount.type === 'credit_card'
+                        ? targetAccount.balance - balanceChange // Usage decreases if borrowed (added to card), usage increases if lent
+                        : targetAccount.balance + balanceChange;
+
+                    await updateAccount(targetAccount.id, {
+                        balance: newBalance
+                    });
+                }
+
                 toast.success("Debt created");
             }
         } catch (e) {
@@ -490,6 +1144,29 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
             const response = await api.updateDebt(userId, id, data);
             if (response.success) {
+                const oldDebt = debts.find(d => d.id === id);
+                if (oldDebt) {
+                    // 1. Reverse old debt effect
+                    const oldAccount = accounts.find(a => a.id === oldDebt.accountId);
+                    if (oldAccount) {
+                        const balanceChange = oldDebt.type === 'borrowed' ? -oldDebt.amount : oldDebt.amount;
+                        const oldBalance = oldAccount.type === 'credit_card'
+                            ? oldAccount.balance - balanceChange
+                            : oldAccount.balance + balanceChange;
+                        await updateAccount(oldAccount.id, { balance: oldBalance });
+                    }
+
+                    // 2. Apply new debt effect
+                    const newDebt = response.debt;
+                    const newAccount = accounts.find(a => a.id === newDebt.accountId);
+                    if (newAccount) {
+                        const balanceChange = newDebt.type === 'borrowed' ? newDebt.amount : -newDebt.amount;
+                        const newBalance = newAccount.type === 'credit_card'
+                            ? newAccount.balance - balanceChange
+                            : newAccount.balance + balanceChange;
+                        await updateAccount(newAccount.id, { balance: newBalance });
+                    }
+                }
                 setDebts(prev => prev.map(d => d.id === id ? response.debt : d));
                 toast.success("Debt updated");
             }
@@ -503,6 +1180,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
             const response = await api.deleteDebt(userId, id);
             if (response.success) {
+                const debt = debts.find(d => d.id === id);
+                if (debt) {
+                    const targetAccount = accounts.find(a => a.id === debt.accountId);
+                    if (targetAccount) {
+                        // Reverse the initial balance change
+                        const balanceChange = debt.type === 'borrowed' ? -debt.amount : debt.amount;
+                        const newBalance = targetAccount.type === 'credit_card'
+                            ? targetAccount.balance - balanceChange
+                            : targetAccount.balance + balanceChange;
+
+                        await updateAccount(targetAccount.id, { balance: newBalance });
+                    }
+                }
                 setDebts(prev => prev.filter(d => d.id !== id));
                 toast.success("Debt deleted");
             }
@@ -516,6 +1206,39 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
             const response = await api.updateDebt(userId, id, { status: "settled" });
             if (response.success) {
+                const debt = debts.find(d => d.id === id);
+                if (debt && debt.status !== 'settled') {
+                    const targetAccount = accounts.find(a => a.id === debt.accountId);
+                    if (targetAccount) {
+                        // Settlement reverses the initial debt flow
+                        // borrowed -> payback (outflow), lent -> received back (inflow)
+                        const settlementAmount = debt.type === 'borrowed' ? -debt.amount : debt.amount;
+
+                        const newBalance = targetAccount.type === 'credit_card'
+                            ? targetAccount.balance - settlementAmount
+                            : targetAccount.balance + settlementAmount;
+
+                        await updateAccount(targetAccount.id, { balance: newBalance });
+
+                        // Record the settlement as a Transfer to avoid double-counting as spending/income
+                        const settlementTransaction = {
+                            description: `Debt Settlement: ${debt.personName}`,
+                            amount: debt.amount,
+                            category: 'Transfer',
+                            date: new Date().toISOString().split('T')[0],
+                            tags: ['debt-settlement'],
+                            accountId: debt.accountId
+                        };
+
+                        if (debt.type === 'borrowed') {
+                            const res = await api.createExpense(userId, settlementTransaction);
+                            if (res.success) setExpenses(prev => [...prev, res.expense]);
+                        } else {
+                            const res = await api.createIncome(userId, settlementTransaction);
+                            if (res.success) setIncomes(prev => [...prev, res.income]);
+                        }
+                    }
+                }
                 setDebts(prev => prev.map(d => d.id === id ? response.debt : d));
                 toast.success("🎉 Debt settled! Great job!");
                 confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
@@ -613,6 +1336,292 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
     };
 
+    // --- Liabilities ---
+    const createLiability = async (data: Omit<Liability, 'id'>) => {
+        try {
+            const response = await api.createLiability(userId, data);
+            if (response.success) {
+                setLiabilities(prev => [...prev, response.liability]);
+                toast.success("Liability created");
+            }
+        } catch (e) {
+            const temp = {
+                id: `temp_${Date.now()}`,
+                ...data,
+                principal: Number(data.principal),
+                outstanding: Number(data.outstanding),
+                interestRate: Number(data.interestRate),
+                emiAmount: Number(data.emiAmount),
+                tenure: Number(data.tenure),
+                createdAt: new Date().toISOString()
+            } as Liability;
+            setLiabilities(prev => [...prev, temp]);
+            toast.warning("Created locally");
+        }
+    };
+
+    const updateLiability = async (id: string, data: Partial<Liability>) => {
+        try {
+            const response = await api.updateLiability(userId, id, data);
+            if (response.success) {
+                setLiabilities(prev => prev.map(l => l.id === id ? response.liability : l));
+                toast.success("Liability updated");
+            }
+        } catch (e) {
+            setLiabilities(prev => prev.map(l => l.id === id ? { ...l, ...data } as Liability : l));
+            toast.warning("Updated locally");
+        }
+    };
+
+    const deleteLiability = async (id: string) => {
+        try {
+            const response = await api.deleteLiability(userId, id);
+            if (response.success) {
+                setLiabilities(prev => prev.filter(l => l.id !== id));
+                toast.success("Liability deleted");
+            }
+        } catch (e) {
+            setLiabilities(prev => prev.filter(l => l.id !== id));
+            toast.warning("Deleted locally");
+        }
+    };
+
+    // --- Investments ---
+    const createInvestment = async (data: any, sourceAccountId?: string) => {
+        try {
+            const response = await api.createInvestment(userId, data);
+            if (response.success) {
+                setInvestments(prev => [...prev, response.investment]);
+
+                // Aggregation Rule: Cash-to-Asset Logic
+                if (sourceAccountId && sourceAccountId !== 'none') {
+                    const sourceAccount = accounts.find(a => a.id === sourceAccountId);
+                    if (sourceAccount) {
+                        const cost = data.buyPrice * data.quantity;
+                        // Deduct from source
+                        await updateAccount(sourceAccountId, {
+                            balance: sourceAccount.balance - cost
+                        });
+
+                        // Record Transfer
+                        const transferData = {
+                            description: `Asset Purchase: ${data.symbol} (${data.quantity} units)`,
+                            amount: cost,
+                            category: 'Transfer',
+                            date: data.purchaseDate || new Date().toISOString().split('T')[0],
+                            tags: ['investment', 'principal', data.symbol],
+                            accountId: sourceAccountId
+                        };
+                        const tResponse = await api.createExpense(userId, transferData);
+                        if (tResponse.success) {
+                            setExpenses(prev => [...prev, tResponse.expense]);
+                        }
+                    }
+                }
+                toast.success("Investment created");
+            }
+        } catch (e) {
+            const temp = { id: `temp_${Date.now()}`, ...data, createdAt: new Date().toISOString() };
+            setInvestments(prev => [...prev, temp]);
+            toast.warning("Created locally");
+        }
+    };
+
+    const updateInvestment = async (id: string, data: any) => {
+        try {
+            const response = await api.updateInvestment(userId, id, data);
+            if (response.success) {
+                setInvestments(prev => prev.map(i => i.id === id ? response.investment : i));
+                toast.success("Investment updated");
+            }
+        } catch (e) {
+            setInvestments(prev => prev.map(i => i.id === id ? { ...i, ...data } : i));
+            toast.warning("Updated locally");
+        }
+    };
+
+    const deleteInvestment = async (id: string) => {
+        try {
+            const response = await api.deleteInvestment(userId, id);
+            if (response.success) {
+                setInvestments(prev => prev.filter(i => i.id !== id));
+                toast.success("Investment deleted");
+            }
+        } catch (e) {
+            setInvestments(prev => prev.filter(i => i.id !== id));
+            toast.warning("Deleted locally");
+        }
+    };
+
+
+    // --- Fund Allocation & Operations ---
+    const [isFundAllocationOpen, setIsFundAllocationOpen] = useState(false);
+    const [fundAllocationType, setFundAllocationType] = useState<'goal' | 'emergency'>('goal');
+
+    const openFundAllocation = (type: 'goal' | 'emergency') => {
+        setFundAllocationType(type);
+        setIsFundAllocationOpen(true);
+    };
+
+    const closeFundAllocation = () => {
+        setIsFundAllocationOpen(false);
+    };
+
+    const performFundAllocation = async (data: {
+        accountId: string;
+        destinationId: string;
+        amount: number;
+        destinationType: 'goal' | 'emergency';
+    }) => {
+        const account = accounts.find(a => a.id === data.accountId);
+        if (!account) {
+            toast.error('Account not found');
+            return;
+        }
+
+        if (account.balance < data.amount) {
+            toast.error(`Insufficient funds in ${account.name}`);
+            return;
+        }
+
+        // Update account balance
+        await updateAccount(data.accountId, {
+            balance: account.balance - data.amount
+        });
+
+        // Update goal or emergency fund
+        if (data.destinationType === 'goal') {
+            const goal = goals.find(g => g.id === data.destinationId);
+            if (goal) {
+                await updateGoal(data.destinationId, {
+                    currentAmount: goal.currentAmount + data.amount
+                });
+            }
+        } else {
+            setEmergencyFundAmount(prev => prev + data.amount);
+        }
+
+        toast.success(
+            `Successfully allocated ${CURRENCY_SYMBOLS[settings.currency]}${data.amount.toLocaleString()} from ${account.name}!`,
+            {
+                description: `${data.destinationType === 'goal' ? 'Goal' : 'Emergency Fund'} balance updated`
+            }
+        );
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+        });
+    };
+
+    const deductFromAccount = async (accountId: string, amount: number) => {
+        const account = accounts.find(a => a.id === accountId);
+        if (account) {
+            if (account.balance < amount) {
+                toast.error(`Insufficient funds in ${account.name}`);
+                throw new Error('Insufficient funds');
+            }
+            await updateAccount(accountId, {
+                balance: account.balance - amount
+            });
+        }
+    };
+
+    const transferFunds = async (sourceId: string, destinationId: string, amount: number) => {
+        const sourceAccount = accounts.find(a => a.id === sourceId);
+        const destAccount = accounts.find(a => a.id === destinationId);
+
+        if (!sourceAccount || !destAccount) {
+            toast.error('Source or destination account not found');
+            return;
+        }
+
+        if (sourceAccount.balance < amount) {
+            toast.error(`Insufficient funds in ${sourceAccount.name}`);
+            return;
+        }
+
+        try {
+            // Update source: subtract
+            await updateAccount(sourceId, { balance: sourceAccount.balance - amount });
+
+            // Update destination: add (or subtract for CC to reduce debt)
+            const destBalanceChange = destAccount.type === 'credit_card' ? -amount : amount;
+            await updateAccount(destinationId, { balance: destAccount.balance + destBalanceChange });
+
+            // Record this migration as a transaction for history (but analytics will ignore it as 'Transfer')
+            const transferExpense = {
+                description: `Migration: ${sourceAccount.name} → ${destAccount.name}`,
+                amount: amount,
+                category: 'Transfer',
+                date: new Date().toISOString().split('T')[0],
+                tags: ['internal', 'migration'],
+                accountId: sourceId
+            };
+
+            // We use direct API call or internal createExpense to avoid recursive balance updates 
+            // since we already updated balances above.
+            const response = await api.createExpense(userId, transferExpense);
+            if (response.success) {
+                setExpenses(prev => [...prev, response.expense]);
+            }
+
+            toast.success(`Transferred ${CURRENCY_SYMBOLS[settings.currency]}${amount.toLocaleString()}!`, {
+                description: `From ${sourceAccount.name} to ${destAccount.name}`
+            });
+
+            confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+        } catch (error) {
+            console.error('Transfer failed', error);
+            toast.error('Capital migration protocol failed');
+        }
+    };
+
+
+    // --- Recurring ---
+    const createRecurringTransaction = async (data: any) => {
+        try {
+            const response = await api.createRecurring(userId, data);
+            if (response.success) {
+                setRecurringTransactions(prev => [...prev, response.recurring]);
+                toast.success('Recurring transaction created');
+            }
+        } catch (error) {
+            console.error('Error creating recurring transaction:', error);
+            // Local fallback
+            const temp = { id: `temp_${Date.now()}`, ...data, createdAt: new Date().toISOString() };
+            setRecurringTransactions(prev => [...prev, temp]);
+            toast.warning('Created locally');
+        }
+    };
+
+    const deleteRecurringTransaction = async (id: string) => {
+        try {
+            const response = await api.deleteRecurring(userId, id);
+            if (response.success) {
+                setRecurringTransactions(prev => prev.filter(r => r.id !== id));
+                toast.success('Recurring transaction deleted');
+            }
+        } catch (error) {
+            console.error('Error deleting recurring transaction:', error);
+            setRecurringTransactions(prev => prev.filter(r => r.id !== id));
+            toast.warning('Deleted locally');
+        }
+    };
+
+    const processRecurringTransactions = async () => {
+        try {
+            const response = await api.processRecurring(userId);
+            if (response.success) {
+                toast.success(`Processed ${response.count} transactions`);
+                // Refresh data to see new transactions
+                await fetchFromApi();
+            }
+        } catch (error) {
+            console.error('Error processing recurring transactions:', error);
+            toast.error('Failed to process recurring transactions');
+        }
+    };
 
     return (
         <FinanceContext.Provider
@@ -620,6 +1629,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 userId,
                 // State
                 settings,
+                currency: settings.currency, // Expose currency
                 expenses,
                 incomes,
                 debts,
@@ -627,14 +1637,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 accounts,
                 investments,
                 liabilities,
+                recurringTransactions,
                 notifications,
                 emergencyFundAmount,
                 isLoading,
                 isRefreshing,
+                isFundAllocationOpen,
+                fundAllocationType,
+
+                // Auth
+                authStatus,
+                currentUser,
+                isAwaitingPin,
 
                 // Actions
                 refreshData,
                 updateSettings,
+                checkIdentity,
+                login,
+                signup,
+                logout,
+
                 createExpense,
                 updateExpense,
                 deleteExpense,
@@ -651,9 +1674,25 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 createAccount,
                 updateAccount,
                 deleteAccount,
+                createLiability,
+                updateLiability,
+                deleteLiability,
+                createInvestment,
+                updateInvestment,
+                deleteInvestment,
+                createRecurringTransaction,
+                deleteRecurringTransaction,
+                processRecurringTransactions,
                 setEmergencyFundAmount,
                 setNotifications,
-                applyTheme
+                applyTheme,
+
+                // Fund Allocation
+                openFundAllocation,
+                closeFundAllocation,
+                performFundAllocation,
+                deductFromAccount,
+                transferFunds,
             }}
         >
             {children}

@@ -37,7 +37,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🧙',
     condition: (data) => data.totalTransactions >= 100
   },
-  
+
   // Consistency Achievements
   {
     id: 'three_day_streak',
@@ -67,7 +67,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '👑',
     condition: (data) => data.currentStreak >= 100
   },
-  
+
   // Goals Achievements
   {
     id: 'first_goal',
@@ -97,7 +97,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '💎',
     condition: (data) => data.completedGoals >= 5
   },
-  
+
   // Debt Management Achievements
   {
     id: 'debt_aware',
@@ -127,7 +127,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🦸',
     condition: (data) => data.totalDebts > 0 && data.settledDebts === data.totalDebts
   },
-  
+
   // Savings Achievements
   {
     id: 'first_saver',
@@ -157,7 +157,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🏰',
     condition: (data) => data.savingsRate >= 0.5
   },
-  
+
   // Budget Management Achievements
   {
     id: 'budget_conscious',
@@ -180,7 +180,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🌟',
     condition: (data) => data.monthlySpendingRatio <= 0.5
   },
-  
+
   // Engagement Achievements
   {
     id: 'stay_notified',
@@ -188,13 +188,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Enable notifications',
     icon: '🔔',
     condition: (data) => data.notificationsEnabled === true
-  },
-  {
-    id: 'theme_explorer',
-    name: 'Theme Explorer',
-    description: 'Change your app theme',
-    icon: '🎨',
-    condition: (data) => data.themeChanged === true
   },
   {
     id: 'ai_curious',

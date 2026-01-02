@@ -1,34 +1,22 @@
-import React, { useState, useEffect, useRef } from "react";
-import fabLogo from 'figma:asset/9af9850a100f6b0723b0e932676f145584e018b5.png';
-import darkLogo from 'figma:asset/a006ac1226c6ec6f407876aa082bc4a0ab761900.png';
-import lightLogo from 'figma:asset/b415be21c50f53d450601114da1e978c85047055.png';
-import { Button } from "./components/ui/button";
-import {
-  Bell,
-  Plus,
-  TrendingUp,
-  ListFilter,
-  Target,
-  User,
-  PieChart,
-  Settings,
-  CreditCard,
-  Bot
-} from "lucide-react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { RecurringTransactions } from "./components/RecurringTransactions";
+
+// Icons moved to AppHeader
 import { toast, Toaster } from "sonner";
 import confetti from "canvas-confetti";
-import { Dashboard } from "./components/Dashboard";
+// import { Dashboard } from "./components/Dashboard"; // Lazy Loaded below
+import { ScrollAwareLayout } from "./components/layout/ScrollAwareLayout";
 import { TransactionForm } from "./components/TransactionForm";
-import { TransactionList } from "./components/TransactionList";
-import { FinancialHealthScore } from "./components/FinancialHealthScore";
-import { GoalsTracker } from "./components/GoalsTracker";
-import { EmergencyFundsTab } from "./components/EmergencyFundsTab";
-import { AIAssistant } from "./components/AIAssistant";
+import { RoundUpDialog } from "./components/RoundUpDialog";
+// import { TransactionList } from "./components/TransactionList"; // Lazy Loaded
+// import { GoalsTracker } from "./components/GoalsTracker"; // Lazy Loaded
+// import { EmergencyFundsTab } from "./components/EmergencyFundsTab"; // Lazy Loaded
+// import { AIAssistant } from "./components/AIAssistant"; // Replaced by Overlay
 import { EnhancedSettingsPanel } from "./components/EnhancedSettingsPanel";
-import { QuoteOfTheDay } from "./components/QuoteOfTheDay";
-import { InvestmentsTab } from "./components/InvestmentsTab";
-import { LiabilityTab } from "./components/LiabilityTab";
-import { LiabilityDashboard } from "./components/LiabilityDashboard";
+// import { QuoteOfTheDay } from "./components/QuoteOfTheDay"; // Removed in new design
+// import { InvestmentsTab } from "./components/InvestmentsTab"; // Lazy Loaded
+// import { LiabilityTab } from "./components/LiabilityTab"; // Lazy Loaded
+// import { LiabilityDashboard } from "./components/LiabilityDashboard"; // Lazy Loaded
 import { MoreTab } from "./components/MoreTab";
 import { NotificationsPanel } from "./components/NotificationsPanel";
 import { AchievementDetailDialog } from "./components/AchievementDetailDialog";
@@ -38,22 +26,33 @@ import {
   Expense,
   Income,
   Debt,
-  Goal,
   AIContext,
   CURRENCY_SYMBOLS,
 } from "./types";
 import { AccountsManager } from "./components/AccountsManager";
+import { TransferForm } from "./components/TransferForm";
 import { PullToRefresh } from "./components/PullToRefresh";
+import { DashboardSkeleton } from "./components/LoadingSkeleton";
 import { useEdgeSwipe } from "./utils/gestures";
+import { generateBrainSummary } from "./utils/aiUtils";
+import { FabStack } from "./components/layout/FabStack";
+import { AIChatOverlay } from "./components/overlays/AIChatOverlay";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
-type View = "dashboard" | "transactions" | "goals" | "investments" | "accounts" | "emergency" | "liability" | "more";
+// Lazy Load Heavy Components
+const Dashboard = lazy(() => import("./components/Dashboard").then(module => ({ default: module.Dashboard })));
+const TransactionList = lazy(() => import("./components/TransactionList").then(module => ({ default: module.TransactionList })));
+const GoalsTracker = lazy(() => import("./components/GoalsTracker").then(module => ({ default: module.GoalsTracker })));
+const EmergencyFundsTab = lazy(() => import("./components/EmergencyFundsTab").then(module => ({ default: module.EmergencyFundsTab })));
+const InvestmentsTab = lazy(() => import("./components/InvestmentsTab").then(module => ({ default: module.InvestmentsTab })));
+const LiabilityTab = lazy(() => import("./components/LiabilityTab").then(module => ({ default: module.LiabilityTab })));
+const LiabilityDashboard = lazy(() => import("./components/LiabilityDashboard").then(module => ({ default: module.LiabilityDashboard })));
+
+type View = "dashboard" | "transactions" | "goals" | "investments" | "accounts" | "emergency" | "liability" | "more" | "recurring";
 type TransactionType = "expense" | "income" | "debt";
-
-import { getBudgetPacingStatus, getHaloClasses } from "./utils/budgetUtils";
 
 export default function App() {
   const {
-    userId,
     settings,
     expenses,
     incomes,
@@ -63,9 +62,11 @@ export default function App() {
     liabilities,
     notifications,
     emergencyFundAmount,
+    investments,
     isLoading,
     refreshData,
     updateSettings,
+    userId,
     createExpense,
     updateExpense,
     deleteExpense,
@@ -83,25 +84,36 @@ export default function App() {
     updateAccount,
     deleteAccount,
     setEmergencyFundAmount,
-    setNotifications
+    setNotifications,
+    // Fund Allocation from Context
+    isFundAllocationOpen,
+    fundAllocationType,
+    closeFundAllocation,
+    performFundAllocation,
+    transferFunds
   } = useFinance();
 
   const [view, setView] = useState<View>("dashboard");
-  const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
 
   const [isTransactionFormOpen, setIsTransactionFormOpen] = useState(false);
   const [transactionFormType, setTransactionFormType] = useState<TransactionType>("expense");
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
 
-  const [isAIOpen, setIsAIOpen] = useState(false);
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [selectedAchievementId, setSelectedAchievementId] = useState<string | null>(null);
   const [isAchievementDialogOpen, setIsAchievementDialogOpen] = useState(false);
-  const [isFundAllocationOpen, setIsFundAllocationOpen] = useState(false);
-  const [fundAllocationType, setFundAllocationType] = useState<'goal' | 'emergency'>('goal');
+  const [isTransferFormOpen, setIsTransferFormOpen] = useState(false);
 
-  const mainContentRef = useRef<HTMLDivElement>(null);
+  // Round-Up State
+  const [isRoundUpOpen, setIsRoundUpOpen] = useState(false);
+  const [roundUpData] = useState<{
+    expenseAmount: number;
+    roundedAmount: number;
+    transactionId?: string;
+    accountId: string;
+  } | null>(null);
 
   // Setup edge swipe gestures
   useEffect(() => {
@@ -112,75 +124,122 @@ export default function App() {
     return cleanup;
   }, []);
 
-  // Expose fund allocation function to window for child components
+  // Theme support
   useEffect(() => {
-    (window as any).showFundAllocation = (type: 'goal' | 'emergency') => {
-      setFundAllocationType(type);
-      setIsFundAllocationOpen(true);
-    };
+    if (settings.theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [settings.theme]);
 
-    // Expose emergency fund deduction handler
-    (window as any).handleEmergencyFundDeduction = async (accountId: string, amount: number) => {
-      const account = accounts.find(a => a.id === accountId);
-      if (account) {
-        await updateAccount(accountId, {
-          balance: account.balance - amount
-        });
-      }
-    };
+  // Calculate financial health score
+  const healthScore = useMemo(() => {
+    const totalIncomeCalc = incomes.reduce((sum: number, i: Income) => sum + i.amount, 0);
+    const totalExpenses = expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
+    const totalDebts = debts.reduce((sum: number, d: Debt) => sum + d.amount, 0);
 
-    return () => {
-      delete (window as any).showFundAllocation;
-      delete (window as any).handleEmergencyFundDeduction;
+    if (totalIncomeCalc === 0 && totalDebts === 0)
+      return {
+        score: 50,
+        savingsRate: 0,
+        debtRatio: 0,
+        spendingRatio: 0,
+      };
+
+    // Calculate months active to annualize income
+    const allTransactions = [...incomes, ...expenses, ...debts];
+    let monthsActive = 1;
+    if (allTransactions.length > 0) {
+      const dates = allTransactions.map(t => new Date(t.date).getTime());
+      const firstTransactionDate = new Date(Math.min(...dates));
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - firstTransactionDate.getTime());
+      const diffMonths = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30));
+      monthsActive = Math.max(1, diffMonths);
+    }
+
+    const avgMonthlyIncome = totalIncomeCalc / monthsActive;
+    const annualizedIncome = avgMonthlyIncome * 12;
+
+    const savingsRate = totalIncomeCalc > 0 ? (totalIncomeCalc - totalExpenses) / totalIncomeCalc : 0;
+    const spendingRatio = totalIncomeCalc > 0 ? totalExpenses / totalIncomeCalc : 0;
+
+    // Debt Ratio: Total Debt / Annualized Income
+    const debtRatio = annualizedIncome > 0
+      ? totalDebts / annualizedIncome
+      : (totalDebts > 0 ? Infinity : 0);
+
+    let score = 50;
+
+    // 1. Savings Rate Impact (Max 30, Min -20)
+    if (savingsRate >= 0.4) score += 30;       // Excellent Saver
+    else if (savingsRate >= 0.2) score += 20;  // Good Saver
+    else if (savingsRate >= 0.1) score += 10;  // Modest Saver
+    else if (savingsRate > 0) score += 5;      // Barely Saving
+    else score -= 20;                          // Living Beyond Means
+
+    // 2. Debt-to-Income Ratio Impact (Max 20, Min -50)
+    if (debtRatio === 0) score += 20;          // Debt Free
+    else if (debtRatio <= 0.3) score += 10;    // Manageable (e.g. 3.6 months salary)
+    else if (debtRatio <= 0.6) score -= 10;    // Warning Zone (e.g. 7.2 months salary)
+    else if (debtRatio <= 1.0) score -= 30;    // High Debt (e.g. 1 year salary)
+    else score -= 50;                          // Critical Condition (Debt > Annual Income)
+
+    // 3. Spending Ratio Impact (Max 20, Min -10)
+    if (spendingRatio <= 0.5) score += 20;     // Very Lean
+    else if (spendingRatio <= 0.7) score += 10;// Comfortable
+    else if (spendingRatio <= 0.9) score += 0; // Tight
+    else score -= 10;                          // Living on the Edge
+
+    return {
+      score: Math.max(0, Math.min(100, Math.round(score))),
+      savingsRate,
+      debtRatio,
+      spendingRatio,
     };
-  }, [accounts, updateAccount]);
+  }, [incomes, expenses, debts]); // Dependencies
+
+  // AI Context - Memoized
+  const aiContext: AIContext = useMemo(() => ({
+    totalIncome: incomes.reduce((sum, i) => sum + i.amount, 0),
+    totalExpenses: expenses.reduce((sum, e) => sum + e.amount, 0),
+    activeDebts: debts.filter((d) => d.status === "pending").length,
+    goalsCount: goals.length,
+    recentTransactions: [
+      ...expenses.slice(0, 5).map((e) => ({ type: "expense", ...e })),
+      ...incomes.slice(0, 5).map((i) => ({ type: "income", ...i })),
+    ] as any[], // Casting to avoid complex switch types for now
+    expenses,
+    incomes,
+    accounts,
+    investments,
+    savingsRate: healthScore.savingsRate,
+    healthScore: healthScore.score,
+    brainSummary: generateBrainSummary(
+      { incomes, expenses, investments, accounts, healthScore: healthScore.score, savingsRate: healthScore.savingsRate, totalIncome: incomes.reduce((sum: number, i: any) => sum + i.amount, 0), totalExpenses: expenses.reduce((sum: number, e: any) => sum + e.amount, 0), activeDebts: debts.filter((d: any) => d.status === "pending").length, goalsCount: goals.length, recentTransactions: [] },
+      settings.currency,
+      view
+    )
+  }), [incomes, expenses, debts, goals.length, healthScore.savingsRate, healthScore.score, accounts, investments, settings.currency, view]);
+
+  // Calculate totals
+  const totalIncome = useMemo(() => incomes.reduce((sum, i) => sum + i.amount, 0), [incomes]);
+
+  // Show skeleton loader while initial data is being fetched
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-4 pb-24 font-sans text-foreground transition-colors duration-200">
+        <div className="max-w-md mx-auto space-y-6 pt-12">
+          <DashboardSkeleton />
+        </div>
+      </div>
+    );
+  }
 
   // Handle pull to refresh
   const handleRefresh = async () => {
     await refreshData();
-  };
-
-  // Fund allocation handler
-  const handleFundAllocation = async (data: {
-    accountId: string;
-    destinationId: string;
-    amount: number;
-    destinationType: 'goal' | 'emergency';
-  }) => {
-    const account = accounts.find(a => a.id === data.accountId);
-    if (!account) {
-      toast.error('Account not found');
-      return;
-    }
-
-    // Update account balance
-    await updateAccount(data.accountId, {
-      balance: account.balance - data.amount
-    });
-
-    // Update goal or emergency fund
-    if (data.destinationType === 'goal') {
-      const goal = goals.find(g => g.id === data.destinationId);
-      if (goal) {
-        await updateGoal(data.destinationId, {
-          currentAmount: goal.currentAmount + data.amount
-        });
-      }
-    } else {
-      setEmergencyFundAmount(prev => prev + data.amount);
-    }
-
-    toast.success(
-      `Successfully allocated ${CURRENCY_SYMBOLS[settings.currency]}${data.amount.toLocaleString()} from ${account.name}!`,
-      {
-        description: `${data.destinationType === 'goal' ? 'Goal' : 'Emergency Fund'} balance updated`
-      }
-    );
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
   };
 
   // Transaction form handlers
@@ -222,6 +281,17 @@ export default function App() {
       // Create new
       if (transactionFormType === "expense") {
         createExpense(data);
+
+        // Handle Manual Round Up from Form
+        if (data.roundUpAmount) {
+          handleRoundUpConfirm(
+            goals.length > 0 ? goals[0].id : 'general', // Default to first goal or create new
+            'goal',
+            undefined,
+            data.roundUpAmount, // Pass explicit amount
+            data.accountId
+          );
+        }
       } else if (transactionFormType === "income") {
         createIncome(data);
       } else if (transactionFormType === "debt") {
@@ -230,339 +300,223 @@ export default function App() {
     }
   };
 
-  // Calculate financial health score
-  const calculateHealthScore = () => {
-    const totalIncome = incomes.reduce((sum, i) => sum + i.amount, 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const activeDebts = debts
-      .filter((d) => d.status === "pending")
-      .reduce((sum, d) => sum + d.amount, 0);
+  const handleRoundUpConfirm = async (
+    destinationId: string,
+    destinationType: 'goal' | 'emergency',
+    _muteDuration?: 'today' | 'week' | 'month',
+    explicitAmount?: number,
+    explicitAccountId?: string
+  ) => {
+    // If explicit amount provided, use it; otherwise fallback to state
+    if (!explicitAmount && !roundUpData) return;
 
-    if (totalIncome === 0)
-      return {
-        score: 50,
-        savingsRate: 0,
-        debtRatio: 0,
-        spendingRatio: 0,
-      };
+    const diff = explicitAmount || (roundUpData ? roundUpData.roundedAmount - roundUpData.expenseAmount : 0);
+    const targetAccountId = explicitAccountId || (roundUpData ? roundUpData.accountId : '');
 
-    const savingsRate = (totalIncome - totalExpenses) / totalIncome;
-    const spendingRatio = totalExpenses / totalIncome;
-    const debtRatio = activeDebts / totalIncome;
+    // Deduct from the same account used for expense
+    const account = accounts.find(a => a.id === targetAccountId);
 
-    let score = 50;
+    if (account) {
+      await updateAccount(account.id, {
+        balance: account.balance - diff
+      });
+    }
 
-    // Savings rate impact (30 points)
-    if (savingsRate >= 0.3) score += 30;
-    else if (savingsRate >= 0.2) score += 25;
-    else if (savingsRate >= 0.1) score += 15;
-    else if (savingsRate >= 0) score += 5;
-    else score -= 10;
+    // Add to Goal or Emergency Fund
+    if (destinationType === 'goal') {
+      const goal = goals.find(g => g.id === destinationId);
+      if (goal) {
+        await updateGoal(destinationId, {
+          currentAmount: goal.currentAmount + diff
+        });
+        toast.success(`Saved ${CURRENCY_SYMBOLS[settings.currency]}${diff} to ${goal.name}!`);
+      } else {
+        const generalSavings = goals.find(g => g.name === "General Savings");
 
-    // Spending ratio impact (30 points)
-    if (spendingRatio <= 0.6) score += 30;
-    else if (spendingRatio <= 0.8) score += 20;
-    else if (spendingRatio <= 1.0) score += 10;
-    else score -= 20;
+        if (generalSavings) {
+          await updateGoal(generalSavings.id, {
+            currentAmount: generalSavings.currentAmount + diff
+          });
+          toast.success(`Saved ${CURRENCY_SYMBOLS[settings.currency]}${diff} to General Savings!`);
+        } else {
+          const newGoal = {
+            name: "General Savings",
+            targetAmount: 10000,
+            currentAmount: diff,
+            targetDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+            emoji: "🐷"
+          };
+          createGoal(newGoal);
+          toast.success(`Created "General Savings" and saved ${CURRENCY_SYMBOLS[settings.currency]}${diff}!`);
+        }
+      }
+    } else {
+      setEmergencyFundAmount((prev: number) => prev + diff);
+      toast.success(`Saved ${CURRENCY_SYMBOLS[settings.currency]}${diff} to Emergency Fund!`);
+    }
 
-    // Debt ratio impact (20 points)
-    if (debtRatio === 0) score += 20;
-    else if (debtRatio <= 0.1) score += 15;
-    else if (debtRatio <= 0.3) score += 5;
-    else score -= 15;
+    setIsRoundUpOpen(false);
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { y: 0.7 }
+    });
+  };
 
-    return {
-      score: Math.max(0, Math.min(100, Math.round(score))),
-      savingsRate,
-      debtRatio,
-      spendingRatio,
+  const handleRoundUpMute = (duration: 'today' | 'week' | 'month') => {
+    const dates: Record<string, number> = {
+      today: 1,
+      week: 7,
+      month: 30
     };
+
+    const date = new Date();
+    date.setDate(date.getDate() + dates[duration]);
+    localStorage.setItem('roundUpMutedUntil', date.toISOString());
+    setIsRoundUpOpen(false);
+    toast.info(`Round ups muted for ${duration === 'today' ? 'today' : duration === 'week' ? 'a week' : 'a month'}`);
   };
-
-  const healthScore = calculateHealthScore();
-
-  // Calculate pacing status for Halo
-  const totalIncomeForHalo = incomes.reduce((sum, i) => sum + i.amount, 0);
-  const totalExpensesForHalo = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const pacingStatus = getBudgetPacingStatus(totalIncomeForHalo, totalExpensesForHalo);
-  const haloClass = getHaloClasses(pacingStatus);
-
-  // AI Context
-  const aiContext: AIContext = {
-    totalIncome: incomes.reduce((sum, i) => sum + i.amount, 0),
-    totalExpenses: expenses.reduce((sum, e) => sum + e.amount, 0),
-    activeDebts: debts.filter((d) => d.status === "pending").length,
-    goalsCount: goals.length,
-    recentTransactions: [
-      ...expenses.slice(0, 5).map((e) => ({ type: "expense", ...e })),
-      ...incomes.slice(0, 5).map((i) => ({ type: "income", ...i })),
-    ],
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading FinHub...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsSettingsOpen(true)}
-            >
-              <Settings className="w-5 h-5" />
-            </Button>
-            <div className={`absolute left-1/2 transform -translate-x-1/2 p-1 rounded-full ${haloClass}`}>
-              <img
-                src={settings.theme === 'dark' ? darkLogo : lightLogo}
-                alt="FinHub"
-                className="h-10 w-auto rounded-full"
-              />
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsNotificationsOpen(true)}
-              className="relative"
-            >
-              <Bell className="w-5 h-5" />
-              {notifications.filter(n => !n.read).length > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-600 rounded-full"></span>
-              )}
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Navigation - Bottom Tab Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
-        <div className="max-w-7xl mx-auto px-1">
-          <div className="flex justify-around items-center py-2">
-            {[
-              { id: "dashboard", icon: TrendingUp, label: "Home" },
-              { id: "transactions", icon: ListFilter, label: "Txns" },
-              { id: "liability", icon: CreditCard, label: "Liability" },
-              { id: "goals", icon: Target, label: "Goals" },
-              { id: "investments", icon: PieChart, label: "Invest" },
-              { id: "more", icon: User, label: "More" },
-            ].map((item) => (
-              <Button
-                key={item.id}
-                variant={view === item.id ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setView(item.id as View)}
-                className="flex-col h-auto py-2 px-1"
-              >
-                <item.icon className="w-5 h-5 mb-0.5" />
-                <span className="text-xs">{item.label}</span>
-              </Button>
-            ))}
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main
-        ref={mainContentRef}
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-y-auto pb-24"
-        style={{ height: 'calc(100vh - 64px)' }}
+    <div className="min-h-screen bg-bg-secondary text-foreground transition-colors font-sans">
+      <ScrollAwareLayout
+        activeTab={view}
+        onTabChange={(tab) => setView(tab as View)}
+        notificationCount={notifications.filter(n => !n.read).length}
+        onNotificationClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+        onSettingsClick={() => setIsSettingsOpen(!isSettingsOpen)}
+        forceHide={isAchievementDialogOpen}
+        renderFab={(isVisible) => (
+          <FabStack
+            isVisible={isVisible && !isSettingsOpen && !isNotificationsOpen && !isAchievementDialogOpen}
+            onOpenAI={() => setIsAIAssistantOpen(true)}
+            onAddTransaction={openAddTransaction}
+            onMigrate={() => setIsTransferFormOpen(true)}
+          />
+        )}
       >
         <PullToRefresh onRefresh={handleRefresh}>
-          {view === "dashboard" && (
-            <div className="space-y-6">
-              <QuoteOfTheDay />
-              <Dashboard
-                expenses={expenses}
-                incomes={incomes}
-                debts={debts}
-                currency={settings.currency}
-                userId={userId}
-                goals={goals}
-                liabilities={liabilities}
-                emergencyFundAmount={emergencyFundAmount}
-              />
-              {liabilities.length > 0 && (
-                <LiabilityDashboard
-                  liabilities={liabilities}
+          <ErrorBoundary>
+            <Suspense fallback={
+              <div className="space-y-6 pt-12">
+                <DashboardSkeleton />
+                <p className="text-center text-slate-500 text-sm">Loading Component...</p>
+              </div>
+            }>
+              {view === "dashboard" && (
+                <div className="space-y-6">
+                  <Dashboard
+                    expenses={expenses}
+                    incomes={incomes}
+                    currency={settings.currency}
+                    goals={goals}
+                    liabilities={liabilities}
+                    debts={debts}
+                    investments={investments}
+                    accounts={accounts}
+                    emergencyFundAmount={emergencyFundAmount}
+                  />
+                </div>
+              )}
+
+              {view === "transactions" && (
+                <TransactionList
+                  expenses={expenses}
+                  incomes={incomes}
+                  debts={debts}
+                  accounts={accounts}
+                  currency={settings.currency}
+                  onEditExpense={handleEditExpense}
+                  onDeleteExpense={deleteExpense}
+                  onEditIncome={handleEditIncome}
+                  onDeleteIncome={deleteIncome}
+                  onEditDebt={handleEditDebt}
+                  onDeleteDebt={deleteDebt}
+                  onSettleDebt={settleDebt}
+                />
+              )}
+
+              {view === "goals" && (
+                <GoalsTracker
+                  goals={goals}
+                  currency={settings.currency}
+                  accounts={accounts}
+                  expenses={expenses}
+                  incomes={incomes}
+                  onCreateGoal={createGoal}
+                  onUpdateGoal={updateGoal}
+                  onDeleteGoal={deleteGoal}
+                  onDeductFromAccount={async (accountId, amount) => {
+                    const account = accounts.find(a => a.id === accountId);
+                    if (account) {
+                      await updateAccount(accountId, {
+                        balance: account.balance - amount
+                      });
+                    }
+                  }}
+                />
+              )}
+
+              {view === "accounts" && (
+                <AccountsManager
+                  accounts={accounts}
+                  currency={settings.currency}
+                  onCreateAccount={createAccount}
+                  onUpdateAccount={updateAccount}
+                  onDeleteAccount={deleteAccount}
+                />
+              )}
+
+              {view === "investments" && (
+                <InvestmentsTab />
+              )}
+
+              {view === "emergency" && (
+                <EmergencyFundsTab
+                  currency={settings.currency}
+                  userId={userId}
+                  expenses={expenses}
+                  incomes={incomes}
+                  accounts={accounts}
+                  onEmergencyFundUpdate={(amount) => setEmergencyFundAmount(amount)}
+                />
+              )}
+
+              {view === "liability" && (
+                <div className="space-y-6">
+                  {/* Only show LiabilityDashboard when specifically in liability tab */}
+                  <LiabilityDashboard
+                    liabilities={liabilities}
+                    currency={settings.currency}
+                    totalMonthlyIncome={totalIncome}
+                  />
+                  <LiabilityTab
+                    currency={settings.currency}
+                    expenses={expenses}
+                    accounts={accounts}
+                  />
+                </div>
+              )}
+
+              {view === "recurring" && (
+                <RecurringTransactions />
+              )}
+
+              {view === "more" && (
+                <MoreTab
+                  onNavigate={(targetView) => setView(targetView)}
+                  onOpenSettings={() => setIsSettingsOpen(true)}
+                  onOpenNotifications={() => setIsNotificationsOpen(true)}
+                  emergencyFundAmount={emergencyFundAmount}
+                  bankAccountsCount={accounts.filter(a => a.type === 'bank').length}
+                  cardsCount={accounts.filter(a => a.type === 'credit_card').length}
                   currency={settings.currency}
                 />
               )}
-              <FinancialHealthScore
-                score={healthScore.score}
-                savingsRate={healthScore.savingsRate}
-                debtRatio={healthScore.debtRatio}
-                spendingRatio={healthScore.spendingRatio}
-              />
-            </div>
-          )}
-
-          {view === "transactions" && (
-            <TransactionList
-              expenses={expenses}
-              incomes={incomes}
-              debts={debts}
-              currency={settings.currency}
-              onEditExpense={handleEditExpense}
-              onDeleteExpense={deleteExpense}
-              onEditIncome={handleEditIncome}
-              onDeleteIncome={deleteIncome}
-              onEditDebt={handleEditDebt}
-              onDeleteDebt={deleteDebt}
-              onSettleDebt={settleDebt}
-            />
-          )}
-
-          {view === "goals" && (
-            <GoalsTracker
-              goals={goals}
-              currency={settings.currency}
-              accounts={accounts}
-              expenses={expenses}
-              incomes={incomes}
-              onCreateGoal={createGoal}
-              onUpdateGoal={updateGoal}
-              onDeleteGoal={deleteGoal}
-              onDeductFromAccount={async (accountId, amount) => {
-                const account = accounts.find(a => a.id === accountId);
-                if (account) {
-                  await updateAccount(accountId, {
-                    balance: account.balance - amount
-                  });
-                }
-              }}
-            />
-          )}
-
-          {view === "accounts" && (
-            <AccountsManager
-              accounts={accounts}
-              currency={settings.currency}
-              onCreateAccount={createAccount}
-              onUpdateAccount={updateAccount}
-              onDeleteAccount={deleteAccount}
-            />
-          )}
-
-          {view === "investments" && (
-            <InvestmentsTab
-              currency={settings.currency}
-              userId={userId}
-              expenses={expenses}
-              incomes={incomes}
-            />
-          )}
-
-          {view === "emergency" && (
-            <EmergencyFundsTab
-              currency={settings.currency}
-              userId={userId}
-              expenses={expenses}
-              incomes={incomes}
-              accounts={accounts}
-              onEmergencyFundUpdate={(amount) => setEmergencyFundAmount(amount)}
-            />
-          )}
-
-          {view === "liability" && (
-            <LiabilityTab
-              currency={settings.currency}
-              userId={userId}
-              expenses={expenses}
-              incomes={incomes}
-              accounts={accounts}
-            />
-          )}
-
-          {view === "more" && (
-            <MoreTab
-              onNavigate={(targetView) => setView(targetView)}
-              onOpenSettings={() => setIsSettingsOpen(true)}
-              onOpenNotifications={() => setIsNotificationsOpen(true)}
-              emergencyFundAmount={emergencyFundAmount}
-              accountsCount={accounts.length}
-              currency={settings.currency}
-              currencySymbol={CURRENCY_SYMBOLS[settings.currency]}
-            />
-          )}
+            </Suspense>
+          </ErrorBoundary>
         </PullToRefresh>
-      </main>
-
-      {/* Floating Action Buttons */}
-      <div className="fixed bottom-24 left-6 z-50">
-        <Button
-          onClick={() => setIsAIOpen(true)}
-          className="w-14 h-14 rounded-full shadow-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-        >
-          <Bot className="w-6 h-6" />
-        </Button>
-      </div>
-
-      <div className="fixed bottom-24 right-6 z-50">
-        <div className="relative">
-          {isFabMenuOpen && (
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => setIsFabMenuOpen(false)}
-            />
-          )}
-
-          <Button
-            onClick={() => setIsFabMenuOpen(!isFabMenuOpen)}
-            className="w-14 h-14 rounded-full shadow-lg bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 relative z-50"
-          >
-            <Plus className={`w-6 h-6 transition-transform ${isFabMenuOpen ? 'rotate-45' : ''}`} />
-          </Button>
-
-          {isFabMenuOpen && (
-            <div className="absolute bottom-16 right-0 flex flex-col gap-2 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-xl z-50">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  openAddTransaction("expense");
-                  setIsFabMenuOpen(false);
-                }}
-                className="justify-start whitespace-nowrap"
-              >
-                💸 Money Out
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  openAddTransaction("income");
-                  setIsFabMenuOpen(false);
-                }}
-                className="justify-start whitespace-nowrap"
-              >
-                💰 Money In
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  openAddTransaction("debt");
-                  setIsFabMenuOpen(false);
-                }}
-                className="justify-start whitespace-nowrap"
-              >
-                🤝 Personal IOU
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
+      </ScrollAwareLayout>
 
       {/* Modals */}
       <TransactionForm
@@ -574,15 +528,30 @@ export default function App() {
         type={transactionFormType}
         onSubmit={handleTransactionSubmit}
         initialData={editingTransaction}
-        userId={userId}
         accounts={accounts}
+        roundUpEnabled={settings.roundUpEnabled}
       />
 
-      <AIAssistant
-        userId={userId}
+      {/* Round Up Dialog */}
+      {roundUpData && (
+        <RoundUpDialog
+          isOpen={isRoundUpOpen}
+          onClose={() => setIsRoundUpOpen(false)}
+          onConfirm={handleRoundUpConfirm}
+          expenseAmount={roundUpData.expenseAmount}
+          roundedAmount={roundUpData.roundedAmount}
+          currency={settings.currency}
+          goals={goals}
+          onMute={handleRoundUpMute}
+        />
+      )}
+
+      {/* Replaced AIAssistant with Overlay */}
+      <AIChatOverlay
+        isOpen={isAIAssistantOpen}
+        onClose={() => setIsAIAssistantOpen(false)}
         context={aiContext}
-        isOpen={isAIOpen}
-        onClose={() => setIsAIOpen(false)}
+        settings={settings}
       />
 
       <EnhancedSettingsPanel
@@ -593,6 +562,7 @@ export default function App() {
         onAchievementClick={(achievementId) => {
           setSelectedAchievementId(achievementId);
           setIsAchievementDialogOpen(true);
+          setIsSettingsOpen(false);
         }}
       />
 
@@ -605,6 +575,7 @@ export default function App() {
             setSelectedAchievementId(notification.achievementId);
             setIsAchievementDialogOpen(true);
           }
+          setIsNotificationsOpen(false);
         }}
         onMarkAsRead={(id) => {
           setNotifications(prev =>
@@ -628,7 +599,7 @@ export default function App() {
 
       <FundAllocationDialog
         isOpen={isFundAllocationOpen}
-        onClose={() => setIsFundAllocationOpen(false)}
+        onClose={closeFundAllocation}
         accounts={accounts}
         goals={goals}
         currency={settings.currency}
@@ -637,10 +608,31 @@ export default function App() {
           currentAmount: emergencyFundAmount,
           targetAmount: 100000
         }}
-        onAllocate={handleFundAllocation}
+        onAllocate={performFundAllocation}
       />
 
-      <Toaster position="top-right" richColors />
+      <TransferForm
+        isOpen={isTransferFormOpen}
+        onClose={() => setIsTransferFormOpen(false)}
+        accounts={accounts}
+        currency={settings.currency}
+        onTransfer={transferFunds}
+      />
+
+      <Toaster
+        position="bottom-center"
+        richColors
+        theme="dark"
+        toastOptions={{
+          style: {
+            background: '#1C1C1E',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            color: '#FFFFFF',
+            borderRadius: '20px',
+            backdropFilter: 'none',
+          },
+        }}
+      />
     </div>
   );
 }

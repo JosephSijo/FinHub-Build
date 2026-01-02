@@ -1,340 +1,618 @@
-import React, { useState } from 'react';
+/* eslint-disable react/forbid-component-props, react/forbid-dom-props */
+import { useState, useMemo } from 'react';
 import { Card } from './ui/card';
-import { Button } from './ui/button';
-import { Progress } from './ui/progress';
-import { 
-  TrendingDown, 
-  AlertTriangle, 
-  Target, 
-  Zap, 
-  DollarSign, 
-  RefreshCw, 
+import {
+  TrendingDown,
+  AlertTriangle,
+  Target,
+  Zap,
+  ListFilter,
+  RefreshCw,
   TrendingUp,
-  ChevronRight,
   Snowflake,
   Mountain,
   LayoutGrid,
   Lightbulb,
-  CheckCircle2,
-  Info
+  Info,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
-import { CURRENCY_SYMBOLS } from '../types';
-
-interface Liability {
-  id: string;
-  name: string;
-  type: string;
-  principal: number;
-  outstanding: number;
-  interestRate: number;
-  emiAmount: number;
-  startDate: string;
-  tenure: number;
-}
+import { formatCurrency, formatDuration, formatFinancialValue } from '../utils/numberFormat';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
+import { Slider } from "./ui/slider";
+import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
+import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
 
 interface LiabilityDashboardProps {
-  liabilities: Liability[];
+  liabilities: any[];
   currency: string;
+  totalMonthlyIncome: number;
 }
 
-export function LiabilityDashboard({ liabilities, currency }: LiabilityDashboardProps) {
+export const LiabilityDashboard = React.memo(({ liabilities, currency, totalMonthlyIncome }: LiabilityDashboardProps) => {
   const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
+  const [whatIfInterest, setWhatIfInterest] = useState<number | null>(null);
+  const [selectedLiabilityIds, setSelectedLiabilityIds] = useState<string[]>([]);
+  const [targetTenure, setTargetTenure] = useState<number>(60); // Default 5 years for consolidation
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  if (!liabilities || liabilities.length === 0) {
-    return null; // Don't show if no liabilities
-  }
-
-  const totalOutstanding = liabilities.reduce((sum, l) => sum + l.outstanding, 0);
-  const totalEMI = liabilities.reduce((sum, l) => sum + l.emiAmount, 0);
-  const averageInterestRate = liabilities.reduce((sum, l) => sum + l.interestRate, 0) / liabilities.length;
-
-  // Calculate months to debt freedom (simple calculation)
-  const monthsToFreedom = totalEMI > 0 ? Math.ceil(totalOutstanding / totalEMI) : 0;
-
-  // Find highest and lowest interest rate loans
-  const highestInterestLoan = [...liabilities].sort((a, b) => b.interestRate - a.interestRate)[0];
-  const lowestInterestLoan = [...liabilities].sort((a, b) => a.interestRate - b.interestRate)[0];
-
-  // Snowball strategy - sort by outstanding (smallest to largest)
-  const snowballOrder = [...liabilities].sort((a, b) => a.outstanding - b.outstanding);
-
-  // Avalanche strategy - sort by interest rate (highest to lowest)
-  const avalancheOrder = [...liabilities].sort((a, b) => b.interestRate - a.interestRate);
-
-  const strategies = [
-    {
-      id: 'avalanche',
-      icon: Mountain,
-      title: 'Avalanche Method',
-      color: 'blue',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      borderColor: 'border-blue-200 dark:border-blue-800',
-      textColor: 'text-blue-600',
-      description: 'Pay off highest interest rate loans first',
-      savings: 'Saves the most money on interest',
-      order: avalancheOrder.slice(0, 3),
-      recommended: highestInterestLoan && highestInterestLoan.interestRate > 10
-    },
-    {
-      id: 'snowball',
-      icon: Snowflake,
-      title: 'Snowball Method',
-      color: 'purple',
-      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-      borderColor: 'border-purple-200 dark:border-purple-800',
-      textColor: 'text-purple-600',
-      description: 'Pay off smallest balances first',
-      savings: 'Builds momentum with quick wins',
-      order: snowballOrder.slice(0, 3),
-      recommended: liabilities.length > 3
-    },
-    {
-      id: 'consolidation',
-      icon: LayoutGrid,
-      title: 'Debt Consolidation',
-      color: 'green',
-      bgColor: 'bg-green-50 dark:bg-green-900/20',
-      borderColor: 'border-green-200 dark:border-green-800',
-      textColor: 'text-green-600',
-      description: 'Combine multiple debts into one loan',
-      savings: 'Simplifies payments, may lower rate',
-      recommended: liabilities.length >= 3 && averageInterestRate > 8,
-      consolidationRate: Math.max(6, averageInterestRate - 2) // Potential consolidated rate
+  // Initialize selected IDs on mount/load
+  React.useEffect(() => {
+    if (liabilities.length > 0 && selectedLiabilityIds.length === 0) {
+      // Default: select everything except very large long-term loans (> 10 years or > 10L)
+      const defaults = liabilities
+        .filter(l => l.interestRate > 10 || l.tenure < 120)
+        .map(l => l.id);
+      setSelectedLiabilityIds(defaults.length > 0 ? defaults : liabilities.map(l => l.id));
     }
-  ];
+  }, [liabilities.length]);
 
-  const actionItems = [
+  const {
+    totalOutstanding,
+    totalPrincipal,
+    totalEMI,
+    averageInterestRate,
+    payoffProgress,
+    monthsToFreedom,
+    totalEstimatedInterest,
+    highestInterestLoan,
+    strategies
+  } = useMemo(() => {
+    const outstanding = liabilities.reduce((sum, l) => sum + l.outstanding, 0);
+    const principal = liabilities.reduce((sum, l) => sum + l.principal, 0);
+    const emi = liabilities.reduce((sum, l) => sum + l.emiAmount, 0);
+    const weightedInterestSum = liabilities.reduce((sum, l) => sum + (l.interestRate * l.outstanding), 0);
+    const avgRate = outstanding > 0 ? weightedInterestSum / outstanding : 0;
+
+    // Total Estimated Interest (approximate) - Using Amortization Math
+    const estimatedInterest = liabilities.reduce((sum, l) => {
+      const p = l.outstanding;
+      const r = l.interestRate / 12 / 100;
+      const emiVal = l.emiAmount;
+
+      if (r === 0 || emiVal <= p * r) return sum;
+
+      const n = Math.log(emiVal / (emiVal - p * r)) / Math.log(1 + r);
+      const totalPayment = emiVal * n;
+      return sum + Math.max(0, totalPayment - p);
+    }, 0);
+    // Months to Freedom - Max time among all loans
+    const maxMonths = liabilities.reduce((max, l) => {
+      const p = l.outstanding;
+      const r = l.interestRate / 12 / 100;
+      const emiVal = l.emiAmount;
+
+      if (r === 0) return Math.max(max, emiVal > 0 ? p / emiVal : 0);
+      if (emiVal <= p * r) return 360; // Safety cap if EMI doesn't cover interest
+
+      const n = Math.log(emiVal / (emiVal - p * r)) / Math.log(1 + r);
+      return Math.max(max, n);
+    }, 0);
+
+    const highest = [...liabilities].sort((a, b) => b.interestRate - a.interestRate)[0];
+    const snowballSorted = [...liabilities].sort((a, b) => a.outstanding - b.outstanding);
+    const avalancheSorted = [...liabilities].sort((a, b) => b.interestRate - a.interestRate);
+
+    const strategyList = [
+      {
+        id: 'avalanche',
+        icon: Mountain,
+        title: 'Avalanche Method',
+        color: 'blue',
+        bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+        borderColor: 'border-blue-200 dark:border-blue-800',
+        textColor: 'text-blue-600',
+        description: 'Pay off highest interest rate loans first',
+        savings: 'Saves the most money on interest',
+        order: avalancheSorted.slice(0, 3),
+        recommended: highest && highest.interestRate > 10
+      },
+      {
+        id: 'snowball',
+        icon: Snowflake,
+        title: 'Snowball Method',
+        color: 'purple',
+        bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+        borderColor: 'border-purple-200 dark:border-purple-800',
+        textColor: 'text-purple-600',
+        description: 'Pay off smallest balances first',
+        savings: 'Builds momentum with quick wins',
+        order: snowballSorted.slice(0, 3),
+        recommended: liabilities.length > 3
+      },
+      {
+        id: 'consolidation',
+        icon: LayoutGrid,
+        title: 'Debt Consolidation',
+        color: 'green',
+        bgColor: 'bg-green-50 dark:bg-green-900/20',
+        borderColor: 'border-green-200 dark:border-green-800',
+        textColor: 'text-green-600',
+        description: 'Combine multiple debts into one loan',
+        savings: 'Simplifies payments, may lower rate',
+        recommended: liabilities.length >= 3 && avgRate > 8,
+        consolidationRate: Math.max(6, avgRate - 2) // Potential consolidated rate
+      }
+    ];
+
+    return {
+      totalOutstanding: outstanding,
+      totalPrincipal: principal,
+      totalEMI: emi,
+      averageInterestRate: avgRate,
+      payoffProgress: principal > 0 ? ((principal - outstanding) / principal) * 100 : 0,
+      monthsToFreedom: Math.ceil(maxMonths),
+      totalEstimatedInterest: estimatedInterest,
+      highestInterestLoan: highest,
+      strategies: strategyList
+    };
+  }, [liabilities]);
+
+  const displayInterestRate = whatIfInterest ?? averageInterestRate;
+
+  // What-if calculation
+  const { calculatedWhatIfEMI, emiDifference, currentSelectedEMI } = useMemo(() => {
+    const includedLiabilities = liabilities.filter(l => selectedLiabilityIds.includes(l.id));
+    const currentEMIForSelected = includedLiabilities.reduce((sum, l) => sum + l.emiAmount, 0);
+
+    const whatIfEMI = includedLiabilities.reduce((sum, l) => {
+      const p = l.outstanding;
+      const r = (whatIfInterest ?? averageInterestRate) / 12 / 100;
+      const n = targetTenure; // Use unified target tenure for consolidation simulation
+
+      if (p <= 0 || n <= 0) return sum;
+
+      if (r === 0) return sum + (p / n);
+      const newEmiVal = (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+
+      return sum + newEmiVal;
+    }, 0);
+
+    return {
+      calculatedWhatIfEMI: whatIfEMI,
+      emiDifference: currentEMIForSelected - whatIfEMI,
+      currentSelectedEMI: currentEMIForSelected
+    };
+  }, [liabilities, selectedLiabilityIds, whatIfInterest, averageInterestRate, targetTenure]);
+
+  const actionItems = useMemo(() => [
     {
       icon: Zap,
       title: 'Make Extra Payments',
-      description: 'Even small extra payments can significantly reduce interest',
+      description: 'Even small extra payments directly reduce principal.',
       impact: 'High',
       color: 'orange',
-      suggestion: `Add ${CURRENCY_SYMBOLS[currency]}${Math.round(totalEMI * 0.1).toLocaleString()} extra/month to save on interest`
+      suggestion: `Pay ${formatCurrency(Math.round(totalEMI * 0.1), currency)} extra/mo`
     },
     {
       icon: RefreshCw,
-      title: 'Refinance Your Loan',
-      description: 'Lower interest rates can reduce monthly payments',
-      impact: 'High',
-      color: 'blue',
-      suggestion: highestInterestLoan 
-        ? `Refinancing ${highestInterestLoan.name} at ${(highestInterestLoan.interestRate - 2).toFixed(1)}% could save ${CURRENCY_SYMBOLS[currency]}${Math.round(highestInterestLoan.outstanding * 0.02).toLocaleString()}`
-        : 'Consider refinancing high-interest loans'
-    },
-    {
-      icon: Target,
-      title: 'Prioritize High-Interest Loans',
-      description: 'Focus extra money on loans with highest rates',
+      title: 'Refinance Loans',
+      description: 'Find lower rates to reduce your monthly interest.',
       impact: 'Medium',
-      color: 'red',
-      suggestion: highestInterestLoan 
-        ? `Focus on ${highestInterestLoan.name} (${highestInterestLoan.interestRate}% interest)`
-        : 'Review interest rates regularly'
+      color: 'blue',
+      suggestion: highestInterestLoan
+        ? `Target ${highestInterestLoan.name} (${highestInterestLoan.interestRate}%)`
+        : 'Monitor efficient rates'
     },
     {
       icon: TrendingUp,
-      title: 'Increase Income Sources',
-      description: 'Additional income accelerates debt payoff',
-      impact: 'High',
+      title: 'Automate Payments',
+      description: 'Never miss a due date and avoid all late fees.',
+      impact: 'Low',
       color: 'green',
-      suggestion: 'Consider side income to pay off debt faster'
+      suggestion: 'Set up auto-pay for peace of mind'
     }
-  ];
+  ], [totalEMI, currency, highestInterestLoan]);
+
+  if (liabilities.length === 0) {
+    return (
+      <Card className="p-8 text-center bg-gray-50 dark:bg-gray-900 shadow-soft border-dashed border-2 border-gray-200 dark:border-gray-800">
+        <div className="max-w-md mx-auto">
+          <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Target className="w-8 h-8 text-green-600" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Debt-Free Zone!</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            You don't have any liabilities recorded. This is a great place to be!
+            Track your loans, credit cards, or other debts here once you have them.
+          </p>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      {/* Header Card */}
-      <Card className="p-4 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-2 border-red-200 dark:border-red-800">
-        <div className="flex items-start gap-3 mb-4">
-          <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
-            <TrendingDown className="w-6 h-6 text-red-600" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-red-900 dark:text-red-100">Liability Overview</h3>
-            <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-              Smart strategies to manage your debt effectively
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
-            <p className="text-xs text-gray-600 dark:text-gray-400">Total Outstanding</p>
-            <p className="text-red-600 mt-1">
-              {CURRENCY_SYMBOLS[currency]}{totalOutstanding.toLocaleString()}
-            </p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
-            <p className="text-xs text-gray-600 dark:text-gray-400">Monthly EMI</p>
-            <p className="text-orange-600 mt-1">
-              {CURRENCY_SYMBOLS[currency]}{totalEMI.toLocaleString()}
-            </p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
-            <p className="text-xs text-gray-600 dark:text-gray-400">Avg. Interest</p>
-            <p className="text-yellow-600 mt-1">
-              {averageInterestRate.toFixed(1)}%
-            </p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
-            <p className="text-xs text-gray-600 dark:text-gray-400">Debt Freedom</p>
-            <p className="text-blue-600 mt-1">
-              {monthsToFreedom} months
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Repayment Strategies */}
-      <Card className="p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Lightbulb className="w-5 h-5 text-yellow-600" />
-          <h4>Debt Repayment Strategies</h4>
-        </div>
-
-        <div className="space-y-3">
-          {strategies.map((strategy) => {
-            const Icon = strategy.icon;
-            const isExpanded = selectedStrategy === strategy.id;
-
-            return (
-              <div
-                key={strategy.id}
-                className={`border-2 rounded-lg overflow-hidden transition-all ${
-                  isExpanded ? strategy.borderColor : 'border-gray-200 dark:border-gray-700'
-                }`}
-              >
-                <button
-                  onClick={() => setSelectedStrategy(isExpanded ? null : strategy.id)}
-                  className={`w-full p-4 flex items-center gap-3 text-left transition-colors ${
-                    isExpanded ? strategy.bgColor : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${strategy.bgColor}`}>
-                    <Icon className={`w-5 h-5 ${strategy.textColor}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm">{strategy.title}</h4>
-                      {strategy.recommended && (
-                        <span className="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">
-                          Recommended
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                      {strategy.description}
-                    </p>
-                  </div>
-                  <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                </button>
-
-                {isExpanded && (
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-                    <div className="mb-3">
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                        <span>{strategy.savings}</span>
-                      </div>
-                      {strategy.id === 'consolidation' && strategy.consolidationRate && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                          Potential consolidated rate: <span className="font-semibold text-green-600">{strategy.consolidationRate.toFixed(1)}%</span>
-                        </p>
-                      )}
-                    </div>
-
-                    {strategy.order && strategy.order.length > 0 && (
-                      <div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                          {strategy.id === 'avalanche' ? 'Priority order (highest interest first):' : 'Priority order (smallest balance first):'}
-                        </p>
-                        <div className="space-y-2">
-                          {strategy.order.map((liability, index) => (
-                            <div key={liability.id} className="flex items-center gap-2 text-sm">
-                              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-xs">
-                                {index + 1}
-                              </span>
-                              <span className="flex-1 truncate">{liability.name}</span>
-                              <span className="text-red-600">
-                                {CURRENCY_SYMBOLS[currency]}{liability.outstanding.toLocaleString()}
-                              </span>
-                              <span className="text-yellow-600 text-xs">
-                                {liability.interestRate}%
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* Action Items */}
-      <Card className="p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Target className="w-5 h-5 text-blue-600" />
-          <h4>Action Items to Reduce Debt</h4>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {actionItems.map((item) => {
-            const Icon = item.icon;
-            const impactColors = {
-              High: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-              Medium: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
-              Low: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-            };
-
-            return (
-              <div key={item.title} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
-                <div className="flex items-start gap-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-${item.color}-100 dark:bg-${item.color}-900/30`}>
-                    <Icon className={`w-4 h-4 text-${item.color}-600`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h5 className="text-sm">{item.title}</h5>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${impactColors[item.impact as keyof typeof impactColors]}`}>
-                        {item.impact} Impact
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                      {item.description}
-                    </p>
-                    <div className="flex items-start gap-1 text-xs bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
-                      <Info className="w-3 h-3 text-blue-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-blue-700 dark:text-blue-300">{item.suggestion}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* Warning if high debt */}
-      {totalOutstanding > 0 && totalEMI > 0 && (
-        <Card className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
-          <div className="flex gap-3">
-            <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+      <Card className="p-0 bg-[#0F172A] border border-white/10 shadow-xl overflow-hidden rounded-[24px]">
+        {/* Collapsible Header */}
+        <div
+          className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-rose-500/10 rounded-xl flex items-center justify-center border border-rose-500/20">
+              <TrendingDown className="w-5 h-5 text-rose-400" />
+            </div>
             <div>
-              <h4 className="text-yellow-900 dark:text-yellow-100">Stay on Track</h4>
-              <p className="text-sm text-yellow-800 dark:text-yellow-200 mt-1">
-                Your total monthly EMI is {CURRENCY_SYMBOLS[currency]}{totalEMI.toLocaleString()}. 
-                Make sure this doesn't exceed 40% of your monthly income to avoid financial stress.
-                {monthsToFreedom > 0 && ` At the current rate, you'll be debt-free in approximately ${monthsToFreedom} months.`}
+              <h3 className="text-slate-100 font-medium text-sm sm:text-base">Liability Analytics</h3>
+              <p className="text-xs text-slate-400">
+                Debt management & strategies
               </p>
             </div>
           </div>
-        </Card>
-      )}
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:block text-right mr-2">
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total Debt</p>
+              <p className="text-xs font-bold text-rose-400">
+                {formatCurrency(totalOutstanding, currency)}
+              </p>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 border border-white/5">
+              {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </div>
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="overflow-hidden"
+            >
+              <div className="p-4 pt-0">
+                <Tabs defaultValue="overview" className="w-full">
+                  <div className="flex items-center justify-center mb-6">
+                    <TabsList className="grid w-full grid-cols-3 max-w-sm bg-slate-800/50 p-1 border border-white/5">
+                      <TabsTrigger value="overview" className="text-xs data-[state=active]:bg-slate-700">Overview</TabsTrigger>
+                      <TabsTrigger value="strategies" className="text-xs data-[state=active]:bg-slate-700">Strategies</TabsTrigger>
+                      <TabsTrigger value="impact" className="text-xs data-[state=active]:bg-slate-700">Impact</TabsTrigger>
+                    </TabsList>
+                  </div>
+
+                  <TabsContent value="overview" className="space-y-4 mt-0">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div className="bg-slate-800/40 border border-white/5 p-3 rounded-2xl">
+                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total Outstanding</p>
+                        <p className="text-sm font-bold text-rose-400 mt-0.5 tabular-nums line-clamp-1">
+                          {formatFinancialValue(totalOutstanding, currency)}
+                        </p>
+                      </div>
+
+                      <TooltipProvider>
+                        <div className="bg-slate-800/40 border border-white/5 p-3 rounded-2xl">
+                          <div className="flex items-center gap-1">
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Monthly EMI</p>
+                            <Tooltip>
+                              <TooltipTrigger><Info className="w-3 h-3 text-slate-600" /></TooltipTrigger>
+                              <TooltipContent><p className="text-xs">Equated Monthly Installment across all loans.</p></TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <p className="text-sm font-bold text-orange-400 mt-0.5 tabular-nums">
+                            {formatFinancialValue(totalEMI, currency)}
+                          </p>
+                        </div>
+                      </TooltipProvider>
+
+                      <div className="bg-slate-800/40 border border-white/5 p-3 rounded-2xl">
+                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">Avg. Interest</p>
+                        <p className="text-sm font-bold text-amber-400 mt-0.5 tabular-nums">
+                          {averageInterestRate.toFixed(1)}%
+                        </p>
+                      </div>
+
+                      <div className="bg-slate-800/40 border border-white/5 p-3 rounded-2xl">
+                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">Debt Freedom</p>
+                        <p className="text-sm font-bold text-blue-400 mt-0.5 tabular-nums">
+                          {formatDuration(monthsToFreedom)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Progress Tracker Layer */}
+                    <div className="bg-slate-800/30 border border-white/5 p-4 rounded-2xl">
+                      <div className="flex justify-between items-end mb-2">
+                        <p className="text-xs font-medium text-slate-300">Overall Payoff Progress</p>
+                        <span className="text-sm font-bold text-emerald-400">{payoffProgress.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.max(0, payoffProgress)}%` }}
+                          className="h-full bg-gradient-to-r from-emerald-500 to-teal-400"
+                        />
+                      </div>
+                      <div className="flex justify-between mt-2">
+                        <p className="text-[10px] text-slate-500">
+                          Paid: {formatCurrency(totalPrincipal - totalOutstanding, currency)}
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          Total: {formatCurrency(totalPrincipal, currency)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Repayment Breakdown Layer */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Card className="p-4 bg-slate-800/30 border-white/5 rounded-2xl shadow-none">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                          <ListFilter size={14} className="text-indigo-400" />
+                          Repayment Breakdown
+                        </h4>
+                        <div className="space-y-4">
+                          <div className="flex justify-between text-[10px] uppercase tracking-wider text-slate-500">
+                            <span>Principal</span>
+                            <span>Interest</span>
+                          </div>
+                          <div className="w-full h-8 bg-slate-900 rounded-xl overflow-hidden flex p-1">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  {(() => {
+                                    const rectProps = {
+                                      style: {
+                                        '--width': `${(totalOutstanding / (totalOutstanding + totalEstimatedInterest) * 100)}%`
+                                      } as React.CSSProperties
+                                    };
+                                    return (
+                                      <div
+                                        className="h-full bg-rose-500/80 rounded-l-lg w-[var(--width)]"
+                                        {...rectProps}
+                                      />
+                                    );
+                                  })()}
+                                </TooltipTrigger>
+                                <TooltipContent>Principal: {formatCurrency(totalOutstanding, currency)}</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  {(() => {
+                                    const rectProps = {
+                                      style: {
+                                        '--width': `${(totalEstimatedInterest / (totalOutstanding + totalEstimatedInterest) * 100)}%`
+                                      } as React.CSSProperties
+                                    };
+                                    return (
+                                      <div
+                                        className="h-full bg-orange-400/80 rounded-r-lg w-[var(--width)]"
+                                        {...rectProps}
+                                      />
+                                    );
+                                  })()}
+                                </TooltipTrigger>
+                                <TooltipContent>Interest: {formatCurrency(totalEstimatedInterest, currency)}</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <div className="flex justify-between text-xs text-slate-400">
+                            <span className="flex items-center gap-1.5 font-medium"><div className="w-2 h-2 rounded-full bg-rose-500" /> Principal</span>
+                            <span className="flex items-center gap-1.5 font-medium"><div className="w-2 h-2 rounded-full bg-orange-400" /> Interest</span>
+                          </div>
+                        </div>
+                      </Card>
+
+                      <Card className="p-4 bg-slate-800/30 border-white/5 rounded-2xl shadow-none">
+                        <div className="flex gap-3 h-full items-center">
+                          <AlertTriangle className="w-10 h-10 text-amber-500/30 flex-shrink-0" />
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-200">Payment Strategy</h4>
+                            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                              Your {formatCurrency(totalEMI, currency)} monthly EMI represents {((totalEMI / totalMonthlyIncome) * 100).toFixed(1)}% of your income.
+                              Aim to keep this under 40% for financial stability.
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="strategies" className="space-y-4 mt-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                        <Lightbulb size={14} className="text-amber-400" />
+                        Compare Methods
+                      </h4>
+                      <ToggleGroup
+                        type="single"
+                        value={selectedStrategy || ""}
+                        onValueChange={(val) => setSelectedStrategy(val || null)}
+                        className="bg-slate-900/50 p-1 border border-white/5 rounded-lg"
+                      >
+                        <ToggleGroupItem value="avalanche" className="px-3 text-[10px] h-7 data-[state=active]:bg-slate-700">Avalanche</ToggleGroupItem>
+                        <ToggleGroupItem value="snowball" className="px-3 text-[10px] h-7 data-[state=active]:bg-slate-700">Snowball</ToggleGroupItem>
+                        <ToggleGroupItem value="consolidation" className="px-3 text-[10px] h-7 data-[state=active]:bg-slate-700">Consolidation</ToggleGroupItem>
+                      </ToggleGroup>
+                    </div>
+
+                    {!selectedStrategy ? (
+                      <div className="py-12 text-center bg-slate-900/20 rounded-2xl border border-dashed border-white/5">
+                        <LayoutGrid className="w-8 h-8 text-slate-700 mx-auto mb-2" />
+                        <p className="text-xs text-slate-500">Pick a strategy to visualize the payoff order</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-4">
+                        {strategies.filter(s => s.id === selectedStrategy).map((strategy) => {
+                          const Icon = strategy.icon;
+                          const strategyColor = strategy.id === 'avalanche' ? 'text-blue-400' : strategy.id === 'snowball' ? 'text-purple-400' : 'text-emerald-400';
+                          return (
+                            <div key={strategy.id} className="p-4 rounded-2xl bg-slate-800/40 border border-white/5">
+                              <div className="flex items-start gap-4">
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-900 border border-white/5">
+                                  <Icon className={`w-5 h-5 ${strategyColor}`} />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h5 className="font-bold text-slate-100">{strategy.title}</h5>
+                                    {strategy.recommended && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20 font-bold uppercase">Optimal</span>}
+                                  </div>
+                                  <p className="text-xs text-slate-400 mb-4">{strategy.description}</p>
+
+                                  {strategy.order && (
+                                    <div className="space-y-2">
+                                      {strategy.order.map((l, i) => (
+                                        <div key={l.id} className="flex items-center gap-3 bg-slate-900/50 p-2.5 rounded-xl border border-white/5">
+                                          <div className="w-6 h-6 rounded-full bg-slate-800 text-[10px] flex items-center justify-center font-bold text-slate-400 border border-white/5">{i + 1}</div>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-medium text-slate-200 truncate">{l.name}</p>
+                                            <p className="text-[10px] text-slate-500">{l.interestRate}% Rate</p>
+                                          </div>
+                                          <p className="text-xs font-bold text-slate-200">{formatCurrency(l.outstanding, currency)}</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="impact" className="space-y-4 mt-0">
+                    <div className="p-4 rounded-2xl bg-slate-800/40 border border-white/5">
+                      <div className="flex items-center gap-2 mb-6">
+                        <Zap className="w-4 h-4 text-blue-400" />
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Refinance & Consolidation Impact</h4>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <div className="flex flex-col gap-1 px-1">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-slate-400">Consolidation Interest Rate:</span>
+                                <span className="text-lg font-bold text-blue-400">{displayInterestRate.toFixed(1)}%</span>
+                              </div>
+                            </div>
+                            <Slider
+                              value={[displayInterestRate]}
+                              min={Math.max(0, averageInterestRate - 5)}
+                              max={Math.max(20, averageInterestRate + 5)}
+                              step={0.1}
+                              onValueChange={(val) => setWhatIfInterest(val[0])}
+                              className="py-4 cursor-pointer"
+                            />
+
+                            <div className="flex flex-col gap-1 px-1 pt-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-slate-400">New Loan Tenure:</span>
+                                <span className="text-lg font-bold text-blue-400">{targetTenure} months</span>
+                              </div>
+                              <p className="text-[10px] text-slate-500">
+                                {targetTenure >= 12 ? `${(targetTenure / 12).toFixed(1)} years` : 'Short term'}
+                              </p>
+                            </div>
+                            <Slider
+                              value={[targetTenure]}
+                              min={12}
+                              max={360}
+                              step={12}
+                              onValueChange={(val) => setTargetTenure(val[0])}
+                              className="py-4 cursor-pointer"
+                            />
+                          </div>
+
+                          <div className="space-y-3">
+                            <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Select Debts to Consolidate</h5>
+                            <div className="space-y-2 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar">
+                              {liabilities.map(l => {
+                                const isSelected = selectedLiabilityIds.includes(l.id);
+                                const isHomeLoan = l.tenure >= 120;
+                                return (
+                                  <div
+                                    key={l.id}
+                                    onClick={() => {
+                                      setSelectedLiabilityIds(prev =>
+                                        prev.includes(l.id) ? prev.filter(id => id !== l.id) : [...prev, l.id]
+                                      );
+                                    }}
+                                    className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center gap-3 ${isSelected
+                                      ? 'bg-blue-500/10 border-blue-500/30'
+                                      : 'bg-slate-900/40 border-white/5 opacity-60'
+                                      }`}
+                                  >
+                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-400' : 'border-slate-600'
+                                      }`}>
+                                      {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex justify-between">
+                                        <p className="text-xs font-bold text-slate-200 truncate">{l.name}</p>
+                                        <p className="text-xs text-slate-400">{formatCurrency(l.outstanding, currency)}</p>
+                                      </div>
+                                      <div className="flex justify-between mt-0.5">
+                                        <p className="text-[10px] text-slate-500">{l.interestRate}% • {l.tenure} mo</p>
+                                        {isHomeLoan && <span className="text-[9px] text-orange-400/80 font-medium">Long Term</span>}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Current EMI (Selection)</p>
+                            <p className="text-xl font-bold text-slate-300">{formatCurrency(currentSelectedEMI, currency)}</p>
+                          </div>
+                          <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">New Consolidated EMI</p>
+                            <p className="text-xl font-bold text-blue-400">{formatCurrency(calculatedWhatIfEMI, currency)}</p>
+                          </div>
+                        </div>
+
+                        <div className={`p-4 rounded-2xl border flex items-center gap-4 ${emiDifference > 0 ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10'
+                          }`}>
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${emiDifference > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                            }`}>
+                            {emiDifference > 0 ? <TrendingDown size={20} /> : <AlertTriangle size={20} />}
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">
+                              {emiDifference > 0 ? 'Potential Monthly Savings' : 'Monthly Cost Increase'}
+                            </p>
+                            <p className={`text-xl font-bold ${emiDifference >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {emiDifference >= 0 ? '+' : ''}{formatCurrency(emiDifference, currency)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {actionItems.map(item => {
+                        const Icon = item.icon;
+                        return (
+                          <div key={item.title} className="p-3 bg-slate-800/20 border border-white/5 rounded-2xl">
+                            <div className="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center mb-2">
+                              <Icon className={`w-4 h-4 text-slate-400`} />
+                            </div>
+                            <h5 className="text-[11px] font-bold text-slate-200">{item.title}</h5>
+                            <p className="text-[10px] text-slate-500 mt-1 leading-tight">{item.suggestion}</p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Card>
     </div>
   );
-}
+});

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Button } from './ui/button';
 import { ArrowLeftRight, RefreshCw, TrendingUp } from 'lucide-react';
 import { api } from '../utils/api';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 const CURRENCIES = [
   { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' },
@@ -77,9 +77,6 @@ export function CurrencyConverter() {
     return CURRENCIES.find(c => c.code === code)?.symbol || code;
   };
 
-  const getFlag = (code: string) => {
-    return CURRENCIES.find(c => c.code === code)?.flag || '🌍';
-  };
 
   const exchangeRate = exchangeRates[toCurrency] || 0;
 
@@ -108,10 +105,10 @@ export function CurrencyConverter() {
       <div className="space-y-6">
         {/* From Currency */}
         <div className="space-y-2">
-          <Label>From</Label>
+          <Label htmlFor="converter-from-currency">From</Label>
           <div className="flex gap-3">
             <Select value={fromCurrency} onValueChange={setFromCurrency}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger id="converter-from-currency" name="fromCurrency" className="w-[180px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -127,9 +124,15 @@ export function CurrencyConverter() {
               </SelectContent>
             </Select>
             <Input
+              id="converter-amount"
+              name="amount"
               type="number"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (parseFloat(val) < 0) return;
+                setAmount(val);
+              }}
               placeholder="Enter amount"
               className="flex-1"
               min="0"
@@ -152,10 +155,10 @@ export function CurrencyConverter() {
 
         {/* To Currency */}
         <div className="space-y-2">
-          <Label>To</Label>
+          <Label htmlFor="converter-to-currency">To</Label>
           <div className="flex gap-3">
             <Select value={toCurrency} onValueChange={setToCurrency}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger id="converter-to-currency" name="toCurrency" className="w-[180px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -170,7 +173,7 @@ export function CurrencyConverter() {
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex-1 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div id="converter-result" className="flex-1 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -193,7 +196,7 @@ export function CurrencyConverter() {
         {exchangeRate > 0 && (
           <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <div className="flex items-start gap-3">
-              <TrendingUp className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm">
                   <strong>1 {fromCurrency}</strong> = <strong>{exchangeRate.toFixed(4)} {toCurrency}</strong>
