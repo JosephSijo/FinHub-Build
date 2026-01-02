@@ -1,7 +1,6 @@
+# FinHub v5.0
 
-  # FinBase v5.0
-
-  This is a code bundle for FinBase v5.0. Created Using Figma & Improved using Antigravity.
+A code bundle for FinHub v5.0. Created Using Figma & Improvised using Antigravity.
 
 The FinHub Story: It’s Not About What You Earn.
 
