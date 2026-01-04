@@ -1,0 +1,34 @@
+
+> finbase-v5@0.1.0 build
+> vite build
+
+[36mvite v6.3.5 [32mbuilding for production...[36m[39m
+transforming...
+
+warn - The class `ease-[cubic-bezier(0.2,1,0.3,1)]` is ambiguous and matches multiple utilities.
+warn - If this is content and not a class, replace it with `ease-&lsqb;cubic-bezier(0.2,1,0.3,1)&rsqb;` to silence this warning.
+
+/mesh-grid.svg referenced in /mesh-grid.svg didn't resolve at build time, it will remain unchanged to be resolved at runtime
+[32mΓ£ô[39m 2788 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mbuild/[22m[32mindex.html                                    [39m[1m[2m  0.97 kB[22m[1m[22m[2m Γöé gzip:   0.48 kB[22m
+[2mbuild/[22m[35massets/index-X9Rfw0lM.css                     [39m[1m[2m138.83 kB[22m[1m[22m[2m Γöé gzip:  21.61 kB[22m
+[2mbuild/[22m[36massets/forms-D0ZUT3iT.js                      [39m[1m[2m  0.03 kB[22m[1m[22m[2m Γöé gzip:   0.05 kB[22m
+[2mbuild/[22m[36massets/haptics-C9gh8PRt.js                    [39m[1m[2m  0.48 kB[22m[1m[22m[2m Γöé gzip:   0.17 kB[22m
+[2mbuild/[22m[36massets/MeshBackground-1toNq0Ag.js             [39m[1m[2m  0.49 kB[22m[1m[22m[2m Γöé gzip:   0.29 kB[22m
+[2mbuild/[22m[36massets/InteractiveFinancialValue-DHV1sWXc.js  [39m[1m[2m  1.21 kB[22m[1m[22m[2m Γöé gzip:   0.72 kB[22m
+[2mbuild/[22m[36massets/slider-Bl99fTer.js                     [39m[1m[2m  1.39 kB[22m[1m[22m[2m Γöé gzip:   0.65 kB[22m
+[2mbuild/[22m[36massets/GoalsTracker-REbJVhxS.js               [39m[1m[2m 16.48 kB[22m[1m[22m[2m Γöé gzip:   4.60 kB[22m
+[2mbuild/[22m[36massets/LiabilityTab-95YPdWrH.js               [39m[1m[2m 16.88 kB[22m[1m[22m[2m Γöé gzip:   4.50 kB[22m
+[2mbuild/[22m[36massets/TransactionList-BEHuKocv.js            [39m[1m[2m 22.54 kB[22m[1m[22m[2m Γöé gzip:   5.70 kB[22m
+[2mbuild/[22m[36massets/LiabilityDashboard-ZVRYEgOa.js         [39m[1m[2m 23.06 kB[22m[1m[22m[2m Γöé gzip:   6.21 kB[22m
+[2mbuild/[22m[36massets/EmergencyFundsTab-C6DAVHqR.js          [39m[1m[2m 32.88 kB[22m[1m[22m[2m Γöé gzip:   6.27 kB[22m
+[2mbuild/[22m[36massets/Dashboard-DLxnjdY6.js                  [39m[1m[2m 44.18 kB[22m[1m[22m[2m Γöé gzip:  10.09 kB[22m
+[2mbuild/[22m[36massets/InvestmentsTab-C9F_9n_o.js             [39m[1m[2m 50.27 kB[22m[1m[22m[2m Γöé gzip:  10.76 kB[22m
+[2mbuild/[22m[36massets/motion-DFLNShgk.js                     [39m[1m[2m 56.94 kB[22m[1m[22m[2m Γöé gzip:  20.41 kB[22m
+[2mbuild/[22m[36massets/vendor-7PqXWhc5.js                     [39m[1m[2m141.85 kB[22m[1m[22m[2m Γöé gzip:  45.52 kB[22m
+[2mbuild/[22m[36massets/ui-qF4dh6YK.js                         [39m[1m[2m190.46 kB[22m[1m[22m[2m Γöé gzip:  58.50 kB[22m
+[2mbuild/[22m[36massets/index-DlpHtG0U.js                      [39m[1m[2m331.86 kB[22m[1m[22m[2m Γöé gzip:  90.02 kB[22m
+[2mbuild/[22m[36massets/charts-CgMDrE-9.js                     [39m[1m[2m425.07 kB[22m[1m[22m[2m Γöé gzip: 113.91 kB[22m
+[32mΓ£ô built in 10.28s[39m

@@ -1,0 +1,42 @@
+/* 
+  QUANTUM DESIGN SYSTEM (DNA)
+  Centralized Token Repository
+*/
+
+:root {
+  /* --- 1. CORE COLOR PALETTE (Quantum Tones) --- */
+  --q-obsidian: #000000;
+  --q-glass: #1C1C1E;
+  --q-card-border: rgba(255, 255, 255, 0.08);
+  
+  /* Accent Colors (Neon & Cyber) */
+  --q-sapphire: #0A84FF;   /* Growth/Investment */
+  --q-amethyst: #BF5AF2;   /* Spending/Bills */
+  --q-emerald: #30D158;    /* Savings/Inflow */
+  --q-ruby: #FF453A;       /* Debt/Liability */
+  --q-gold: #FF9F0A;       /* Caution/Alert */
+  --q-silver: #F2F2F7;     /* UI Text Primary */
+  --q-slate: #8E8E93;      /* UI Text Secondary */
+
+  /* --- 2. TYPOGRAPHY SYSTEM --- */
+  --q-font-ui: 'Inter', 'Outfit', system-ui, -apple-system, sans-serif;
+  --q-font-data: 'JetBrains Mono', 'Roboto Mono', monospace;
+
+  /* --- 3. GEOMETRY & RADII (Squircle Architecture) --- */
+  --q-radius-2xl: 32px;
+  --q-radius-xl: 28px;
+  --q-radius-lg: 22px;
+  --q-radius-md: 16px;
+  --q-radius-sm: 12px;
+
+  /* --- 4. MOTION & PHYSICS --- */
+  --q-ease-quantum: cubic-bezier(0.2, 1, 0.3, 1);
+  --q-transition-fast: 0.1s ease;
+  --q-transition-standard: 0.3s var(--q-ease-quantum);
+  --q-transition-slow: 0.5s var(--q-ease-quantum);
+
+  /* --- 5. VISUAL EFFECTS --- */
+  --q-glow-intensity-low: 0.1;
+  --q-glow-intensity-med: 0.4;
+  --q-mesh-opacity-cap: 0.3;
+}

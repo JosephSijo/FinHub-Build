@@ -18,11 +18,11 @@ export const AchievementsPanel: React.FC<AchievementsPanelProps> = ({
   const progressStyle = { '--progress-width': `${progress}%` } as React.CSSProperties;
 
   return (
-    <Card className="p-8 bg-slate-950 border-white/5 rounded-[32px] relative overflow-hidden group">
+    <Card className="p-8 bg-black border-white/5 sq-2xl relative overflow-hidden group">
       <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500 blur-[80px] opacity-5 -mr-16 -mt-16 group-hover:opacity-10 transition-opacity" />
 
       <div className="flex items-center gap-4 mb-8 relative z-10">
-        <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 shadow-inner">
+        <div className="w-12 h-12 sq-md bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 shadow-inner">
           <Trophy className="w-6 h-6 text-yellow-500" />
         </div>
         <div className="flex-1">
@@ -37,7 +37,7 @@ export const AchievementsPanel: React.FC<AchievementsPanelProps> = ({
       </div>
 
       {/* Progress Bar */}
-      <div className="h-2.5 bg-white/5 rounded-full mb-10 overflow-hidden relative z-10 border border-white/5">
+      <div className="h-2.5 bg-white/5 sq-full mb-10 overflow-hidden relative z-10 border border-white/5">
         {(() => {
           const barProps = { style: progressStyle };
           return (
@@ -57,7 +57,7 @@ export const AchievementsPanel: React.FC<AchievementsPanelProps> = ({
           return (
             <div
               key={achievement.id}
-              className={`relative aspect-square rounded-2xl border transition-all duration-500 flex items-center justify-center group/item cursor-help ${isUnlocked
+              className={`relative aspect-square sq-md border transition-all duration-500 flex items-center justify-center group/item cursor-help ${isUnlocked
                 ? 'border-yellow-500/30 bg-yellow-500/5 shadow-[0_10px_30px_rgba(234,179,8,0.1)] hover:border-yellow-500/50'
                 : 'border-white/5 bg-white/2'
                 }`}
@@ -70,7 +70,7 @@ export const AchievementsPanel: React.FC<AchievementsPanelProps> = ({
               )}
 
               {isUnlocked && (
-                <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-slate-950 shadow-lg">
+                <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-emerald-500 sq-full flex items-center justify-center border-2 border-slate-950 shadow-lg">
                   <span className="text-white text-[10px] font-black">✓</span>
                 </div>
               )}
@@ -87,7 +87,7 @@ export const AchievementsPanel: React.FC<AchievementsPanelProps> = ({
             {ACHIEVEMENTS.filter(a => unlockedAchievements.includes(a.id)).reverse().map(achievement => (
               <div
                 key={achievement.id}
-                className="flex items-center gap-4 p-4 bg-white/2 border border-white/5 rounded-2xl hover:bg-white/5 transition-colors group/record"
+                className="flex items-center gap-4 p-4 bg-white/2 border border-white/5 sq-md hover:bg-white/5 transition-colors group/record"
               >
                 <div className="text-2xl group-hover/record:scale-110 transition-transform">{achievement.icon}</div>
                 <div className="flex-1 min-w-0">

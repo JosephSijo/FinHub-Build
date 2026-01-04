@@ -30,30 +30,31 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
             <motion.div
                 whileTap={{ scale: 0.98 }}
                 onClick={onToggle}
-                className="flex items-center justify-between cursor-pointer group/collapsible"
+                className="flex sm:flex-row flex-col sm:items-center justify-between cursor-pointer group/collapsible gap-4"
             >
-                <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${isOpen ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-slate-500'}`}>
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center transition-colors ${isOpen ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-slate-500'}`}>
                         {icon}
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-xs font-black uppercase tracking-widest text-slate-400 group-hover/collapsible:text-slate-200">
+                    <div className="flex flex-col min-w-0">
+                        <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover/collapsible:text-slate-200 truncate leading-tight font-sans">
                             {title}
                         </span>
                         {subtitle && (
-                            <span className="text-[9px] text-slate-600 uppercase font-bold tracking-widest">{subtitle}</span>
+                            <span className="text-[9px] text-slate-600 uppercase font-bold tracking-widest truncate leading-tight font-sans">{subtitle}</span>
                         )}
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-shrink-0 sm:ml-4 ml-11">
                     {value && (
-                        <span className={`text-sm font-bold tabular-nums ${valueColor}`}>
+                        <span className={`text-sm font-bold tabular-nums font-mono ${valueColor}`}>
                             {value}
                         </span>
                     )}
                     <motion.div
                         animate={{ rotate: isOpen ? 180 : 0 }}
                         transition={{ duration: 0.3, ease: [0.19, 1, 0.22, 1] }}
+                        className="sm:block hidden"
                     >
                         <ChevronDown className="w-4 h-4 text-slate-600" />
                     </motion.div>

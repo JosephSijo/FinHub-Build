@@ -9,12 +9,24 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collap
 import { Separator } from './ui/separator';
 import {
   User, Camera, TrendingUp, ArrowRightLeft, Trophy, Bot, X,
-  Loader2, CheckCircle2, Trash2, ChevronDown, Settings2
+  Loader2, CheckCircle2, Trash2, ChevronDown, Settings2, LogOut, AlertOctagon
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from './ui/alert-dialog';
 import { UserSettings, CURRENCY_SYMBOLS } from '../types';
 import { getAllAchievements } from '../utils/achievements';
-import { validateApiKey, resolveApiKey } from '../services/ai';
+import { resolveApiKey, validateApiKey } from '../services/ai';
 import { toast } from 'sonner';
+import { useFinance } from '../context/FinanceContext';
 
 interface EnhancedSettingsPanelProps {
   isOpen: boolean;
@@ -34,6 +46,8 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
   const [name, setName] = useState(settings.name || '');
   const [photoURL, setPhotoURL] = useState(settings.photoURL || '');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const { logout, scheduleAccountDeletion } = useFinance();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Currency Converter State
   const [fromCurrency, setFromCurrency] = useState<string>('USD');
@@ -426,7 +440,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                   <Label htmlFor="ai-provider-select" className="text-[9px] font-bold uppercase tracking-widest text-slate-500 ml-1">Preferred Provider</Label>
                   <Select
                     value={selectedProvider}
-                    onValueChange={(value) => onUpdateSettings({ aiProvider: value })}
+                    onValueChange={(value: string) => onUpdateSettings({ aiProvider: value })}
                   >
                     <SelectTrigger id="ai-provider-select" name="aiProvider" className="bg-slate-900 border-white/5 rounded-xl h-11 text-[10px] font-bold uppercase tracking-widest">
                       <SelectValue />
@@ -614,7 +628,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
           <Separator className="bg-white/5" />
 
           {/* Copyright System Footer */}
-          <div className="text-center pt-8 space-y-2 opacity-40 hover:opacity-100 transition-opacity duration-700 pb-20">
+          <div className="text-center pt-8 space-y-2 opacity-40 hover:opacity-100 transition-opacity duration-700 pb-10">
             <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-100">Obsidian System Node</p>
             <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">
               Architect: Sijo Joseph // BUILD 50.3.0 // QUANTUM CORE
@@ -622,6 +636,61 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
             <p className="text-[8px] font-bold text-slate-700 uppercase tracking-widest mt-4">
               © 2025 NEURAL FINBASE FABRIC
             </p>
+          </div>
+
+          <div className="px-2 pb-10">
+            <Button
+              variant="outline"
+              onClick={() => {
+                logout();
+                onClose();
+              }}
+              className="w-full h-14 bg-white/5 hover:bg-white/10 border-white/10 hover:border-white/20 text-white/60 hover:text-white font-black uppercase tracking-widest gap-3 rounded-[24px] transition-all group mb-4"
+            >
+              <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+              Terminate Session
+            </Button>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full h-14 bg-rose-500/5 hover:bg-rose-500/10 border-rose-500/20 hover:border-rose-500/40 text-rose-500 font-black uppercase tracking-widest gap-3 rounded-[24px] transition-all group"
+                >
+                  <AlertOctagon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  Delete Account & Data
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="bg-slate-950 border-white/10 text-white rounded-[32px] p-8">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-2xl font-black tracking-tight flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-rose-500/20 text-rose-500">
+                      <AlertOctagon className="w-6 h-6" />
+                    </div>
+                    Irreversible Action?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-slate-400 font-medium leading-relaxed mt-4">
+                    Your account will be <span className="text-white font-bold italic">deactivated immediately</span> and scheduled for permanent deletion in <span className="text-white font-bold">30 days</span>.
+                    <br /><br />
+                    Log in anytime before then to cancel this request and restore your data node.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="mt-8 gap-3">
+                  <AlertDialogCancel className="h-14 flex-1 rounded-2xl bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white font-black uppercase tracking-widest transition-all">
+                    Abort
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      await scheduleAccountDeletion();
+                      onClose();
+                    }}
+                    className="h-14 flex-1 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black uppercase tracking-widest shadow-lg shadow-rose-500/20 transition-all active:scale-95"
+                  >
+                    Confirm Purge
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </SheetContent>

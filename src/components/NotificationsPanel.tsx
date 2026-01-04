@@ -85,11 +85,11 @@ export function NotificationsPanel({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col h-dvh max-h-dvh bg-slate-950 border-white/5 text-slate-100 overflow-hidden">
+      <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col h-dvh max-h-dvh bg-black border-white/5 text-slate-100 overflow-hidden">
         <SheetTitle className="sr-only">Notifications</SheetTitle>
         <SheetDescription className="sr-only">Protocol Intelligence Pulse</SheetDescription>
         {/* Modernized Panel Header */}
-        <div className="px-8 pt-28 pb-10 border-b border-white/5 bg-[#020408] relative overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
+        <div className="px-8 pt-28 pb-10 border-b border-white/5 bg-black relative overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
           <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500 blur-[120px] opacity-10 -mr-24 -mt-24" />
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500 blur-[80px] opacity-5 -ml-12 -mb-12" />
 
@@ -99,7 +99,7 @@ export function NotificationsPanel({
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="w-10 h-10 rounded-full bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+              className="w-10 h-10 sq-full bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
             >
               <X className="w-5 h-5" />
             </Button>
@@ -111,7 +111,7 @@ export function NotificationsPanel({
                 <h2 className="text-3xl font-black text-slate-100 tracking-tighter leading-none flex items-center gap-4">
                   Pulse
                   {unreadCount > 0 && (
-                    <span className="flex items-center justify-center min-w-[24px] h-6 px-2 text-[10px] font-black bg-indigo-600 text-white rounded-full shadow-[0_0_15px_rgba(79,70,229,0.4)]">
+                    <span className="flex items-center justify-center min-w-[24px] h-6 px-2 text-[10px] font-black bg-indigo-600 text-white sq-full shadow-[0_0_15px_rgba(79,70,229,0.4)]">
                       {unreadCount}
                     </span>
                   )}
@@ -133,7 +133,7 @@ export function NotificationsPanel({
                       if (!n.read) onMarkAsRead?.(n.id);
                     });
                   }}
-                  className="w-11 h-11 rounded-2xl bg-white/5 text-slate-400 hover:text-indigo-400 hover:bg-white/10 transition-all duration-300 border border-white/5 active:scale-90"
+                  className="w-11 h-11 sq-md bg-white/5 text-slate-400 hover:text-indigo-400 hover:bg-white/10 transition-all duration-300 border border-white/5 active:scale-90"
                 >
                   <CheckCheck className="w-5 h-5" />
                 </Button>
@@ -148,7 +148,7 @@ export function NotificationsPanel({
                       onClearRead?.();
                     }
                   }}
-                  className="w-11 h-11 rounded-2xl bg-white/5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-300 border border-white/5 active:scale-90"
+                  className="w-11 h-11 sq-md bg-white/5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-300 border border-white/5 active:scale-90"
                 >
                   <Trash2 className="w-5 h-5" />
                 </Button>
@@ -157,12 +157,12 @@ export function NotificationsPanel({
           </div>
         </div>
 
-        <ScrollArea className="flex-1 w-full bg-[#020408] overflow-hidden custom-scrollbar">
+        <ScrollArea className="flex-1 w-full bg-black overflow-hidden custom-scrollbar">
           <div className="px-6 space-y-12 py-8 pb-32">
             {notifications.length === 0 ? (
               <div className="text-center py-32 flex flex-col items-center animate-in fade-in zoom-in duration-700">
-                <div className="w-24 h-24 bg-slate-900 border border-white/5 rounded-[40px] flex items-center justify-center text-slate-800 mb-8 shadow-inner relative group">
-                  <div className="absolute inset-0 bg-indigo-500/5 blur-2xl rounded-full group-hover:bg-indigo-500/10 transition-colors" />
+                <div className="w-24 h-24 bg-white/5 border border-white/5 sq-2xl flex items-center justify-center text-slate-800 mb-8 shadow-inner relative group">
+                  <div className="absolute inset-0 bg-indigo-500/5 blur-2xl sq-full group-hover:bg-indigo-500/10 transition-colors" />
                   <Bell className="w-10 h-10 relative z-10" />
                 </div>
                 <h4 className="text-2xl font-black text-slate-100 mb-3 tracking-tight">Signal Silence</h4>
@@ -190,7 +190,7 @@ export function NotificationsPanel({
                           {category}
                         </span>
                         {unreadInCategory > 0 && (
-                          <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
+                          <div className="w-1.5 h-1.5 bg-indigo-500 sq-full animate-pulse shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
                         )}
                       </div>
                       <div className="flex items-center gap-2">
@@ -202,8 +202,8 @@ export function NotificationsPanel({
                     <div className="space-y-3 relative">
                       {!isExpanded && categoryNotifs.length > 1 && (
                         <>
-                          <div className="absolute top-2 left-2 right-2 h-full bg-slate-900/40 rounded-[24px] -z-10 border border-white/5 translate-y-2 scale-[0.98]" />
-                          <div className="absolute top-4 left-4 right-4 h-full bg-slate-900/20 rounded-[24px] -z-20 border border-white/5 translate-y-4 scale-[0.96]" />
+                          <div className="absolute top-2 left-2 right-2 h-full bg-black/40 sq-xl -z-10 border border-white/5 translate-y-2 scale-[0.98]" />
+                          <div className="absolute top-4 left-4 right-4 h-full bg-black/20 sq-xl -z-20 border border-white/5 translate-y-4 scale-[0.96]" />
                         </>
                       )}
 
@@ -218,9 +218,9 @@ export function NotificationsPanel({
                           <div
                             key={notification.id}
                             {...animProps}
-                            className={`p-6 rounded-[24px] border transition-all duration-500 group relative overflow-hidden cursor-pointer active:scale-[0.98] animate-in fade-in slide-in-from-right-4 fill-mode-both [animation-delay:var(--anim-delay)] z-[var(--z-index)] ${notification.read
-                              ? 'bg-slate-900 border-white/5'
-                              : 'bg-slate-900 border-indigo-500/30 shadow-lg shadow-indigo-500/5 hover:border-indigo-500/50'
+                            className={`p-6 sq-xl border transition-all duration-500 group relative overflow-hidden cursor-pointer active:scale-[0.98] animate-in fade-in slide-in-from-right-4 fill-mode-both [animation-delay:var(--anim-delay)] z-[var(--z-index)] ${notification.read
+                              ? 'bg-black border-white/5'
+                              : 'bg-black border-indigo-500/30 shadow-lg shadow-indigo-500/5 hover:border-indigo-500/50'
                               }`}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -236,7 +236,7 @@ export function NotificationsPanel({
                             )}
 
                             <div className="flex gap-4 relative z-10">
-                              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 transition-all duration-500 ${notification.read ? 'bg-slate-800/50 text-slate-600' : (notification.priority === 'high' ? 'bg-red-500/10 text-red-400' : 'bg-indigo-500/10 text-indigo-400 shadow-inner')}`}>
+                              <div className={`w-12 h-12 sq-md flex items-center justify-center shrink-0 border border-white/5 transition-all duration-500 ${notification.read ? 'bg-white/5 text-slate-600' : (notification.priority === 'high' ? 'bg-red-500/10 text-red-400' : 'bg-indigo-500/10 text-indigo-400 shadow-inner')}`}>
                                 {getIcon(notification.type)}
                               </div>
 
@@ -256,7 +256,7 @@ export function NotificationsPanel({
 
                                 {notification.priority === 'high' && !notification.read && (
                                   <div className="mt-4 flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 bg-red-400 rounded-full animate-ping" />
+                                    <div className="w-1.5 h-1.5 bg-red-400 sq-full animate-ping" />
                                     <span className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em]">
                                       Critical Stability Alert
                                     </span>

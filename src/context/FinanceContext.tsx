@@ -33,7 +33,9 @@ const STORAGE_KEYS = {
     NOTIFICATIONS: 'finbase_notifications',
     EMERGENCY_FUND: 'finbase_emergency_fund',
     RECURRING: 'finbase_recurring',
-    AUTH: 'finbase_auth'
+    AUTH: 'finbase_auth',
+    REMEMBERED_MOBILE: 'finbase_remembered_mobile',
+    DELETION_SCHEDULE: 'finbase_deletion_schedule'
 };
 
 interface FinanceContextType {
@@ -58,6 +60,8 @@ interface FinanceContextType {
     authStatus: 'guest' | 'authenticating' | 'authenticated';
     currentUser: AuthUser | null;
     isAwaitingPin: boolean;
+    isRememberedUser: boolean;
+    rememberedMobile: string;
 
     // Actions
     refreshData: () => Promise<void>;
@@ -65,9 +69,12 @@ interface FinanceContextType {
 
     // Auth Actions
     checkIdentity: (mobile: string) => Promise<boolean>;
-    login: (pin: string) => Promise<boolean>;
-    signup: (mobile: string, pin: string, name: string) => Promise<boolean>;
+    login: (pin: string, rememberMe?: boolean) => Promise<boolean>;
+    signup: (mobile: string, pin: string, name: string, rememberMe?: boolean) => Promise<boolean>;
     logout: () => void;
+    scheduleAccountDeletion: () => Promise<void>;
+    cancelAccountDeletion: () => Promise<void>;
+    deletionDate: string | null;
 
     // CRUD Actions
     createExpense: (data: any) => Promise<void>;
@@ -169,6 +176,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
     const [isAwaitingPin, setIsAwaitingPin] = useState(false);
     const [pendingMobile, setPendingMobile] = useState('');
+    const [isRememberedUser, setIsRememberedUser] = useState(false);
+    const [rememberedMobile, setRememberedMobile] = useState('');
+    const [deletionDate, setDeletionDate] = useState<string | null>(null);
 
     // Pre-defined users for Beta/Demo
     const DEMO_USERS = [
@@ -469,6 +479,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             const storedRecurring = localStorage.getItem(STORAGE_KEYS.RECURRING);
             if (storedRecurring) setRecurringTransactions(JSON.parse(storedRecurring));
 
+            const storedRememberedMobile = localStorage.getItem(STORAGE_KEYS.REMEMBERED_MOBILE);
+            if (storedRememberedMobile) {
+                setRememberedMobile(storedRememberedMobile);
+                setPendingMobile(storedRememberedMobile);
+                setIsRememberedUser(true);
+            }
+
+            const storedDeletion = localStorage.getItem(STORAGE_KEYS.DELETION_SCHEDULE);
+            if (storedDeletion) {
+                const deletionTime = new Date(storedDeletion).getTime();
+                const now = new Date().getTime();
+
+                if (now >= deletionTime) {
+                    // 30 days have passed. Execute total purge.
+                    purgeAllData();
+                    console.warn("Account purge executed based on schedule.");
+                } else {
+                    setDeletionDate(storedDeletion);
+                }
+            }
+
         } catch (e) {
             console.error("Error loading specific local data:", e);
         }
@@ -595,7 +626,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return isExistingUser;
     };
 
-    const login = async (pin: string) => {
+    const login = async (pin: string, rememberMe: boolean = false) => {
         // Authenticating state triggers LoadingSprite
         setAuthStatus('authenticating');
 
@@ -631,6 +662,23 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(authenticatedUser));
             setAuthStatus('authenticated');
             setIsAwaitingPin(false);
+
+            // Handle deletion cancellation on login
+            if (deletionDate) {
+                await cancelAccountDeletion();
+                toast.success('Your account deletion request has been canceled. Welcome back!');
+            }
+
+            if (rememberMe) {
+                localStorage.setItem(STORAGE_KEYS.REMEMBERED_MOBILE, pendingMobile);
+                setRememberedMobile(pendingMobile);
+                setIsRememberedUser(true);
+            } else {
+                // If they explicitly log in without remember me, we might want to clear it 
+                // but the requirement says "Smart Prompt" if they didn't check it.
+                // So we leave existing remembered mobile but don't update it to THIS session if different.
+            }
+
             return true;
         } else {
             setAuthStatus('guest'); // Reset to guest on failure
@@ -638,7 +686,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
     };
 
-    const signup = async (mobile: string, pin: string, name: string) => {
+    const signup = async (mobile: string, pin: string, name: string, rememberMe: boolean = false) => {
         setAuthStatus('authenticating');
         await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -655,15 +703,61 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(authUser));
         setAuthStatus('authenticated');
         setIsAwaitingPin(false);
+
+        if (rememberMe) {
+            localStorage.setItem(STORAGE_KEYS.REMEMBERED_MOBILE, mobile);
+            setRememberedMobile(mobile);
+            setIsRememberedUser(true);
+        }
+
         return true;
     };
 
     const logout = () => {
-        setCurrentUser(null);
         setAuthStatus('guest');
-        setIsAwaitingPin(false);
-        setPendingMobile('');
+        setCurrentUser(null);
         localStorage.removeItem(STORAGE_KEYS.AUTH);
+    };
+
+    const scheduleAccountDeletion = async () => {
+        const date = new Date();
+        date.setDate(date.getDate() + 30);
+        const dateString = date.toISOString();
+
+        setDeletionDate(dateString);
+        localStorage.setItem(STORAGE_KEYS.DELETION_SCHEDULE, dateString);
+
+        toast.warning('Account scheduled for deletion in 30 days.');
+        logout();
+    };
+
+    const cancelAccountDeletion = async () => {
+        setDeletionDate(null);
+        localStorage.removeItem(STORAGE_KEYS.DELETION_SCHEDULE);
+    };
+
+    const purgeAllData = () => {
+        // Clear all known storage keys
+        Object.values(STORAGE_KEYS).forEach(key => {
+            localStorage.removeItem(key);
+        });
+
+        // Reset state
+        setExpenses([]);
+        setIncomes([]);
+        setDebts([]);
+        setGoals([]);
+        setAccounts([]);
+        setInvestments([]);
+        setLiabilities([]);
+        setRecurringTransactions([]);
+        setNotifications([]);
+        setEmergencyFundAmount(0);
+        setDeletionDate(null);
+        setAuthStatus('guest');
+        setCurrentUser(null);
+
+        toast.info('Session purged successfully.');
     };
 
     // Auto-login from storage
@@ -1649,6 +1743,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 authStatus,
                 currentUser,
                 isAwaitingPin,
+                isRememberedUser,
+                rememberedMobile,
 
                 // Actions
                 refreshData,
@@ -1657,6 +1753,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 login,
                 signup,
                 logout,
+                scheduleAccountDeletion,
+                cancelAccountDeletion,
+                deletionDate,
 
                 createExpense,
                 updateExpense,

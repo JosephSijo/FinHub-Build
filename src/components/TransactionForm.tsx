@@ -11,6 +11,7 @@ import { EXPENSE_CATEGORIES, Account } from '../types';
 import { isTransfer } from '../utils/isTransfer';
 import { Checkbox } from './ui/checkbox';
 import { autoCategorize } from '../utils/autoCategorize';
+import { formatCurrency } from '../utils/numberFormat';
 
 interface TransactionFormProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ interface TransactionFormProps {
   onSubmit: (data: any) => void;
   initialData?: any;
   accounts: Account[];
+  currency: string;
   roundUpEnabled?: boolean;
 }
 
@@ -29,6 +31,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   onSubmit,
   initialData,
   accounts,
+  currency,
   roundUpEnabled = true // Default to true if not provided
 }) => {
   const [formData, setFormData] = useState({
@@ -248,7 +251,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-[#020408] border-white/5 p-0 shadow-2xl custom-scrollbar">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-black border-white/5 p-0 shadow-2xl custom-scrollbar sq-2xl">
         <div className={`px-8 pt-10 pb-8 border-b border-white/5 relative overflow-hidden ${type === 'expense' ? 'bg-rose-500/5' :
           type === 'income' ? 'bg-emerald-500/5' :
             'bg-yellow-500/5'
@@ -280,15 +283,17 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               <div className="space-y-2">
                 <Label htmlFor="transaction-account" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Account Reservoir</Label>
                 <Select value={formData.accountId} onValueChange={(value) => setFormData({ ...formData, accountId: value })}>
-                  <SelectTrigger id="transaction-account" name="accountId" className="h-12 bg-slate-900 border-white/5 rounded-2xl focus:ring-1 focus:ring-white/10 text-slate-200 font-bold">
+                  <SelectTrigger id="transaction-account" name="accountId" className="h-12 bg-black border-white/5 sq-md focus:ring-1 focus:ring-white/10 text-slate-200 font-bold">
                     <SelectValue placeholder="Select account" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-white/5">
+                  <SelectContent className="bg-black border-white/5">
                     {accounts.map((account) => (
                       <SelectItem key={account.id} value={account.id} className="focus:bg-white/5 focus:text-white">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{account.icon}</span>
+                        <div className="flex items-center justify-between w-full">
                           <span className="font-bold">{account.name}</span>
+                          <span className="text-[10px] text-slate-500 ml-4 font-mono">
+                            {formatCurrency(account.balance, currency)}
+                          </span>
                         </div>
                       </SelectItem>
                     ))}
@@ -296,7 +301,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 </Select>
               </div>
             ) : (
-              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-amber-400">
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 sq-md text-[10px] font-black uppercase tracking-widest text-amber-400">
                 ⚠️ Protocol Failure: No accounts detected
               </div>
             )}
@@ -325,7 +330,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                         : 'John Doe'
                   }
                   required
-                  className="h-12 bg-slate-900 border-white/5 rounded-2xl focus:border-white/10 text-slate-200 font-bold placeholder:text-slate-600 flex-1"
+                  className="h-12 bg-black border-white/5 sq-md focus:border-white/10 text-slate-200 font-bold placeholder:text-slate-600 flex-1"
                   autoComplete="off"
                 />
                 {type === 'debt' && (
@@ -333,7 +338,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                     type="button"
                     variant="ghost"
                     onClick={handlePickContact}
-                    className="h-12 w-12 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-center p-0 text-slate-400 hover:text-white"
+                    className="h-12 w-12 bg-white/5 border border-white/5 sq-md flex items-center justify-center p-0 text-slate-400 hover:text-white"
                     title="Select from Contacts"
                   >
                     <Users className="w-5 h-5" />
@@ -343,7 +348,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
               {/* AI Suggestion */}
               {suggestedCategory && (
-                <div className="mt-3 p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl flex items-start gap-3 animate-in fade-in zoom-in-95 duration-300">
+                <div className="mt-3 p-4 bg-indigo-500/5 border border-indigo-500/10 sq-md flex items-start gap-3 animate-in fade-in zoom-in-95 duration-300">
                   <Sparkles className="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
                     <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300 leading-tight">
@@ -362,7 +367,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                       size="sm"
                       variant="ghost"
                       onClick={applySuggestion}
-                      className="mt-3 h-8 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest w-full"
+                      className="mt-3 h-8 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 sq-sm text-[10px] font-black uppercase tracking-widest w-full"
                     >
                       Auto-Configure Form
                     </Button>
@@ -384,7 +389,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                   step="any"
                   min="0"
                   required
-                  className="flex-1 h-14 bg-slate-900 border-white/5 rounded-2xl focus:border-white/10 text-xl font-black text-slate-100 placeholder:text-slate-800"
+                  className="flex-1 h-14 bg-black border-white/5 sq-md focus:border-white/10 text-xl font-black text-slate-100 placeholder:text-slate-800"
                   autoComplete="off"
                 />
                 <div className="flex flex-col gap-1">
@@ -393,7 +398,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={() => appendZeros(2)}
-                    className="px-3 h-[25px] bg-white/5 text-[10px] font-black text-slate-400 hover:text-white rounded-lg border border-white/5"
+                    className="px-3 h-[25px] bg-white/5 text-[10px] font-black text-slate-400 hover:text-white sq-sm border border-white/5"
                     title="Add 00"
                   >
                     +00
@@ -403,7 +408,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={() => appendZeros(3)}
-                    className="px-3 h-[25px] bg-white/5 text-[10px] font-black text-slate-400 hover:text-white rounded-lg border border-white/5"
+                    className="px-3 h-[25px] bg-white/5 text-[10px] font-black text-slate-400 hover:text-white sq-sm border border-white/5"
                     title="Add 000"
                   >
                     +000
@@ -416,7 +421,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                     key={amount}
                     type="button"
                     onClick={() => setFormData({ ...formData, amount: amount.toString() })}
-                    className="flex-1 py-2 text-[10px] font-black bg-slate-900 border border-white/5 text-slate-500 rounded-xl hover:bg-white/5 hover:text-slate-200 transition-all uppercase tracking-widest"
+                    className="flex-1 py-2 text-[10px] font-black bg-black border border-white/5 text-slate-500 sq-md hover:bg-white/5 hover:text-slate-200 transition-all uppercase tracking-widest"
                   >
                     {amount}
                   </button>
@@ -432,7 +437,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
                   if (diff > 0 && diff >= 1) {
                     return (
-                      <div className="flex items-center space-x-3 mt-4 p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl animate-in fade-in duration-500">
+                      <div className="flex items-center space-x-3 mt-4 p-4 bg-indigo-500/5 border border-indigo-500/10 sq-md animate-in fade-in duration-500">
                         <Checkbox
                           id="roundUp"
                           name="roundUp"
@@ -447,10 +452,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                             className="text-[10px] font-black uppercase tracking-widest text-slate-100 flex items-center gap-2 cursor-pointer"
                           >
                             <TrendingUp className="w-3 h-3 text-indigo-400" />
-                            Reserve {diff.toFixed(2)} to Goals
+                            Reserve {formatCurrency(diff, currency)} to Goals
                           </Label>
                           <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">
-                            Round up capital to nearest 100 ({target})
+                            Round up capital to nearest 100 ({formatCurrency(target, currency)})
                           </p>
                         </div>
                       </div>
@@ -466,10 +471,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               <div className="space-y-2">
                 <Label htmlFor="transaction-category" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Spending Domain</Label>
                 <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                  <SelectTrigger id="transaction-category" name="category" className="h-12 bg-slate-900 border-white/5 rounded-2xl focus:ring-1 focus:ring-white/10 text-slate-200 font-bold">
+                  <SelectTrigger id="transaction-category" name="category" className="h-12 bg-black border-white/5 sq-md focus:ring-1 focus:ring-white/10 text-slate-200 font-bold">
                     <SelectValue placeholder="Select domain" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-white/5 max-h-[300px]">
+                  <SelectContent className="bg-black border-white/5 max-h-[300px]">
                     {EXPENSE_CATEGORIES.map((cat) => (
                       <SelectItem key={cat.value} value={cat.value} className="focus:bg-white/5 focus:text-white">
                         <span className="mr-2">{cat.emoji}</span>
@@ -494,7 +499,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               const isBreaching = projectedSpent > safeLimit && creditLimit > 0;
 
               return (
-                <div className="space-y-4 p-4 bg-slate-900 border border-white/5 rounded-2xl animate-in slide-in-from-top-2 duration-300">
+                <div className="space-y-4 p-4 bg-black border border-white/5 sq-md animate-in slide-in-from-top-2 duration-300">
                   <div className="flex items-center justify-between">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Credit Protocol</Label>
                     {isBreaching && (
@@ -525,7 +530,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                         placeholder="Why is this credit use essential?"
                         value={formData.justification}
                         onChange={(e) => setFormData(prev => ({ ...prev, justification: e.target.value }))}
-                        className="bg-white/5 border-rose-500/20 focus:border-rose-500/50 rounded-xl h-12 text-sm"
+                        className="bg-white/5 border-rose-500/20 focus:border-rose-500/50 sq-md h-12 text-sm"
                         required={isBreaching}
                         autoComplete="off"
                       />
@@ -542,11 +547,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             {type === 'debt' && (
               <div className="space-y-3">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Asset Direction</Label>
-                <div className="flex gap-2 p-1.5 bg-slate-900 border border-white/5 rounded-2xl">
+                <div className="flex gap-2 p-1.5 bg-black border border-white/5 sq-md">
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, debtType: 'lent' })}
-                    className={`flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.debtType === 'lent'
+                    className={`flex-1 py-3 px-4 sq-md text-[10px] font-black uppercase tracking-widest transition-all ${formData.debtType === 'lent'
                       ? 'bg-emerald-600 text-white shadow-lg'
                       : 'text-slate-500 hover:text-slate-200 hover:bg-white/5'
                       } `}
@@ -556,7 +561,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, debtType: 'borrowed' })}
-                    className={`flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.debtType === 'borrowed'
+                    className={`flex-1 py-3 px-4 sq-md text-[10px] font-black uppercase tracking-widest transition-all ${formData.debtType === 'borrowed'
                       ? 'bg-rose-600 text-white shadow-lg'
                       : 'text-slate-500 hover:text-slate-200 hover:bg-white/5'
                       } `}
@@ -577,7 +582,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                   type="date"
                   value={formData.debtDueDate}
                   onChange={(e) => setFormData({ ...formData, debtDueDate: e.target.value })}
-                  className="h-12 bg-slate-900 border-white/5 rounded-2xl focus:border-white/10 text-slate-200 font-bold"
+                  className="h-12 bg-black border-white/5 sq-md focus:border-white/10 text-slate-200 font-bold"
                 />
               </div>
             )}
@@ -592,7 +597,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 required
-                className="h-12 bg-slate-900 border-white/5 rounded-2xl focus:border-white/10 text-slate-200 font-bold"
+                className="h-12 bg-black border-white/5 sq-md focus:border-white/10 text-slate-200 font-bold"
               />
             </div>
 
@@ -608,14 +613,14 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
                   placeholder="urgent, recurring, etc..."
                   autoComplete="off"
-                  className="h-12 bg-slate-900 border-white/5 rounded-2xl focus:border-white/10 text-slate-200 font-bold placeholder:text-slate-800"
+                  className="h-12 bg-black border-white/5 sq-md focus:border-white/10 text-slate-200 font-bold placeholder:text-slate-800"
                 />
                 <Button
                   type="button"
                   onClick={handleAddTag}
                   variant="ghost"
                   size="sm"
-                  className="h-12 px-6 bg-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white rounded-2xl border border-white/5"
+                  className="h-12 px-6 bg-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white sq-md border border-white/5"
                 >
                   Index
                 </Button>
@@ -626,7 +631,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                     <Badge
                       key={tag}
                       variant="secondary"
-                      className="gap-2 bg-slate-900 border border-white/5 text-slate-300 font-bold px-3 py-1 rounded-xl"
+                      className="gap-2 bg-black border border-white/5 text-slate-300 font-bold px-3 py-1 sq-sm"
                     >
                       #{tag}
                       <button type="button" onClick={() => handleRemoveTag(tag)} aria-label={`Remove tag ${tag}`} className="hover:text-rose-400 transition-colors">
@@ -639,7 +644,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             </div>
 
             {/* Recurring */}
-            <div className="flex items-center gap-3 p-4 bg-slate-900 border border-white/5 rounded-2xl group cursor-pointer" onClick={() => setFormData({ ...formData, isRecurring: !formData.isRecurring })}>
+            <div className="flex items-center gap-3 p-4 bg-black border border-white/5 sq-md group cursor-pointer" onClick={() => setFormData({ ...formData, isRecurring: !formData.isRecurring })}>
               <Checkbox
                 id="recurring"
                 name="isRecurring"
@@ -657,10 +662,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 <div className="space-y-2">
                   <Label htmlFor="transaction-frequency" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Period</Label>
                   <Select value={formData.frequency} onValueChange={(value: any) => setFormData({ ...formData, frequency: value })}>
-                    <SelectTrigger id="transaction-frequency" name="frequency" className="bg-slate-900 border-white/5 h-12 rounded-2xl text-slate-200 font-bold">
+                    <SelectTrigger id="transaction-frequency" name="frequency" className="bg-black border-white/5 h-12 sq-md text-slate-200 font-bold">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-white/5">
+                    <SelectContent className="bg-black border-white/5">
                       <SelectItem value="daily">Daily</SelectItem>
                       <SelectItem value="weekly">Weekly</SelectItem>
                       <SelectItem value="monthly">Monthly</SelectItem>
@@ -676,7 +681,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                     type="date"
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    className="bg-slate-900 border-white/5 h-12 rounded-2xl text-slate-200 font-bold"
+                    className="bg-black border-white/5 h-12 sq-md text-slate-200 font-bold"
                   />
                 </div>
               </div>
@@ -687,13 +692,13 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 type="button"
                 variant="ghost"
                 onClick={handleClose}
-                className="flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-100 hover:bg-white/5 border border-white/5"
+                className="flex-1 h-14 sq-md text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-100 hover:bg-white/5 border border-white/5"
               >
                 Abort
               </Button>
               <Button
                 type="submit"
-                className={`flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-[0.98] transition-all ${type === 'expense' ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-900/20' :
+                className={`flex-1 h-14 sq-md text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-[0.98] transition-all ${type === 'expense' ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-900/20' :
                   type === 'income' ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20' :
                     'bg-yellow-600 hover:bg-yellow-500 shadow-yellow-900/20'
                   }`}

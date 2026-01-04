@@ -1,48 +1,43 @@
+@import './styles/theme.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* --- APPLE INSPIRED VISUAL DNA --- */
-    --bg-obsidian: #000000;
-    --surface-glass: #1C1C1E;
-    /* Apple's System Gray 6 */
-    --card-edge: rgba(255, 255, 255, 0.08);
+    /* --- APPLE INSPIRED VISUAL DNA (LEGACY MAPPING) --- */
+    --bg-obsidian: var(--q-obsidian);
+    --surface-glass: var(--q-glass);
+    --card-edge: var(--q-card-border);
 
     /* Tailwind Mappings */
-    --bg-primary: var(--bg-obsidian);
-    --bg-secondary: #000000;
+    --bg-primary: var(--q-obsidian);
+    --bg-secondary: var(--q-obsidian);
     --text-primary: #FFFFFF;
-    --text-secondary: #8E8E93;
-    /* iOS Gray */
-    --text-muted: #8E8E93;
-    --text-inverse: #000000;
+    --text-secondary: var(--q-slate);
+    --text-muted: var(--q-slate);
+    --text-inverse: var(--q-obsidian);
 
-    --accent-blue: #0A84FF;
-    /* iOS standard blue */
-    --accent-purple: #BF5AF2;
-    /* iOS standard purple */
-    --neon-green: #30D158;
-    /* iOS green */
-    --neon-red: #FF453A;
-    /* iOS red */
+    --accent-blue: var(--q-sapphire);
+    --accent-purple: var(--q-amethyst);
+    --neon-green: var(--q-emerald);
+    --neon-red: var(--q-ruby);
 
-    --text-silver: #F2F2F7;
-    --text-dim: #8E8E93;
-    /* iOS Gray */
+    --text-silver: var(--q-silver);
+    --text-dim: var(--q-slate);
   }
 
   body {
-    @apply bg-[#000000] text-[#FFFFFF] antialiased overflow-x-hidden;
-    font-family: 'Inter', 'SF Pro Text', -apple-system, sans-serif;
-    background: #000000;
+    @apply bg-black text-white antialiased overflow-x-hidden;
+    font-family: var(--q-font-ui);
+    background: var(--q-obsidian);
   }
 
   button:active,
   .active-scale:active {
     transform: scale(0.97);
-    transition: transform 0.1s ease;
+    transition: transform var(--q-transition-fast);
   }
 }
 
@@ -62,13 +57,13 @@
 
   /* Modern Solid Card Architecture - No Pill Shapes */
   .card-elite {
-    background: #1C1C1E;
+    background: var(--q-glass);
     border: 0.5px solid #38383A;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
-    transition: all 0.4s cubic-bezier(0.2, 1, 0.3, 1);
+    transition: all var(--q-transition-slow);
     position: relative;
     overflow: hidden;
-    border-radius: 28px;
+    border-radius: var(--q-radius-xl);
   }
 
   .card-elite::before {
@@ -88,53 +83,63 @@
     background: #2C2C2E;
   }
 
-  /* Segmented Stack Components */
+  /* Segmented Stack Components - Solid Obsidian */
   .segmented-stack {
     display: flex;
     flex-direction: column;
     gap: 0;
     overflow: hidden;
-    border-radius: 28px;
-    border: 0.5px solid #38383A;
-    background-color: #1C1C1E;
+    border-radius: var(--q-radius-2xl); 
+    border: 1px solid var(--q-card-border);
+    background-color: var(--q-obsidian);
   }
-
+ 
   .stack-cap {
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 28px 28px 0 0;
-    border-bottom: 0.5px solid #38383A;
-    padding: 24px;
+    background: transparent;
+    padding: 1.5rem 1.5rem 0.75rem 1.5rem;
   }
-
+ 
   .stack-body {
     background: transparent;
-    border-radius: 0;
-    padding: 24px;
-    flex-grow: 1;
-    min-height: 44px;
-    /* Touch Safety */
+    padding: 0 1.5rem 1.5rem 1.5rem;
+  }
+ 
+  .stack-footer {
+    background: transparent;
+    padding: 0.75rem 1.5rem 1.5rem 1.5rem;
+    border: none;
   }
 
-  .stack-footer {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 0 0 28px 28px;
-    border-top: 0.5px solid #38383A;
-    padding: 16px 24px;
+  /* Solid Card (No Blur) */
+  .solid-card {
+    position: relative;
+    z-index: 10;
+    background: var(--q-obsidian);
+    border: 1px solid var(--q-card-border);
+    border-radius: var(--q-radius-lg);
+    padding: 1.25rem;
+  }
+
+  .dotted-divider {
+    border-top: 1px dotted rgba(255, 255, 255, 0.1);
+    width: 100%;
+    height: 1px;
+    margin: 16px 0;
   }
 
   /* Balanced Grid (Small Widgets) */
   .grid-widget {
-    background: #1C1C1E;
+    background: var(--q-glass);
     border: 0.5px solid #38383A;
     border-radius: 18px;
-    /* Fixed Geometry Rule */
-    padding: 16px;
+    /* Flexible Geometry Rule */
+    padding: 1rem;
     /* Global Internal Padding */
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    transition: all 0.3s ease;
-    min-height: 80px;
+    gap: 0.75rem;
+    transition: all var(--q-transition-standard);
+    min-height: 5rem;
   }
 
   /* Constraint: Adaptive Radius for Small Heights */
@@ -161,22 +166,18 @@
     text-transform: uppercase;
   }
 
-  /* Legacy Squircle replacements to avoid pill shape */
-  .squircle-22 {
-    border-radius: 28px;
-  }
+  /* Standardized Squircle Architecture */
+  .sq-2xl { border-radius: var(--q-radius-2xl) !important; }
+  .sq-xl  { border-radius: var(--q-radius-xl) !important; }
+  .sq-lg  { border-radius: var(--q-radius-lg) !important; }
+  .sq-md  { border-radius: var(--q-radius-md) !important; }
+  .sq-sm  { border-radius: var(--q-radius-sm) !important; }
 
-  .squircle-12 {
-    border-radius: 16px;
-  }
-
-  .squircle-card {
-    border-radius: 28px;
-  }
-
-  .squircle-btn {
-    border-radius: 12px;
-  }
+  /* Legacy Cleanups */
+  .squircle-22 { border-radius: 28px; }
+  .squircle-12 { border-radius: 16px; }
+  .squircle-card { border-radius: 28px; }
+  .squircle-btn { border-radius: 12px; }
 
   .text-balance {
     font-weight: 700;
@@ -185,8 +186,8 @@
 
   .main-grid {
     display: grid;
-    gap: 12px;
-    padding: 100px 20px 150px 20px;
+    gap: 0.75rem;
+    padding: 6.25rem 1.25rem 9.375rem 1.25rem;
     max-width: 1400px;
     margin: 0 auto;
   }
@@ -244,6 +245,7 @@
     border-radius: 10px;
   }
 
+  /* --- SYNCHRONIZED MESH SYSTEM --- */
   .mesh-gradient-card {
     background: #000000;
     position: relative;
@@ -251,74 +253,84 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
-  /* Hero Ghost Icons specs */
-  .hero-ghost-icon {
+  .mesh-readability-lock {
     position: absolute;
-    width: 80% !important;
-    height: auto !important;
-    right: -15%;
-    bottom: -10%;
-    opacity: 0.1;
-    /* Slightly higher base to account for soft-light blending */
-    mix-blend-mode: soft-light;
-    z-index: 0;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.1); /* No Blur - Solid Overlay */
     pointer-events: none;
-    color: white;
+    z-index: 1;
   }
 
-  /* Stealth Gray Rule for Secondary Cards */
-  .secondary-stealth {
-    background: linear-gradient(135deg, #2C2C2E 0%, #1C1C1E 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
-  }
-
+  /* Shared Navy Base Highlights - Brightness Cap 30% */
   .mesh-blob {
     position: absolute;
     width: 350px;
     height: 350px;
     border-radius: 50%;
     filter: blur(100px);
-    opacity: 0.25;
+    opacity: var(--q-mesh-opacity-cap); /* Brightness/Opacity Cap */
     z-index: 0;
     pointer-events: none;
-    animation: blob-float 20s infinite alternate cubic-bezier(0.45, 0, 0.55, 1);
+  }
+
+  .mesh-blob-base { background: #001D3D !important; opacity: 0.15; top: 20%; left: 30%; } /* Unified Deep Navy */
+
+  /* Category Specific High-Vibrancy Meshes */
+  .mesh-spending .mesh-blob-1 { background: #BF5AF2 !important; top: -150px; left: -150px; } /* Neon Purple */
+  .mesh-spending .mesh-blob-2 { background: #5E5CE6 !important; bottom: -150px; right: -150px; } /* Indigo */
+
+  .mesh-savings .mesh-blob-1 { background: #30D158 !important; top: -150px; left: -150px; } /* Emerald */
+  .mesh-savings .mesh-blob-2 { background: #004D40 !important; bottom: -150px; right: -150px; } /* Deep Forest */
+
+  .mesh-debt .mesh-blob-1 { background: #FF9F0A !important; top: -150px; left: -150px; } /* Sunset Orange */
+  .mesh-debt .mesh-blob-2 { background: #FF453A !important; bottom: -150px; right: -150px; } /* Coral/Red */
+
+  .mesh-invest .mesh-blob-1 { background: #0A84FF !important; top: -150px; left: -150px; } /* Electric Blue */
+  .mesh-invest .mesh-blob-2 { background: #5856D6 !important; bottom: -150px; right: -150px; } /* Royal Blue */
+
+  /* Ghost Blue (Low Saturation Intelligence) */
+  .mesh-ghost-blue {
+    background: #000000 !important;
+    border: 1px solid rgba(10, 132, 255, 0.2) !important; /* Subtle Glowing Blue Border */
+    box-shadow: 0 0 15px rgba(10, 132, 255, 0.05);
+  }
+  .mesh-ghost-blue .mesh-blob {
+    background: #0A84FF !important;
+    opacity: 0.1; /* 10% Ghosting */
+    filter: blur(120px);
+    desaturate: 50%;
+  }
+
+  /* Data-First Chart Atmosphere */
+  .chart-container-solid {
+    background: #000000 !important;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .chart-atmosphere {
+    position: absolute;
+    bottom: -50px;
+    right: -50px;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.1;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .mesh-blob {
+    animation: blob-float 15s infinite alternate cubic-bezier(0.45, 0, 0.55, 1);
   }
 
   @keyframes blob-float {
-    0% {
-      transform: translate(-10%, -10%) scale(1);
-    }
-
-    100% {
-      transform: translate(10%, 10%) scale(1.1);
-    }
+    0% { transform: translate(-10%, -10%) scale(1); }
+    100% { transform: translate(15%, 15%) scale(1.1); }
   }
 
-  .mesh-blob-1 {
-    background: #001D3D !important;
-    /* Navy */
-    top: -100px;
-    left: -100px;
-  }
-
-  .mesh-blob-2 {
-    background: #1A0A2E !important;
-    /* Purple */
-    bottom: -100px;
-    right: -100px;
-    animation-delay: -5s;
-  }
-
-  .mesh-blob-3 {
-    background: #0A84FF !important;
-    /* iOS Blue hint */
-    top: 20%;
-    left: 40%;
-    animation-delay: -10s;
-    opacity: 0.15;
-  }
+  .text-pure-white { color: #FFFFFF !important; }
 
   .spring-expand {
-    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all var(--q-transition-slow);
   }
 }

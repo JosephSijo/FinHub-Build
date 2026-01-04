@@ -66,7 +66,7 @@ export const InteractiveFinancialValue: React.FC<InteractiveFinancialValueProps>
             <span
                 className={cn(
                     "cursor-pointer transition-all duration-200 select-none",
-                    "border-b border-dotted border-[#38383A]",
+                    "border-b border-dotted border-[#38383A] font-mono tabular-nums",
                     isPressed && "scale-105",
                     className
                 )}
@@ -78,7 +78,7 @@ export const InteractiveFinancialValue: React.FC<InteractiveFinancialValueProps>
                 <div
                     className={cn(
                         "absolute bottom-full mb-2 z-[300] whitespace-nowrap",
-                        "px-4 py-2 rounded-xl text-xs font-black",
+                        "px-4 py-2 rounded-xl text-xs font-black font-mono",
                         "bg-white/10 backdrop-blur-md border border-white/20",
                         "shadow-[0_8px_32px_rgba(0,0,0,0.8)]",
                         "animate-in fade-in zoom-in-95 duration-200",

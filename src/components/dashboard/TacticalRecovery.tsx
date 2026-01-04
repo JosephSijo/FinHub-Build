@@ -1,6 +1,7 @@
 import React from 'react';
 import { Compass, Layers, FlaskConical } from 'lucide-react';
 import { Liability } from '@/types';
+import { CyberButton } from '../ui/CyberButton';
 
 interface TacticalRecoveryProps {
     liabilities: Liability[];
@@ -26,7 +27,7 @@ export const TacticalRecovery: React.FC<TacticalRecoveryProps> = ({ liabilities 
     if (liabilities.length === 0) return null;
 
     return (
-        <div className="segmented-stack">
+        <div className="segmented-stack col-span-full">
             {/* Sub-Component A (The Cap) */}
             <div className="stack-cap flex justify-between items-center border-t-2 border-blue-600/50">
                 <div className="flex items-center gap-4">
@@ -60,9 +61,9 @@ export const TacticalRecovery: React.FC<TacticalRecoveryProps> = ({ liabilities 
                                             {targetLoan.interestRate}% APR • {strategy === 'avalanche' ? 'Burn Heavy' : 'Low Friction'}
                                         </span>
                                     </div>
-                                    <button className="bg-blue-600 text-white text-[10px] font-black px-6 py-3 rounded-xl shadow-xl shadow-blue-900/40 uppercase tracking-widest hover:bg-blue-500 transition-colors">
+                                    <CyberButton variant="blue" className="w-full sm:w-auto h-12">
                                         PAY OFF
-                                    </button>
+                                    </CyberButton>
                                 </div>
                             </div>
                         )}

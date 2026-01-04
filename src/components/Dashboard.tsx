@@ -19,6 +19,7 @@ import { AdvancedInsights } from './dashboard/AdvancedInsights';
 import { CollapsibleSection } from './ui/CollapsibleSection';
 import { useShadowWallet } from '@/hooks/useShadowWallet';
 import { formatCurrency, formatFinancialValue } from '@/utils/numberFormat';
+import { MeshBackground } from './ui/MeshBackground';
 import { isTransfer } from '@/utils/isTransfer';
 import { Expense, Income, Account, Debt } from '@/types';
 
@@ -204,81 +205,68 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* AI Truth Banner */}
       <TruthBanner
-        message={`Assessment: ₹${formatCurrency(totalReserved, currency, true)} reserved. Safe daily spending limit is ₹${formatCurrency(safeDailyLimit, currency, true)} for the next ${daysRemaining} days.`}
+        message={`Assessment: ${formatCurrency(totalReserved, currency, true)} reserved. Safe daily spending limit is ${formatCurrency(safeDailyLimit, currency, true)} for the next ${daysRemaining} days.`}
       />
 
       {/* 1. COLLAPSIBLE BALANCE BOARD */}
       <motion.div
         layout
         initial={false}
-        className={`segmented-stack mesh-gradient-card group transition-all duration-500 col-span-full`}
+        className={`segmented-stack mesh-gradient-card mesh-invest group transition-all duration-500 col-span-full relative overflow-hidden sq-2xl`}
       >
+        <MeshBackground variant="invest" />
         {/* Sub-Component A (The Cap) */}
-        <div className="stack-cap relative z-10 border-none bg-transparent">
-          {/* Animated Mesh Blobs */}
-          <div className="mesh-blob mesh-blob-1" />
-          <div className="mesh-blob mesh-blob-2" />
-          <div className="mesh-blob mesh-blob-3" />
-
-          {/* Ghost Header Icon */}
-          <Wallet className="hero-ghost-icon" />
+        <div className="stack-cap relative z-10">
 
           <div className="flex justify-between items-start relative z-20">
             <div>
-              <div className="flex items-center gap-3 mb-4">
-                <h3 className="text-label text-[9px]">Balance Board</h3>
-                <div className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border border-blue-500/20 bg-blue-500/10 text-[#0A84FF]">
-                  Total Liquidity
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 bg-white/5 flex items-center justify-center border border-white/10 group-hover:scale-110 transition-transform duration-500 sq-lg flex-shrink-0">
+                    <Wallet className="text-blue-400 w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-label text-[10px] tracking-widest truncate">Balance Board</h3>
+                    <div className="px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-tighter border border-blue-500/20 bg-blue-500/10 text-[var(--q-sapphire)] inline-block">
+                      Total Liquidity
+                    </div>
+                  </div>
                 </div>
               </div>
               <motion.div
                 layoutId="balance-mount"
-                className="hero-text text-5xl md:text-6xl lg:text-7xl tabular-nums text-white"
+                className="hero-text text-4xl md:text-6xl lg:text-7xl tabular-nums text-white"
               >
                 <InteractiveFinancialValue value={m1Assets} currency={currency} />
               </motion.div>
-            </div>
-            <div className="w-14 h-14 bg-white/5 flex items-center justify-center border border-white/10 backdrop-blur-xl group-hover:scale-110 transition-transform duration-500 rounded-2xl">
-              <Wallet className="text-blue-400 w-6 h-6" />
             </div>
           </div>
         </div>
 
         {/* Sub-Component B (The Body) */}
         <div className="stack-body relative z-10">
-          <div className="grid grid-cols-2 gap-8 mb-8">
+          <div className="dotted-divider opacity-50 mb-6" />
+
+          <div className="grid grid-cols-2 gap-4 mb-6">
             <div>
-              <p className="text-label text-[10px] mb-1.5 opacity-60">Daily Spend</p>
-              <div className="text-balance text-xl text-white tabular-nums">
-                <InteractiveFinancialValue value={safeDailyLimit} currency={currency} />
+              <p className="text-label text-[10px] mb-1.5 opacity-60 font-black">Daily Spend</p>
+              <div className="hero-text text-[clamp(1.5rem,5vw,1.875rem)] text-white tabular-nums font-mono">
+                {formatCurrency(safeDailyLimit, currency)}
               </div>
             </div>
             <div>
-              <p className="text-label text-[10px] mb-1.5 opacity-60">Budget Left</p>
-              <div className="text-balance text-xl text-[#30D158] tabular-nums">
-                <InteractiveFinancialValue value={availableToSpend} currency={currency} />
+              <p className="text-label text-[10px] mb-1.5 opacity-60 font-black">Budget Left</p>
+              <div className="hero-text text-[clamp(1.5rem,5vw,1.875rem)] text-[var(--q-emerald)] tabular-nums font-mono">
+                {formatCurrency(availableToSpend, currency)}
               </div>
             </div>
           </div>
+
+          <div className="dotted-divider opacity-50 mb-6" />
         </div>
 
         {/* Sub-Component C (The Footer) */}
-        <div className="stack-footer relative z-10 bg-transparent border-t border-white/5 py-6">
-
-          <div className="grid grid-cols-2 gap-8 mb-8">
-            <div>
-              <p className="text-label text-[10px] mb-1.5 opacity-60">Daily Spend</p>
-              <p className="text-balance text-xl text-white tabular-nums">
-                {formatCurrency(safeDailyLimit, currency)}
-              </p>
-            </div>
-            <div>
-              <p className="text-label text-[10px] mb-1.5 opacity-60">Budget Left</p>
-              <p className="text-balance text-xl text-[#30D158] tabular-nums">
-                {formatCurrency(availableToSpend, currency)}
-              </p>
-            </div>
-          </div>
+        <div className="stack-footer relative z-10 space-y-2">
 
 
           <CollapsibleSection
@@ -291,15 +279,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
           >
             <div className="space-y-3">
               {accounts.filter(a => a.type === 'bank' || a.type === 'cash').map(acc => (
-                <div key={acc.id} className="flex justify-between items-center p-4 bg-slate-900/50 rounded-xl border border-white/5">
-                  <div className="flex items-center gap-3">
-                    {acc.type === 'bank' ? <Building2 className="w-4 h-4 text-blue-400" /> : <Wallet className="w-4 h-4 text-emerald-400" />}
+                <div className="flex justify-between items-center p-4 bg-slate-900/50 rounded-2xl border border-white/5">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {acc.type === 'bank' ? <Building2 className="w-4 h-4 text-blue-400 flex-shrink-0" /> : <Wallet className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
                     <div className="min-w-0">
-                      <p className="text-[10px] font-black text-slate-200 uppercase truncate">{acc.name}</p>
-                      <p className="text-[9px] text-slate-600 uppercase font-black tracking-widest">{acc.type === 'bank' ? 'Institutional Reservoir' : 'Physical Cash Node'}</p>
+                      <p className="text-[11px] font-black text-slate-200 uppercase truncate leading-tight">{acc.name}</p>
+                      <p className="text-[9px] text-slate-600 uppercase font-bold tracking-widest truncate leading-tight">{acc.type === 'bank' ? 'Institutional Reservoir' : 'Physical Cash Node'}</p>
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-white tabular-nums">{formatCurrency(acc.balance, currency)}</span>
+                  <span className="text-sm font-bold text-white tabular-nums flex-shrink-0 ml-2">{formatCurrency(acc.balance, currency)}</span>
                 </div>
               ))}
             </div>
@@ -410,23 +398,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* SECONDARY METRICS GRID (2x2 on Desktop) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 col-span-full">
-        {/* 2. CIRCULATION ANALYSIS */}
-        <div className="grid-widget mesh-gradient-card group relative">
-          {/* Animated Mesh Blobs */}
-          <div className="mesh-blob mesh-blob-1 opacity-10" />
-          <div className="mesh-blob mesh-blob-3 opacity-10" />
 
-          {/* Ghost Icon */}
-          <Zap className="hero-ghost-icon" />
-
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-500/10 flex items-center justify-center border border-blue-500/20 rounded-xl">
-                <Zap className="text-blue-400 w-5 h-5" />
+        {/* 2. CIRCULATION ANALYSIS (Spending - Purple) */}
+        <div className="grid-widget mesh-gradient-card mesh-spending relative overflow-hidden h-full">
+          <MeshBackground variant="spending" />
+          <div className="relative z-10 p-6 h-full flex flex-col">
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 sq-md flex-shrink-0">
+                <Zap className="text-indigo-400 w-5 h-5" />
               </div>
-              <div>
-                <h3 className="text-label text-[10px]">Circulation</h3>
-                <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Efficiency</p>
+              <div className="min-w-0">
+                <h3 className="text-white font-black text-[10px] uppercase tracking-[0.2em] truncate">Circulation</h3>
+                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 truncate">Active Expense Node</p>
               </div>
             </div>
 
@@ -441,15 +424,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 onToggle={() => toggleCard('flow-speed')}
               >
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-800 p-5 rounded-xl border border-white/5">
+                  <div className="bg-slate-900/50 p-4 sq-md border border-white/5">
                     <span className="text-[8px] text-slate-500 uppercase block mb-1">Gross Income (Est)</span>
-                    <div className="text-emerald-400 font-bold tabular-nums">
+                    <div className="text-emerald-400 font-bold tabular-nums font-mono">
                       ~<InteractiveFinancialValue value={grossIncome} currency={currency} />
                     </div>
                   </div>
-                  <div className="bg-slate-800 p-5 rounded-xl border border-white/5">
+                  <div className="bg-slate-900/50 p-4 sq-md border border-white/5">
                     <span className="text-[8px] text-slate-500 uppercase block mb-1">Gross Burn</span>
-                    <div className="text-red-400 font-bold tabular-nums">
+                    <div className="text-red-400 font-bold tabular-nums font-mono">
                       <InteractiveFinancialValue value={grossBurn} currency={currency} />
                     </div>
                   </div>
@@ -475,11 +458,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 onToggle={() => toggleCard('spending-flow')}
               >
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-slate-800 rounded-xl border border-white/5">
+                  <div className="p-4 bg-slate-800/50 rounded-xl border border-white/5">
                     <span className="text-[8px] text-slate-500 uppercase block mb-1">Daily Spend Avg</span>
                     <span className="text-sm font-bold tabular-nums">{formatCurrency(Math.floor(grossBurn / 30), currency)}</span>
                   </div>
-                  <div className="p-4 bg-slate-800 rounded-xl border border-white/5">
+                  <div className="p-4 bg-slate-800/50 rounded-xl border border-white/5">
                     <span className="text-[8px] text-slate-500 uppercase block mb-1">Subscriptions</span>
                     <span className="text-sm font-bold tabular-nums">{formatCurrency(subscriptionBurden, currency)}</span>
                   </div>
@@ -489,23 +472,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* 3. RESERVE MANAGEMENT */}
-        <div className="grid-widget mesh-gradient-card group relative">
-          {/* Animated Mesh Blobs */}
-          <div className="mesh-blob mesh-blob-2 opacity-10" />
-          <div className="mesh-blob mesh-blob-3 opacity-10" />
-
-          {/* Ghost Icon */}
-          <ShieldCheck className="hero-ghost-icon" />
-
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-purple-500/10 flex items-center justify-center border border-purple-500/20 rounded-xl">
-                <ShieldCheck className="text-purple-400 w-5 h-5" />
+        {/* 3. RESERVE MANAGEMENT (Savings - Green) */}
+        <div className="grid-widget mesh-gradient-card mesh-savings relative overflow-hidden h-full">
+          <MeshBackground variant="savings" />
+          <div className="relative z-10 p-6 h-full flex flex-col">
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 sq-md flex-shrink-0">
+                <ShieldCheck className="text-emerald-400 w-5 h-5" />
               </div>
-              <div>
-                <h3 className="text-label text-[10px]">Reserves</h3>
-                <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Allocations</p>
+              <div className="min-w-0">
+                <h3 className="text-white font-black text-[10px] uppercase tracking-[0.2em] truncate">Reserves</h3>
+                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 truncate">Capital Accumulation</p>
               </div>
             </div>
 
@@ -521,17 +498,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
               >
                 <div className="space-y-4">
                   {emergencyFundAmount > 0 && (
-                    <div className="flex justify-between items-center p-4 bg-slate-800 rounded-xl border border-white/5">
+                    <div className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5">
                       <span className="text-xs text-slate-300 block">Emergency Fund</span>
-                      <div className="font-bold text-emerald-400 tabular-nums">
+                      <div className="font-bold text-emerald-400 tabular-nums font-mono">
                         <InteractiveFinancialValue value={emergencyFundAmount} currency={currency} />
                       </div>
                     </div>
                   )}
                   {totalCommitments > 0 && (
-                    <div className="flex justify-between items-center p-4 bg-slate-800 rounded-xl border border-white/5">
+                    <div className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5">
                       <span className="text-xs text-slate-300 block">Upcoming Bills/EMI</span>
-                      <div className="font-bold text-red-400 tabular-nums">
+                      <div className="font-bold text-red-400 tabular-nums font-mono">
                         <InteractiveFinancialValue value={totalCommitments} currency={currency} />
                       </div>
                     </div>
@@ -550,7 +527,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               >
                 <div className="space-y-3">
                   {goals.map(g => (
-                    <div key={g.id} className="flex justify-between items-center p-4 bg-slate-800 rounded-xl border border-white/5">
+                    <div key={g.id} className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5">
                       <div className="flex items-center gap-3">
                         <span className="text-xl">{g.emoji || '🎯'}</span>
                         <div>
@@ -559,7 +536,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="font-bold text-white tabular-nums block">{formatCurrency(g.currentAmount, currency)}</span>
+                        <span className="font-bold text-white tabular-nums font-mono block">{formatCurrency(g.currentAmount, currency)}</span>
                         <span className="text-[8px] text-slate-500 uppercase tracking-tighter">of {formatCurrency(g.targetAmount, currency)}</span>
                       </div>
                     </div>
@@ -570,107 +547,171 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* 4. INVESTMENTS (Money Growth) */}
-        <div className="grid-widget mesh-gradient-card group relative">
-          {/* Animated Mesh Blobs */}
-          <div className="mesh-blob mesh-blob-1 opacity-10" />
-          <div className="mesh-blob mesh-blob-2 opacity-10" />
-
-          {/* Ghost Icon */}
-          <TrendingUp className="hero-ghost-icon" />
-
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 rounded-xl">
-                <TrendingUp className="text-emerald-400 w-5 h-5" />
+        {/* 4. OBLIGATIONS (Debt/Bills - Orange) */}
+        <div className="grid-widget mesh-gradient-card mesh-debt relative overflow-hidden h-full">
+          <MeshBackground variant="debt" />
+          <div className="relative z-10 p-6 h-full flex flex-col">
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-rose-500/10 flex items-center justify-center border border-rose-500/20 sq-md flex-shrink-0">
+                <Activity className="text-rose-400 w-5 h-5" />
               </div>
-              <div>
-                <h3 className="text-label text-[10px]">Growth</h3>
-                <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">Valuation</p>
+              <div className="min-w-0">
+                <h3 className="text-white font-black text-[10px] uppercase tracking-[0.2em] truncate">Obligations</h3>
+                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 truncate">Institutional Debt</p>
               </div>
             </div>
 
-            <CollapsibleSection
-              title="Money Growth"
-              subtitle={`${parseFloat(portfolioVelocity) >= 0 ? '+' : ''}${portfolioVelocity}% Velocity`}
-              icon={<TrendingUp className="w-4 h-4" />}
-              value={formatFinancialValue(totalInvestmentValue, currency)}
-              valueColor="text-emerald-400"
-              isOpen={activeCard === 'invest-growth'}
-              onToggle={() => toggleCard('invest-growth')}
-            >
-              <div className="p-6 bg-slate-800/20 border border-dashed border-white/5 rounded-xl text-center">
-                <Activity className="w-8 h-8 mx-auto text-slate-700 mb-2" />
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Portfolio Deep Dive</p>
-                <p className="text-[10px] text-slate-600 mt-1">Visit Investments tab for detailed node analysis</p>
-              </div>
-            </CollapsibleSection>
+            <div className="space-y-2">
+              <CollapsibleSection
+                title="Active Liabilities"
+                subtitle={`${liabilities.length + pendingBorrowedDebts.length} Active Strings`}
+                icon={<Activity className="w-4 h-4" />}
+                value={<InteractiveFinancialValue value={totalLiabilities + totalMoneyOwed + totalCreditUsage} currency={currency} />}
+                valueColor="text-rose-400"
+                isOpen={activeCard === 'debt-widget'}
+                onToggle={() => toggleCard('debt-widget')}
+              >
+                <div className="space-y-3">
+                  {liabilities.map((l: any) => (
+                    <div key={l.id} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
+                      <span className="text-[10px] font-bold text-slate-300 uppercase truncate">{l.name}</span>
+                      <span className="text-xs font-bold text-rose-400 tabular-nums font-mono">
+                        {formatCurrency(l.outstanding || l.principal, currency)}
+                      </span>
+                    </div>
+                  ))}
+                  {totalCreditUsage > 0 && (
+                    <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
+                      <span className="text-[10px] font-bold text-slate-300 uppercase">Card Usage</span>
+                      <span className="text-xs font-bold text-rose-400 tabular-nums font-mono">
+                        {formatCurrency(totalCreditUsage, currency)}
+                      </span>
+                    </div>
+                  )}
+                  {pendingBorrowedDebts.map((d: any) => (
+                    <div key={d.id} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
+                      <span className="text-[10px] font-bold text-slate-300 uppercase truncate">{d.personName}</span>
+                      <span className="text-xs font-bold text-rose-400 tabular-nums font-mono">
+                        {formatCurrency(d.amount, currency)}
+                      </span>
+                    </div>
+                  ))}
+                  {(liabilities.length === 0 && totalCreditUsage === 0 && pendingBorrowedDebts.length === 0) && (
+                    <p className="text-[10px] text-slate-500 text-center py-4">No active obligations detected.</p>
+                  )}
+                </div>
+              </CollapsibleSection>
+
+              {/* Tactical Recovery shortcut if active */}
+              {liabilities.length > 0 && (
+                <div className="p-4 bg-rose-500/5 border border-rose-500/10 rounded-xl">
+                  <p className="text-[9px] text-rose-400 font-bold uppercase tracking-widest mb-1">Tactical Mode Active</p>
+                  <p className="text-[10px] text-slate-400 leading-tight">Payback optimization logic is currently prioritizing high-interest nodes.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* 7. TACTICAL RECOVERY (if active) */}
-        {liabilities.length > 0 && (
-          <TacticalRecovery liabilities={liabilities} />
-        )}
+        {/* 5. INVESTMENTS (Growth - Blue) */}
+        <div className="grid-widget mesh-gradient-card mesh-invest relative overflow-hidden h-full">
+          <MeshBackground variant="invest" />
+          <div className="relative z-10 p-6 h-full flex flex-col">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-blue-500/10 flex items-center justify-center border border-blue-500/20 sq-md">
+                <TrendingUp className="text-blue-400 w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-white font-black text-[10px] uppercase tracking-[0.2em]">Growth</h3>
+                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Asset Expansion</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <CollapsibleSection
+                title="Money Growth"
+                subtitle={`${parseFloat(portfolioVelocity) >= 0 ? '+' : ''}${portfolioVelocity}% Velocity`}
+                icon={<TrendingUp className="w-4 h-4" />}
+                value={formatFinancialValue(totalInvestmentValue, currency)}
+                valueColor="text-emerald-400"
+                isOpen={activeCard === 'invest-growth-widget'}
+                onToggle={() => toggleCard('invest-growth-widget')}
+              >
+                <div className="p-6 bg-white/5 border border-dashed border-white/10 rounded-xl text-center">
+                  <Activity className="w-8 h-8 mx-auto text-slate-700 mb-2" />
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Portfolio Deep Dive</p>
+                  <p className="text-[10px] text-slate-600 mt-1">Visit Investments tab for detailed node analysis</p>
+                </div>
+              </CollapsibleSection>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* 7. TACTICAL RECOVERY (if active) */}
+      {liabilities.length > 0 && (
+        <TacticalRecovery liabilities={liabilities} />
+      )}
+
       {/* 8. ADVANCED INSIGHTS GRID */}
-      {(() => {
-        const totalEMIs = liabilities.reduce((sum, l) => sum + (l.emiAmount || 0), 0);
-        const totalCCDebt = accounts
-          .filter(a => a.type === 'credit_card')
-          .reduce((sum, a) => sum + Math.abs(a.balance), 0);
-        const monthlyCCPayment = totalCCDebt * 0.05; // 5% minimum payment estimate
-        const totalMonthlyDebt = totalEMIs + monthlyCCPayment;
+      {
+        (() => {
+          const totalEMIs = liabilities.reduce((sum, l) => sum + (l.emiAmount || 0), 0);
+          const totalCCDebt = accounts
+            .filter(a => a.type === 'credit_card')
+            .reduce((sum, a) => sum + Math.abs(a.balance), 0);
+          const monthlyCCPayment = totalCCDebt * 0.05; // 5% minimum payment estimate
+          const totalMonthlyDebt = totalEMIs + monthlyCCPayment;
 
-        // Outflow Calculation for Leakage Tracker (Multi-Account Aggregate)
-        const bankAccountIds = accounts.filter(a => a.type === 'bank').map(a => a.id);
-        const spendAccountIds = accounts.filter(a => ['bank', 'cash', 'credit_card'].includes(a.type)).map(a => a.id);
+          // Outflow Calculation for Leakage Tracker (Multi-Account Aggregate)
+          const bankAccountIds = accounts.filter(a => a.type === 'bank').map(a => a.id);
+          const spendAccountIds = accounts.filter(a => ['bank', 'cash', 'credit_card'].includes(a.type)).map(a => a.id);
 
-        const currentMonthIncomes = reconciledIncomes.filter(i => {
-          const d = new Date(i.date);
-          return d.getMonth() === currentMonth &&
-            d.getFullYear() === currentYear &&
-            bankAccountIds.includes(i.accountId) &&
-            !i.isInternalTransfer;
-        }).reduce((sum, i) => sum + i.amount, 0) || grossIncome;
+          const currentMonthIncomes = reconciledIncomes.filter(i => {
+            const d = new Date(i.date);
+            return d.getMonth() === currentMonth &&
+              d.getFullYear() === currentYear &&
+              bankAccountIds.includes(i.accountId) &&
+              !i.isInternalTransfer;
+          }).reduce((sum, i) => sum + i.amount, 0) || grossIncome;
 
-        const currentMonthInvestments = investments.filter(inv => {
-          const d = new Date(inv.purchaseDate);
-          return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-        }).reduce((sum, inv) => sum + (inv.buyPrice * inv.quantity), 0);
+          const currentMonthInvestments = investments.filter(inv => {
+            const d = new Date(inv.purchaseDate);
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+          }).reduce((sum, inv) => sum + (inv.buyPrice * inv.quantity), 0);
 
-        // Outflow = Spending from Credit Cards + Cash + Bank
-        const refinedSpend = reconciledExpenses.filter(e => {
-          const d = new Date(e.date);
-          return d.getMonth() === currentMonth &&
-            d.getFullYear() === currentYear &&
-            spendAccountIds.includes(e.accountId) &&
-            !e.isInternalTransfer;
-        }).reduce((sum, e) => sum + e.amount, 0);
+          // Outflow = Spending from Credit Cards + Cash + Bank
+          const refinedSpend = reconciledExpenses.filter(e => {
+            const d = new Date(e.date);
+            return d.getMonth() === currentMonth &&
+              d.getFullYear() === currentYear &&
+              spendAccountIds.includes(e.accountId) &&
+              !e.isInternalTransfer;
+          }).reduce((sum, e) => sum + e.amount, 0);
 
-        // Leakage = Refined Spending + Investments
-        const totalOutflows = refinedSpend + currentMonthInvestments;
-        const outflowRatio = currentMonthIncomes > 0 ? (totalOutflows / currentMonthIncomes) : 0;
+          // Leakage = Refined Spending + Investments
+          const totalOutflows = refinedSpend + currentMonthInvestments;
+          const outflowRatio = currentMonthIncomes > 0 ? (totalOutflows / currentMonthIncomes) : 0;
 
-        return (
-          <AdvancedInsights
-            currency={currency}
-            expenses={reconciledExpenses}
-            incomes={reconciledIncomes}
-            accounts={accounts}
-            savingsRate={grossIncome > 0 ? ((grossIncome - grossBurn) / grossIncome * 100) : 0}
-            dtiRatio={grossIncome > 0 ? (totalMonthlyDebt / grossIncome) : 0}
-            outflowRatio={outflowRatio}
-          />
-        );
-      })()}
+          return (
+            <AdvancedInsights
+              currency={currency}
+              expenses={reconciledExpenses}
+              incomes={reconciledIncomes}
+              accounts={accounts}
+              savingsRate={grossIncome > 0 ? ((grossIncome - grossBurn) / grossIncome * 100) : 0}
+              dtiRatio={grossIncome > 0 ? (totalMonthlyDebt / grossIncome) : 0}
+              outflowRatio={outflowRatio}
+            />
+          );
+        })()
+      }
 
       {/* FAB STACK IS NOW HANDLED BY layout/FabStack.tsx (FabDock) rendered in App.tsx */}
 
       {/* HIDDEN SPACER for Last Item Visibility */}
       <div className="h-24 w-full col-span-full" />
 
-    </div>
+    </div >
   );
 };

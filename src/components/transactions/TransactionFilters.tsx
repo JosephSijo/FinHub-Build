@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Search, ListFilter, TrendingDown, TrendingUp, Users, Repeat, CreditCard, Shield, Target } from 'lucide-react';
+import { cn } from "@/lib/utils";
 
 interface TransactionFiltersProps {
     searchTerm: string;
@@ -37,78 +38,109 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
                 </div>
             </Card>
 
-            {/* Filter Buttons */}
-            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide sm:flex-wrap sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0">
+            <div className="flex gap-2.5 overflow-x-auto pb-4 -mx-1 px-1 scrollbar-hide sm:flex-wrap sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0">
                 <Button
-                    variant={filter === "all" ? "default" : "outline"}
-                    size="sm"
+                    variant="ghost"
                     onClick={() => setFilter("all")}
-                    className="gap-1.5 whitespace-nowrap flex-shrink-0"
+                    className={cn(
+                        "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
+                        filter === "all"
+                            ? "bg-slate-100 text-slate-900 border-none shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+                            : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+                    )}
                 >
-                    <ListFilter className="w-4 h-4" />
+                    <ListFilter className="w-3.5 h-3.5" />
                     All
                 </Button>
                 <Button
-                    variant={filter === "expenses" ? "default" : "outline"}
-                    size="sm"
+                    variant="ghost"
                     onClick={() => setFilter("expenses")}
-                    className={`gap-1.5 whitespace-nowrap flex-shrink-0 ${filter !== "expenses" ? "border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20" : ""}`}
+                    className={cn(
+                        "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
+                        filter === "expenses"
+                            ? "bg-rose-500 text-white border-none shadow-[0_0_20px_rgba(244,63,94,0.3)]"
+                            : "bg-white/5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10"
+                    )}
                 >
-                    <TrendingDown className="w-4 h-4" />
+                    <TrendingDown className="w-3.5 h-3.5" />
                     Expenses
                 </Button>
                 <Button
-                    variant={filter === "income" ? "default" : "outline"}
-                    size="sm"
+                    variant="ghost"
                     onClick={() => setFilter("income")}
-                    className={`gap-1.5 whitespace-nowrap flex-shrink-0 ${filter !== "income" ? "border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20" : ""}`}
+                    className={cn(
+                        "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
+                        filter === "income"
+                            ? "bg-emerald-500 text-white border-none shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                            : "bg-white/5 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10"
+                    )}
                 >
-                    <TrendingUp className="w-4 h-4" />
+                    <TrendingUp className="w-3.5 h-3.5" />
                     Income
                 </Button>
                 <Button
-                    variant={filter === "debts" ? "default" : "outline"}
-                    size="sm"
+                    variant="ghost"
                     onClick={() => setFilter("debts")}
-                    className={`gap-1.5 whitespace-nowrap flex-shrink-0 ${filter !== "debts" ? "border-yellow-300 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-700 dark:text-yellow-400 dark:hover:bg-yellow-900/20" : ""}`}
+                    className={cn(
+                        "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
+                        filter === "debts"
+                            ? "bg-amber-500 text-white border-none shadow-[0_0_20px_rgba(245,158,11,0.3)]"
+                            : "bg-white/5 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10"
+                    )}
                 >
-                    <Users className="w-4 h-4" />
+                    <Users className="w-3.5 h-3.5" />
                     IOUs
                 </Button>
                 <Button
-                    variant={filter === "subs" ? "default" : "outline"}
-                    size="sm"
+                    variant="ghost"
                     onClick={() => setFilter("subs")}
-                    className={`gap-1.5 whitespace-nowrap flex-shrink-0 ${filter !== "subs" ? "border-purple-300 text-purple-700 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/20" : ""}`}
+                    className={cn(
+                        "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
+                        filter === "subs"
+                            ? "bg-purple-500 text-white border-none shadow-[0_0_20px_rgba(168,85,247,0.3)]"
+                            : "bg-white/5 text-slate-400 hover:text-purple-400 hover:bg-purple-500/10"
+                    )}
                 >
-                    <Repeat className="w-4 h-4" />
+                    <Repeat className="w-3.5 h-3.5" />
                     Subs
                 </Button>
                 <Button
-                    variant={filter === "emis" ? "default" : "outline"}
-                    size="sm"
+                    variant="ghost"
                     onClick={() => setFilter("emis")}
-                    className={`gap-1.5 whitespace-nowrap flex-shrink-0 ${filter !== "emis" ? "border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-900/20" : ""}`}
+                    className={cn(
+                        "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
+                        filter === "emis"
+                            ? "bg-sky-500 text-white border-none shadow-[0_0_20px_rgba(14,165,233,0.3)]"
+                            : "bg-white/5 text-slate-400 hover:text-sky-400 hover:bg-sky-500/10"
+                    )}
                 >
-                    <CreditCard className="w-4 h-4" />
+                    <CreditCard className="w-3.5 h-3.5" />
                     EMIs
                 </Button>
                 <Button
-                    variant={filter === "emergency" ? "default" : "outline"}
-                    size="sm"
+                    variant="ghost"
                     onClick={() => setFilter("emergency")}
-                    className={`gap-1.5 whitespace-nowrap flex-shrink-0 ${filter !== "emergency" ? "border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20" : ""}`}
+                    className={cn(
+                        "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
+                        filter === "emergency"
+                            ? "bg-blue-600 text-white border-none shadow-[0_0_20px_rgba(37,99,235,0.3)]"
+                            : "bg-white/5 text-slate-400 hover:text-blue-400 hover:bg-blue-600/10"
+                    )}
                 >
-                    <Shield className="w-4 h-4" />
+                    <Shield className="w-3.5 h-3.5" />
                     Emergency
                 </Button>
                 <Button
-                    variant={filter === "goals" ? "default" : "outline"}
-                    size="sm"
+                    variant="ghost"
                     onClick={() => setFilter("goals")}
-                    className={`gap-1.5 whitespace-nowrap flex-shrink-0 ${filter !== "goals" ? "border-purple-300 text-purple-700 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/20" : ""}`}
+                    className={cn(
+                        "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
+                        filter === "goals"
+                            ? "bg-[#BF5AF2] text-white border-none shadow-[0_0_20px_rgba(191,90,242,0.3)]"
+                            : "bg-white/5 text-slate-400 hover:text-[#BF5AF2] hover:bg-[#BF5AF2]/10"
+                    )}
                 >
-                    <Target className="w-4 h-4" />
+                    <Target className="w-3.5 h-3.5" />
                     Goals
                 </Button>
             </div>

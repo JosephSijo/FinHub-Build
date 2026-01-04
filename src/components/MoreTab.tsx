@@ -43,13 +43,13 @@ export function MoreTab({
       {/* Primary Feature Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card
-          className="p-8 cursor-pointer bg-slate-900/40 border-white/5 rounded-[32px] border hover:bg-slate-900/60 transition-all duration-300 group relative overflow-hidden"
+          className="p-8 cursor-pointer bg-black border-white/5 sq-2xl border hover:bg-white/5 transition-all duration-300 group relative overflow-hidden"
           onClick={() => onNavigate('emergency')}
         >
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500 blur-3xl opacity-5 -mr-12 -mt-12 transition-opacity group-hover:opacity-20" />
 
           <div className="relative z-10">
-            <div className="w-16 h-16 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-center text-blue-400 mb-8 group-hover:scale-110 transition-transform duration-500">
+            <div className="w-16 h-16 bg-blue-500/10 border border-blue-500/20 sq-md flex items-center justify-center text-blue-400 mb-8 group-hover:scale-110 transition-transform duration-500">
               <Shield className="w-8 h-8" />
             </div>
 
@@ -68,13 +68,13 @@ export function MoreTab({
         </Card>
 
         <Card
-          className="p-8 cursor-pointer bg-slate-900/40 border-white/5 rounded-[32px] border hover:bg-slate-900/60 transition-all duration-300 group relative overflow-hidden"
+          className="p-8 cursor-pointer bg-black border-white/5 sq-2xl border hover:bg-white/5 transition-all duration-300 group relative overflow-hidden"
           onClick={() => onNavigate('accounts')}
         >
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500 blur-3xl opacity-5 -mr-12 -mt-12 transition-opacity group-hover:opacity-20" />
 
           <div className="relative z-10">
-            <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 mb-8 group-hover:scale-110 transition-transform duration-500">
+            <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 sq-md flex items-center justify-center text-emerald-400 mb-8 group-hover:scale-110 transition-transform duration-500">
               <Landmark className="w-8 h-8" />
             </div>
 
@@ -101,13 +101,13 @@ export function MoreTab({
         </Card>
 
         <Card
-          className="p-8 cursor-pointer bg-slate-900/40 border-white/5 rounded-[32px] border hover:bg-slate-900/60 transition-all duration-300 group relative overflow-hidden"
+          className="p-8 cursor-pointer bg-black border-white/5 sq-2xl border hover:bg-white/5 transition-all duration-300 group relative overflow-hidden"
           onClick={() => onNavigate('recurring')}
         >
           <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500 blur-3xl opacity-5 -mr-12 -mt-12 transition-opacity group-hover:opacity-20" />
 
           <div className="relative z-10">
-            <div className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400 mb-8 group-hover:scale-110 transition-transform duration-500">
+            <div className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 sq-md flex items-center justify-center text-indigo-400 mb-8 group-hover:scale-110 transition-transform duration-500">
               <RefreshCw className="w-8 h-8" />
             </div>
 
@@ -135,12 +135,12 @@ export function MoreTab({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Card
-            className="p-6 cursor-pointer bg-slate-900/20 border-white/5 rounded-[24px] border hover:bg-slate-900/40 transition-all group"
+            className="p-6 cursor-pointer bg-black border-white/5 sq-xl border hover:bg-white/5 transition-all group"
             onClick={onOpenSettings}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-white transition-colors">
+                <div className="w-12 h-12 bg-white/5 sq-md flex items-center justify-center text-slate-400 group-hover:text-white transition-colors">
                   <Settings className="w-6 h-6" />
                 </div>
                 <div>
@@ -153,12 +153,12 @@ export function MoreTab({
           </Card>
 
           <Card
-            className="p-6 cursor-pointer bg-slate-900/20 border-white/5 rounded-[24px] border hover:bg-slate-900/40 transition-all group"
+            className="p-6 cursor-pointer bg-black border-white/5 sq-xl border hover:bg-white/5 transition-all group"
             onClick={onOpenNotifications}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-white transition-colors">
+                <div className="w-12 h-12 bg-white/5 sq-md flex items-center justify-center text-slate-400 group-hover:text-white transition-colors">
                   <Bell className="w-6 h-6" />
                 </div>
                 <div>
@@ -170,10 +170,10 @@ export function MoreTab({
             </div>
           </Card>
 
-          <Card className="p-6 cursor-pointer bg-slate-900/20 border-white/5 rounded-[24px] border hover:bg-slate-900/40 transition-all group opacity-60 hover:opacity-100">
+          <Card className="p-6 cursor-pointer bg-black border-white/5 sq-xl border hover:bg-white/5 transition-all group opacity-60 hover:opacity-100">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
+                <div className="w-12 h-12 bg-white/5 sq-md flex items-center justify-center text-slate-400">
                   <HelpCircle className="w-6 h-6" />
                 </div>
                 <div>
@@ -185,10 +185,10 @@ export function MoreTab({
             </div>
           </Card>
 
-          <Card className="p-6 cursor-pointer bg-slate-900/20 border-white/5 rounded-[24px] border hover:bg-slate-900/40 transition-all group opacity-60 hover:opacity-100">
+          <Card className="p-6 cursor-pointer bg-black border-white/5 sq-xl border hover:bg-white/5 transition-all group opacity-60 hover:opacity-100">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center text-slate-400">
+                <div className="w-12 h-12 bg-white/5 sq-md flex items-center justify-center text-slate-400">
                   <FileText className="w-6 h-6" />
                 </div>
                 <div>

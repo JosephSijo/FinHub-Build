@@ -1,9 +1,9 @@
 
-  # FinBase v5.0
+# FinBase v5.0
 
-  This is a code bundle for FinBase v5.0. The original project is available at https://www.figma.com/design/PzJxQomW1Qg3MmOEZbEjAG/FinBase-v5.0.
+  This is a code bundle for FinBase v5.0. The original project is available at [Figma Design](https://www.figma.com/design/PzJxQomW1Qg3MmOEZbEjAG/FinBase-v5.0).
 
-  ## Running the code
+## Running the code
 
   Run `npm i` to install the dependencies.
 

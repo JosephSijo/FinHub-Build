@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Card } from './ui/card';
 import { Expense, Income, Debt, Account } from '../types';
 import { TransactionOverview } from './transactions/TransactionOverview';
 import { TransactionFilters } from './transactions/TransactionFilters';
@@ -161,59 +160,63 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       />
 
       {/* Transaction List */}
-      <div className="pb-20">
-        {filteredTransactions.length === 0 ? (
-          <Card className="p-12 text-center">
-            <p className="text-gray-500">No transactions found.</p>
-            <p className="text-sm text-gray-400 mt-2">
-              {filter === "emis"
-                ? "No EMI payments recorded. Add expenses with 'EMI' category or visit the Liability tab to track loans."
-                : "Try adjusting your filters or search term"}
-            </p>
-          </Card>
-        ) : (
-          filteredTransactions.map((transaction) => {
-            const description = 'description' in transaction ? transaction.description :
-              'source' in transaction ? transaction.source :
-                'personName' in transaction ? transaction.personName : 'Transaction';
+      <div className="pb-32">
+        <div className="frosted-plate rounded-3xl border border-white/5 overflow-hidden">
+          {filteredTransactions.length === 0 ? (
+            <div className="p-12 text-center bg-white/[0.02]">
+              <p className="text-slate-500 font-mono text-sm uppercase tracking-widest">No Stream Data Found</p>
+              <p className="text-[10px] text-slate-600 mt-2 uppercase">
+                {filter === "emis"
+                  ? "Initialize EMI parameters in Liability Node"
+                  : "Adjust filter parameters or search query"}
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/5">
+              {filteredTransactions.map((transaction) => {
+                const description = 'description' in transaction ? transaction.description :
+                  'source' in transaction ? transaction.source :
+                    'personName' in transaction ? transaction.personName : 'Transaction';
 
-            if (transaction.kind === 'expense') {
-              return (
-                <ExpenseItem
-                  key={transaction.id}
-                  expense={transaction as Expense}
-                  currency={currency}
-                  onEdit={onEditExpense}
-                  onDelete={() => handleXDelete(transaction.id, description)}
-                  isPendingDelete={isPending(transaction.id)}
-                />
-              );
-            } else if (transaction.kind === 'income') {
-              return (
-                <IncomeItem
-                  key={transaction.id}
-                  income={transaction as Income}
-                  currency={currency}
-                  onEdit={onEditIncome}
-                  onDelete={() => handleXDelete(transaction.id, description)}
-                  isPendingDelete={isPending(transaction.id)}
-                />
-              );
-            } else {
-              return (
-                <DebtItem
-                  key={transaction.id}
-                  debt={transaction as Debt}
-                  currency={currency}
-                  onEdit={onEditDebt}
-                  onDelete={() => handleXDelete(transaction.id, description)}
-                  onSettle={onSettleDebt}
-                  isPendingDelete={isPending(transaction.id)}
-                />
-              );
-            }
-          })
-        )}
+                if (transaction.kind === 'expense') {
+                  return (
+                    <ExpenseItem
+                      key={transaction.id}
+                      expense={transaction as Expense}
+                      currency={currency}
+                      onEdit={onEditExpense}
+                      onDelete={() => handleXDelete(transaction.id, description)}
+                      isPendingDelete={isPending(transaction.id)}
+                    />
+                  );
+                } else if (transaction.kind === 'income') {
+                  return (
+                    <IncomeItem
+                      key={transaction.id}
+                      income={transaction as Income}
+                      currency={currency}
+                      onEdit={onEditIncome}
+                      onDelete={() => handleXDelete(transaction.id, description)}
+                      isPendingDelete={isPending(transaction.id)}
+                    />
+                  );
+                } else {
+                  return (
+                    <DebtItem
+                      key={transaction.id}
+                      debt={transaction as Debt}
+                      currency={currency}
+                      onEdit={onEditDebt}
+                      onDelete={() => handleXDelete(transaction.id, description)}
+                      onSettle={onSettleDebt}
+                      isPendingDelete={isPending(transaction.id)}
+                    />
+                  );
+                }
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

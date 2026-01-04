@@ -23,13 +23,14 @@ export const getCategoryIcon = (category: string) => {
 };
 
 export const getIncomeIcon = (source: string) => {
-    if (source.toLowerCase().includes('salary')) {
+    const s = (source || '').toLowerCase();
+    if (s.includes('salary')) {
         return <DollarSign className="w-5 h-5" />;
     }
-    if (source.toLowerCase().includes('freelance')) {
+    if (s.includes('freelance')) {
         return <TrendingUp className="w-5 h-5" />;
     }
-    if (source.toLowerCase().includes('investment')) {
+    if (s.includes('investment')) {
         return <TrendingUp className="w-5 h-5" />;
     }
     return <DollarSign className="w-5 h-5" />;

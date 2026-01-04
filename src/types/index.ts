@@ -243,3 +243,9 @@ export interface Notification {
   read: boolean;
   achievementId?: string;
 }
+
+export interface AuthUser {
+  id: string;
+  mobile: string;
+  name: string;
+}

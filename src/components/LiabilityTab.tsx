@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { NumberInput } from './ui/number-input';
 import { Label } from './ui/label';
+import { MeshBackground } from './ui/MeshBackground';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { CreditCard, Plus, Pencil, Trash2, Calculator } from 'lucide-react';
@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { formatCurrency } from '../utils/numberFormat';
 import { motion } from 'framer-motion';
 import { useFinance } from '../context/FinanceContext';
+import { CyberButton } from './ui/CyberButton';
+
 
 
 
@@ -221,55 +223,58 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
     <div className="space-y-6">
       {/* Mini Dashboard */}
       {emiTransactions.length > 0 && (
-        <Card className="p-4 bg-[#1C1C1E] border border-white/5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-[#0A84FF]/10 border border-[#0A84FF]/20 rounded-2xl flex items-center justify-center">
-                <CreditCard className="w-6 h-6 text-[#0A84FF]" />
-              </div>
-              <div>
-                <h3 className="text-label text-[9px] mb-1">Liability Flow</h3>
-                <p className="text-[10px] text-slate-500 font-bold">
-                  Institutional Debt Streams
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-right">
-                <p className="text-label text-[8px] mb-1 opacity-60">Total EMI/Month</p>
-                <p className="text-balance text-xl text-[#FF453A]">
-                  {formatCurrency(totalEMI, currency)}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-label text-[8px] mb-1 opacity-60">Capital Outflow</p>
-                <p className="text-balance text-xl text-[#FF9F0A]">
-                  {formatCurrency(totalEMIPaid, currency)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent EMI Transactions */}
-          <div className="pt-4 border-t border-white/5">
-            <p className="text-label text-[8px] mb-3 opacity-60">Transactional History:</p>
-            <div className="space-y-2">
-              {emiTransactions.map((transaction: any, idx: number) => (
-                <div key={idx} className="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-white/5">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-100 truncate">{transaction.description}</p>
-                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mt-1">
-                      {transaction.category} • {new Date(transaction.date).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <p className="text-balance text-sm text-[#FF453A] whitespace-nowrap ml-3">
-                    -{formatCurrency(transaction.amount, currency)}
+        <div className="frosted-plate rounded-3xl border border-white/5 p-4 bg-transparent relative overflow-hidden">
+          <MeshBackground variant="spending" />
+          <div className="relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-[#0A84FF]/10 border border-[#0A84FF]/20 rounded-2xl flex items-center justify-center">
+                  <CreditCard className="w-6 h-6 text-[#0A84FF]" />
+                </div>
+                <div>
+                  <h3 className="text-label text-[9px] mb-1">Liability Flow</h3>
+                  <p className="text-[10px] text-slate-500 font-bold">
+                    Institutional Debt Streams
                   </p>
                 </div>
-              ))}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-right">
+                  <p className="text-label text-[8px] mb-1 opacity-60 uppercase font-bold tracking-widest">Total Monthly EMI</p>
+                  <p className="text-balance text-xl text-rose-500 font-black tabular-nums font-mono">
+                    {formatCurrency(totalEMI, currency)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-label text-[8px] mb-1 opacity-60">Capital Outflow</p>
+                  <p className="text-balance text-xl text-[#FF9F0A]">
+                    {formatCurrency(totalEMIPaid, currency)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent EMI Transactions */}
+            <div className="pt-4 border-t border-white/5">
+              <p className="text-label text-[8px] mb-3 opacity-60">Transactional History:</p>
+              <div className="space-y-2">
+                {emiTransactions.map((transaction: any, idx: number) => (
+                  <div key={idx} className="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-white/5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-100 truncate">{transaction.description}</p>
+                      <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mt-1">
+                        {transaction.category} • {new Date(transaction.date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <p className="text-balance text-sm text-[#FF453A] whitespace-nowrap ml-3">
+                      -{formatCurrency(transaction.amount, currency)}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Header - Standardized Layout */}
@@ -278,14 +283,13 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
           <h2 className="text-xl font-bold text-slate-100 tracking-tight truncate">Liabilities & Loans</h2>
           <p className="text-xs text-slate-500 mt-1 truncate">Manage institutional loans and EMIs</p>
         </div>
-        <Button
+        <CyberButton
           onClick={() => { resetForm(); setIsAddDialogOpen(true); }}
-          className="bg-[#0A84FF] hover:bg-[#007AFF] text-white rounded-xl h-12 px-6 border-none shadow-lg shadow-blue-600/10 flex items-center gap-2 group transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0"
+          icon={Plus}
+          className="h-12"
         >
-          <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
-          <span className="font-bold hidden sm:inline">Add Liability</span>
-          <span className="font-bold sm:hidden">Add</span>
-        </Button>
+          Add Liability
+        </CyberButton>
       </div>
 
       {/* Liabilities List */}
@@ -315,14 +319,14 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
         ) : liabilities.length === 0 ? (
           <div
             onClick={() => setIsAddDialogOpen(true)}
-            className="group cursor-pointer p-12 bg-slate-800/10 border-2 border-dashed border-slate-700/30 rounded-[32px] hover:border-slate-600/50 hover:bg-slate-800/20 transition-all duration-300 flex flex-col items-center justify-center space-y-4"
+            className="group cursor-pointer p-12 bg-black border-2 border-dashed border-white/5 sq-2xl hover:border-rose-500/30 hover:bg-white/5 transition-all duration-500 flex flex-col items-center justify-center space-y-4"
           >
-            <div className="w-16 h-16 rounded-2xl bg-slate-800/50 flex items-center justify-center border border-white/5 opacity-50 group-hover:scale-105 transition-transform text-slate-500">
+            <div className="w-16 h-16 sq-md bg-white/5 flex items-center justify-center border border-white/10 opacity-50 group-hover:scale-105 group-hover:opacity-100 transition-all text-slate-500 group-hover:text-rose-400">
               <CreditCard className="w-8 h-8" />
             </div>
             <div className="text-center">
-              <h3 className="text-slate-200 font-bold text-lg">No liabilities tracked yet. Want to manage your debt flow?</h3>
-              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mt-2 font-black">Tap to Initialize Liability Tracker</p>
+              <h3 className="text-slate-200 font-black text-xs uppercase tracking-[0.2em]">Zero Debt Environment Identified</h3>
+              <p className="text-[9px] text-slate-500 uppercase tracking-widest mt-2 font-bold opacity-60">Initialize strategic debt analysis node</p>
             </div>
           </div>
         ) : (
@@ -335,59 +339,71 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
               const typeInfo = LIABILITY_TYPES.find(t => t.value === liability.type);
 
               return (
-                <div key={liability.id} className="p-5 bg-[#1C1C1E] border border-white/5 rounded-[28px] group hover:bg-[#2C2C2E] transition-all">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-center">
-                        <span className="text-2xl">{typeInfo?.icon}</span>
+                <div
+                  key={liability.id}
+                  className="bg-black sq-xl border border-white/5 p-6 group relative overflow-hidden transition-all duration-500 hover:border-rose-500/30"
+                >
+                  <div className="absolute inset-0 bg-white/[0.01] group-hover:bg-rose-500/[0.04] transition-all duration-500" />
+
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white/5 border border-white/10 sq-md flex items-center justify-center group-hover:border-rose-500/30 transition-all duration-500">
+                          <span className="text-2xl">{typeInfo?.icon}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-black text-xs uppercase tracking-tight text-white truncate">{liability.name}</h4>
+                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
+                            {typeInfo?.label.replace(/^\S+ /, '')} // {liability.interestRate}% RATE
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-bold text-slate-100">{liability.name}</h4>
-                        <p className="text-label text-[10px]">
-                          {typeInfo?.label.replace(/^\S+ /, '')} • {liability.interestRate}% interest
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(liability)} className="w-8 h-8 p-0 text-slate-500 hover:text-white hover:bg-white/10 rounded-lg">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(liability.id)} className="w-8 h-8 p-0 text-rose-500/60 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+                      <div className="space-y-1.5">
+                        <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest opacity-60">Outstanding</p>
+                        <p className="text-sm font-black text-rose-500 tabular-nums font-mono">
+                          {formatCurrency(liability.outstanding, currency)}
                         </p>
                       </div>
+                      <div className="space-y-1.5">
+                        <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest opacity-60">Monthly Flow</p>
+                        <p className="text-sm font-black text-orange-500 tabular-nums font-mono">
+                          {formatCurrency(liability.emiAmount, currency)}
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest opacity-60">Principal</p>
+                        <p className="text-xs font-bold text-slate-400 tabular-nums font-mono">{formatCurrency(liability.principal, currency)}</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest opacity-60">Cycle</p>
+                        <p className="text-xs font-bold text-slate-400 tracking-tighter font-mono">{monthsPaid} <span className="text-[10px] opacity-40">/ {liability.tenure}</span></p>
+                      </div>
                     </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(liability)} className="text-slate-400 hover:text-white hover:bg-white/5">
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(liability.id)} className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="bg-black/40 p-3 rounded-2xl border border-white/5">
-                      <p className="text-label text-[8px] mb-1 opacity-60">Principal</p>
-                      <p className="text-balance text-sm text-slate-200">{formatCurrency(liability.principal, currency)}</p>
-                    </div>
-                    <div className="bg-black/40 p-3 rounded-2xl border border-white/5">
-                      <p className="text-label text-[8px] mb-1 opacity-60">Outstanding</p>
-                      <p className="text-balance text-sm text-[#FF453A]">{formatCurrency(liability.outstanding, currency)}</p>
-                    </div>
-                    <div className="bg-black/40 p-3 rounded-2xl border border-white/5">
-                      <p className="text-label text-[8px] mb-1 opacity-60">Monthly EMI</p>
-                      <p className="text-balance text-sm text-[#FF9F0A]">{formatCurrency(liability.emiAmount, currency)}</p>
-                    </div>
-                    <div className="bg-black/40 p-3 rounded-2xl border border-white/5">
-                      <p className="text-label text-[8px] mb-1 opacity-60">Tenure</p>
-                      <p className="text-balance text-sm text-slate-200">{monthsPaid} / {liability.tenure} mo</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-label text-[8px] opacity-60">
-                      <span>Repayment Momentum</span>
-                      <span className="text-[#30D158]">{progress.toFixed(1)}%</span>
-                    </div>
-                    <div className="h-1 w-full bg-black/40 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        className="h-full bg-gradient-to-r from-[#30D158] to-[#0A84FF]"
-                      />
+                    <div className="space-y-2">
+                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progress}%` }}
+                          className="h-full bg-gradient-to-r from-rose-600 to-orange-500 shadow-[0_0_12px_rgba(225,29,72,0.4)]"
+                        />
+                      </div>
+                      <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest">
+                        <span className="text-rose-500/60">
+                          {Math.min(100, progress).toFixed(0)}% RECLAIMED
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -402,7 +418,7 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
         setIsAddDialogOpen(open);
         if (!open) resetForm();
       }}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-[#1C1C1E] border-[#38383A] text-white p-8 custom-scrollbar">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-black border-white/5 text-white p-8 custom-scrollbar sq-2xl">
           <DialogHeader>
             <DialogTitle>{editingLiability ? 'Edit' : 'Add'} Liability</DialogTitle>
             <DialogDescription>
@@ -419,7 +435,7 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g., Home Loan - HDFC"
-                className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white placeholder:text-slate-600 focus:border-[#0A84FF]/50 transition-colors"
+                className="bg-black border-white/5 sq-md h-14 text-white placeholder:text-slate-600 focus:border-[#0A84FF]/50 transition-colors"
                 required
                 autoComplete="off"
               />
@@ -428,10 +444,10 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
             <div>
               <Label htmlFor="liability-type" className="text-label text-[10px] mb-3 block">Debt Category</Label>
               <Select value={formData.type} onValueChange={(value: any) => setFormData({ ...formData, type: value })}>
-                <SelectTrigger id="liability-type" name="type" className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white">
+                <SelectTrigger id="liability-type" name="type" className="bg-black border-white/5 sq-md h-14 text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1C1C1E] border-[#38383A] text-white">
+                <SelectContent className="bg-black border-white/5 text-white">
                   {LIABILITY_TYPES.map((type) => (
                     <SelectItem key={type.value} value={type.value}>
                       {type.label}

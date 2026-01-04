@@ -20,10 +20,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     key={filter}
                     onClick={() => onFilterChange?.(filter)}
                     className={cn(
-                        "px-5 py-2.5 rounded-2xl text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all duration-300",
+                        "px-5 py-2.5 sq-md text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300",
                         activeFilter === filter
                             ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
-                            : "bg-slate-900 border border-white/5 text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+                            : "bg-black border border-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/5"
                     )}
                 >
                     {filter}
@@ -39,7 +39,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     onChange={(e) => onFilterChange?.(`Date: ${e.target.value}`)}
                     aria-label="Choose date"
                 />
-                <button className="px-5 py-2.5 rounded-2xl text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all duration-300 bg-slate-900 border border-dashed border-white/20 text-slate-500 hover:border-indigo-500/50 hover:text-indigo-400 flex items-center gap-2">
+                <button className="px-5 py-2.5 sq-md text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300 bg-black border border-dashed border-white/20 text-slate-500 hover:border-indigo-500/50 hover:text-indigo-400 flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
                     Query date
                 </button>

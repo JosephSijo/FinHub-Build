@@ -15,13 +15,13 @@ import {
     YAxis,
     Tooltip,
     BarChart,
-    Bar,
-    CartesianGrid
+    Bar
 } from 'recharts';
 import { CircleDot } from 'lucide-react';
 import { formatCurrency, formatFinancialValue } from '@/utils/numberFormat';
 import { motion } from 'framer-motion';
 import { Haptics } from '@/utils/haptics';
+import { MeshBackground } from '../ui/MeshBackground';
 
 import { Expense, Income, Account } from '@/types';
 
@@ -264,8 +264,9 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
                 {/* 1. Health Score (Radar) */}
-                <div className="segmented-stack secondary-stealth">
-                    <div className="stack-cap flex justify-between items-start border-white/5">
+                <div className="segmented-stack mesh-ghost-blue relative">
+                    <MeshBackground variant="ghost" />
+                    <div className="stack-cap flex justify-between items-start border-white/5 relative z-10">
                         <div>
                             <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] mb-2">Financial Health</h3>
                             <div className="text-4xl font-black text-white">{overallHealth}<span className="text-sm text-slate-500 font-normal ml-2">/100</span></div>
@@ -278,7 +279,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                         <ResponsiveContainer width="100%" height="100%">
                             <RadarChart cx="50%" cy="50%" outerRadius="70%" data={healthData}>
                                 <PolarGrid stroke="rgba(255,255,255,0.1)" />
-                                <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748B', fontSize: 10, fontWeight: 800 }} />
+                                <PolarAngleAxis dataKey="subject" tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 900 }} />
                                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                                 <Radar
                                     name="Health"
@@ -294,8 +295,9 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                 </div>
 
                 {/* 2. Spending Nodes (Donut) */}
-                <div className="segmented-stack secondary-stealth">
-                    <div className="stack-cap flex justify-between items-center border-white/5">
+                <div className="segmented-stack mesh-ghost-blue relative">
+                    <MeshBackground variant="ghost" />
+                    <div className="stack-cap flex justify-between items-center border-white/5 relative z-10">
                         <div>
                             <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] mb-1">Spending Power</h3>
                             <div className="text-2xl font-black text-white">{peakCategory}</div>
@@ -309,14 +311,20 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                     data={spendingData}
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={5}
+                                    innerRadius={62}
+                                    outerRadius={82}
+                                    paddingAngle={3}
+                                    cornerRadius={6}
                                     dataKey="value"
                                     stroke="none"
                                 >
                                     {spendingData.map((_, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        <Cell
+                                            key={`cell-${index}`}
+                                            fill={COLORS[index % COLORS.length]}
+                                            style={{ filter: `drop-shadow(0 0 6px ${COLORS[index % COLORS.length]}88)` }}
+                                            className="transition-all duration-500 hover:opacity-80"
+                                        />
                                     ))}
                                 </Pie>
                                 <Tooltip content={<CustomTooltip />} />
@@ -337,8 +345,9 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                 </div>
 
                 {/* 3. 6-Month Trend (Area) */}
-                <div className="segmented-stack secondary-stealth">
-                    <div className="stack-cap border-white/5">
+                <div className="segmented-stack mesh-ghost-blue relative">
+                    <MeshBackground variant="ghost" />
+                    <div className="stack-cap border-white/5 relative z-10">
                         <h3 className="text-slate-400 text-[9px] font-bold uppercase tracking-[0.2em]">Spending Power Trend</h3>
                     </div>
                     <div className="stack-body px-0 pb-0 h-[200px] w-full">
@@ -379,8 +388,9 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                 </div>
 
                 {/* 4. Income vs Spending (Bar) */}
-                <div className="segmented-stack secondary-stealth">
-                    <div className="stack-cap flex justify-between items-center border-white/5">
+                <div className="segmented-stack mesh-ghost-blue relative">
+                    <MeshBackground variant="ghost" />
+                    <div className="stack-cap flex justify-between items-center border-white/5 relative z-10">
                         <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em]">Flow Efficiency</h3>
                         <div className="flex gap-4">
                             <div className="flex items-center gap-1.5">
@@ -414,8 +424,9 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                 </div>
 
                 {/* 5. The Risk Meter (DTI) */}
-                <div className="segmented-stack col-span-full secondary-stealth">
-                    <div className="stack-cap flex justify-between items-start border-white/5">
+                <div className="segmented-stack col-span-full mesh-ghost-blue relative">
+                    <MeshBackground variant="ghost" />
+                    <div className="stack-cap flex justify-between items-start border-white/5 relative z-10">
                         <div>
                             <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] mb-2">The Risk Meter (DTI)</h3>
                             <div className="text-4xl font-black text-white">{(dtiRatio * 100).toFixed(1)}%<span className="text-sm text-slate-500 font-normal ml-2">Debt-to-Income</span></div>
@@ -471,8 +482,9 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                 </div>
 
                 {/* 6. The Leakage Tracker (Outflow) */}
-                <div className="segmented-stack col-span-full secondary-stealth">
-                    <div className="stack-cap flex justify-between items-start border-white/5">
+                <div className="segmented-stack col-span-full mesh-ghost-blue relative">
+                    <MeshBackground variant="ghost" />
+                    <div className="stack-cap flex justify-between items-start border-white/5 relative z-10">
                         <div>
                             <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] mb-2">Leakage Tracker</h3>
                             <div className="text-4xl font-black text-white">{(outflowRatio * 100).toFixed(1)}%<span className="text-sm text-slate-500 font-normal ml-2">Total Outflow</span></div>

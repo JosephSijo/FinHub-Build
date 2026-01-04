@@ -2,7 +2,6 @@ import React from 'react';
 import { Card } from '../ui/card';
 import { SwipeableItem } from '../ui/SwipeableItem';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
 import { Check, RefreshCw, Users, ChevronRight } from 'lucide-react';
 import { Expense, Income, Debt } from '../../types';
 import { getCategoryIcon, getIncomeIcon } from './utils';
@@ -40,56 +39,33 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ expense, currency, onE
             onEdit={() => onEdit(expense)}
             isPendingDelete={isPendingDelete}
         >
-            <Card className={`p-5 hover:shadow-md transition-shadow border-none rounded-none bg-transparent ${isGoalRelated ? 'border-l-4 border-l-purple-500' : ''
-                } ${isEmergencyRelated ? 'border-l-4 border-l-blue-500' : ''}`}>
-                <div className="flex items-start gap-4">
+            <Card className={`p-4 hover:shadow-2xl transition-all border-none rounded-none bg-transparent group relative ${isGoalRelated ? 'border-l-2 border-l-purple-500' : ''
+                } ${isEmergencyRelated ? 'border-l-2 border-l-blue-500' : ''}`}>
+                <div className="absolute inset-0 bg-white/[0.02] group-hover:bg-cyan-500/[0.04] transition-colors pointer-events-none" />
+                <div className="flex items-center gap-4 relative z-10">
                     {/* Icon */}
-                    <div className="w-12 h-12 rounded-xl bg-[#FF453A]/10 border border-[#FF453A]/20 flex items-center justify-center text-[#FF453A] flex-shrink-0">
+                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 flex-shrink-0 group-hover:border-cyan-500/30 group-hover:text-cyan-400 transition-all">
                         {getCategoryIcon(expense.category)}
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h4 className="truncate font-bold text-slate-100">{expense.description}</h4>
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                            <h4 className="truncate font-bold text-slate-200 text-xs sm:text-sm uppercase tracking-tight">{expense.description}</h4>
                             {expense.isRecurring && (
-                                <RefreshCw className="w-3 h-3 text-[#0A84FF] flex-shrink-0" />
-                            )}
-                            {isGoalRelated && (
-                                <Badge variant="outline" className="text-[10px] bg-[#BF5AF2]/10 border-[#BF5AF2]/20 text-[#BF5AF2] font-black uppercase">
-                                    🎯 Goal
-                                </Badge>
-                            )}
-                            {isEmergencyRelated && (
-                                <Badge variant="outline" className="text-[10px] bg-[#0A84FF]/10 border-[#0A84FF]/20 text-[#0A84FF] font-black uppercase">
-                                    🛡️ Emergency
-                                </Badge>
-                            )}
-                            {expense.isIncomeGenerating && (
-                                <Badge variant="outline" className="text-[10px] bg-[#30D158]/10 border-[#30D158]/20 text-[#30D158] font-black uppercase">
-                                    🚀 Strategic
-                                </Badge>
+                                <RefreshCw className="w-3 h-3 text-cyan-400 flex-shrink-0 animate-spin-slow" />
                             )}
                         </div>
-                        <p className="text-label text-[10px]">
-                            {expense.category} • {formatDate(expense.date)}
+                        <p className="text-[10px] text-slate-500 font-mono uppercase tracking-tighter">
+                            {formatDate(expense.date)} // {expense.category}
                         </p>
-                        {expense.tags && Array.isArray(expense.tags) && expense.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                                {expense.tags.map((tag, idx) => (
-                                    <Badge key={`${tag}-${idx}`} variant="outline" className="text-[9px] bg-white/5 border-white/5 text-[#8E8E93] font-bold">
-                                        #{tag}
-                                    </Badge>
-                                ))}
-                            </div>
-                        )}
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <p className="text-balance text-sm text-[#FF453A] whitespace-nowrap">
+                        <p className="text-xs sm:text-sm font-black text-rose-500 tabular-nums font-mono">
                             -{formatCurrency(expense.amount, currency)}
                         </p>
-                        <ChevronRight className="w-4 h-4 text-slate-600 flex-shrink-0" />
+                        <ChevronRight className="w-4 h-4 text-slate-700 flex-shrink-0 group-hover:text-cyan-500 transition-colors" />
                     </div>
                 </div>
             </Card>
@@ -117,46 +93,33 @@ export const IncomeItem: React.FC<IncomeItemProps> = ({ income, currency, onEdit
             onEdit={() => onEdit(income)}
             isPendingDelete={isPendingDelete}
         >
-            <Card className={`p-5 hover:shadow-md transition-shadow border-none rounded-none bg-transparent ${isGoalRelated ? 'border-l-4 border-l-purple-500' : ''
+            <Card className={`p-4 hover:shadow-2xl transition-all border-none rounded-none bg-transparent group relative ${isGoalRelated ? 'border-l-2 border-l-purple-500' : ''
                 }`}>
-                <div className="flex items-start gap-4">
+                <div className="absolute inset-0 bg-white/[0.02] group-hover:bg-emerald-500/[0.04] transition-colors pointer-events-none" />
+                <div className="flex items-center gap-4 relative z-10">
                     {/* Icon */}
-                    <div className="w-12 h-12 rounded-xl bg-[#30D158]/10 border border-[#30D158]/20 flex items-center justify-center text-[#30D158] flex-shrink-0">
+                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 flex-shrink-0 group-hover:border-emerald-500/30 group-hover:text-emerald-400 transition-all">
                         {getIncomeIcon(income.source)}
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h4 className="truncate font-bold text-slate-100">{income.source}</h4>
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                            <h4 className="truncate font-bold text-slate-200 text-xs sm:text-sm uppercase tracking-tight">{income.source}</h4>
                             {income.isRecurring && (
-                                <RefreshCw className="w-3 h-3 text-[#0A84FF] flex-shrink-0" />
-                            )}
-                            {isGoalRelated && (
-                                <Badge variant="outline" className="text-[10px] bg-[#BF5AF2]/10 border-[#BF5AF2]/20 text-[#BF5AF2] font-black uppercase">
-                                    🎯 Goal
-                                </Badge>
+                                <RefreshCw className="w-3 h-3 text-emerald-400 flex-shrink-0 animate-spin-slow" />
                             )}
                         </div>
-                        <p className="text-label text-[10px]">
-                            Capital Injection • {formatDate(income.date)}
+                        <p className="text-[10px] text-slate-500 font-mono uppercase tracking-tighter">
+                            {formatDate(income.date)} // CAPITAL INJECTION
                         </p>
-                        {income.tags && Array.isArray(income.tags) && income.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                                {income.tags.map((tag, idx) => (
-                                    <Badge key={`${tag}-${idx}`} variant="outline" className="text-[9px] bg-white/5 border-white/5 text-[#8E8E93] font-bold">
-                                        #{tag}
-                                    </Badge>
-                                ))}
-                            </div>
-                        )}
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <p className="text-balance text-sm text-[#30D158] whitespace-nowrap">
+                        <p className="text-xs sm:text-sm font-black text-emerald-400 tabular-nums font-mono">
                             +{formatCurrency(income.amount, currency)}
                         </p>
-                        <ChevronRight className="w-4 h-4 text-slate-600 flex-shrink-0" />
+                        <ChevronRight className="w-4 h-4 text-slate-700 flex-shrink-0 group-hover:text-emerald-500 transition-colors" />
                     </div>
                 </div>
             </Card>
@@ -180,40 +143,34 @@ export const DebtItem: React.FC<DebtItemProps> = ({ debt, currency, onEdit, onDe
             onEdit={() => onEdit(debt)}
             isPendingDelete={isPendingDelete}
         >
-            <Card className="p-5 hover:shadow-md transition-shadow border-none rounded-none bg-transparent">
-                <div className="flex items-start gap-4">
+            <Card className="p-4 hover:shadow-2xl transition-all border-none rounded-none bg-transparent group relative">
+                <div className="absolute inset-0 bg-white/[0.02] group-hover:bg-amber-500/[0.04] transition-all pointer-events-none" />
+                <div className="flex items-center gap-4 relative z-10">
                     {/* Icon */}
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${debt.type === 'lent'
-                        ? 'bg-[#0A84FF]/10 border border-[#0A84FF]/20 text-[#0A84FF]'
-                        : 'bg-[#FF9F0A]/10 border border-[#FF9F0A]/20 text-[#FF9F0A]'
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${debt.type === 'lent'
+                        ? 'bg-white/5 border border-white/10 text-slate-400 group-hover:border-cyan-500/30 group-hover:text-cyan-400'
+                        : 'bg-white/5 border border-white/10 text-slate-400 group-hover:border-amber-500/30 group-hover:text-amber-400'
                         }`}>
-                        <Users className="w-5 h-5" />
+                        <Users className="w-5 h-5 transition-transform group-hover:scale-110" />
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                        <h4 className="truncate font-bold text-slate-100">{debt.personName}</h4>
-                        <p className="text-label text-[10px]">
-                            {debt.type === 'lent' ? 'Capital Displaced' : 'Capital Sourced'} • {formatDate(debt.date)}
+                        <div className="flex items-center gap-2 mb-0.5">
+                            <h4 className="truncate font-bold text-slate-200 text-xs sm:text-sm uppercase tracking-tight">{debt.personName}</h4>
+                            {debt.status === 'settled' && (
+                                <div className="p-0.5 rounded-full bg-emerald-500/20 text-emerald-400">
+                                    <Check className="w-2.5 h-2.5" />
+                                </div>
+                            )}
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-mono uppercase tracking-tighter">
+                            {formatDate(debt.date)} // {debt.type === 'lent' ? 'CAPITAL DISPLACED' : 'CAPITAL SOURCED'}
                         </p>
-                        {debt.status === 'settled' && (
-                            <Badge variant="outline" className="text-[10px] mt-1 bg-[#30D158]/10 border-[#30D158]/20 text-[#30D158] font-black uppercase">
-                                ✓ Settled
-                            </Badge>
-                        )}
-                        {debt.tags && Array.isArray(debt.tags) && debt.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                                {debt.tags.map((tag, idx) => (
-                                    <Badge key={`${tag}-${idx}`} variant="outline" className="text-[9px] bg-white/5 border-white/5 text-[#8E8E93] font-bold">
-                                        #{tag}
-                                    </Badge>
-                                ))}
-                            </div>
-                        )}
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <p className={`text-balance text-sm whitespace-nowrap ${debt.type === 'lent' ? 'text-[#0A84FF]' : 'text-[#FF9F0A]'}`}>
+                        <p className={`text-xs sm:text-sm font-black tabular-nums font-mono ${debt.type === 'lent' ? 'text-cyan-400' : 'text-amber-500'}`}>
                             {formatCurrency(debt.amount, currency)}
                         </p>
                         <div className="flex items-center gap-1">
@@ -222,13 +179,13 @@ export const DebtItem: React.FC<DebtItemProps> = ({ debt, currency, onEdit, onDe
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => onSettle(debt.id)}
-                                    className="w-8 h-8 p-0 text-[#30D158] hover:bg-[#30D158]/10"
+                                    className="w-8 h-8 p-0 text-emerald-400 hover:bg-emerald-400/10 border border-emerald-400/20 rounded-lg"
                                     title="Mark as Settled"
                                 >
                                     <Check className="w-4 h-4" />
                                 </Button>
                             )}
-                            <ChevronRight className="w-4 h-4 text-slate-600 flex-shrink-0" />
+                            <ChevronRight className="w-4 h-4 text-slate-700 flex-shrink-0 group-hover:text-slate-400 transition-colors" />
                         </div>
                     </div>
                 </div>

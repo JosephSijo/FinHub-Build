@@ -38,6 +38,9 @@ import { generateBrainSummary } from "./utils/aiUtils";
 import { FabStack } from "./components/layout/FabStack";
 import { AIChatOverlay } from "./components/overlays/AIChatOverlay";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { LoginScreen } from "./components/auth/LoginScreen";
+import { LoadingSprite } from "./components/ui/LoadingSprite";
+import { AnimatePresence, motion } from "framer-motion";
 
 // Lazy Load Heavy Components
 const Dashboard = lazy(() => import("./components/Dashboard").then(module => ({ default: module.Dashboard })));
@@ -90,7 +93,8 @@ export default function App() {
     fundAllocationType,
     closeFundAllocation,
     performFundAllocation,
-    transferFunds
+    transferFunds,
+    authStatus
   } = useFinance();
 
   const [view, setView] = useState<View>("dashboard");
@@ -151,7 +155,7 @@ export default function App() {
     const allTransactions = [...incomes, ...expenses, ...debts];
     let monthsActive = 1;
     if (allTransactions.length > 0) {
-      const dates = allTransactions.map(t => new Date(t.date).getTime());
+      const dates = allTransactions.map((t: any) => new Date(t.date).getTime());
       const firstTransactionDate = new Date(Math.min(...dates));
       const now = new Date();
       const diffTime = Math.abs(now.getTime() - firstTransactionDate.getTime());
@@ -202,13 +206,13 @@ export default function App() {
 
   // AI Context - Memoized
   const aiContext: AIContext = useMemo(() => ({
-    totalIncome: incomes.reduce((sum, i) => sum + i.amount, 0),
-    totalExpenses: expenses.reduce((sum, e) => sum + e.amount, 0),
-    activeDebts: debts.filter((d) => d.status === "pending").length,
+    totalIncome: incomes.reduce((sum: number, i: Income) => sum + i.amount, 0),
+    totalExpenses: expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0),
+    activeDebts: debts.filter((d: Debt) => d.status === "pending").length,
     goalsCount: goals.length,
     recentTransactions: [
-      ...expenses.slice(0, 5).map((e) => ({ type: "expense", ...e })),
-      ...incomes.slice(0, 5).map((i) => ({ type: "income", ...i })),
+      ...expenses.slice(0, 5).map((e: Expense) => ({ type: "expense", ...e })),
+      ...incomes.slice(0, 5).map((i: Income) => ({ type: "income", ...i })),
     ] as any[], // Casting to avoid complex switch types for now
     expenses,
     incomes,
@@ -217,24 +221,18 @@ export default function App() {
     savingsRate: healthScore.savingsRate,
     healthScore: healthScore.score,
     brainSummary: generateBrainSummary(
-      { incomes, expenses, investments, accounts, healthScore: healthScore.score, savingsRate: healthScore.savingsRate, totalIncome: incomes.reduce((sum: number, i: any) => sum + i.amount, 0), totalExpenses: expenses.reduce((sum: number, e: any) => sum + e.amount, 0), activeDebts: debts.filter((d: any) => d.status === "pending").length, goalsCount: goals.length, recentTransactions: [] },
+      { incomes, expenses, investments, accounts, healthScore: healthScore.score, savingsRate: healthScore.savingsRate, totalIncome: incomes.reduce((sum: number, i: Income) => sum + i.amount, 0), totalExpenses: expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0), activeDebts: debts.filter((d: Debt) => d.status === "pending").length, goalsCount: goals.length, recentTransactions: [] },
       settings.currency,
       view
     )
   }), [incomes, expenses, debts, goals.length, healthScore.savingsRate, healthScore.score, accounts, investments, settings.currency, view]);
 
   // Calculate totals
-  const totalIncome = useMemo(() => incomes.reduce((sum, i) => sum + i.amount, 0), [incomes]);
+  const totalIncome = useMemo(() => incomes.reduce((sum: number, i: Income) => sum + i.amount, 0), [incomes]);
 
-  // Show skeleton loader while initial data is being fetched
+  // Show branded loader while initial data is being fetched
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background p-4 pb-24 font-sans text-foreground transition-colors duration-200">
-        <div className="max-w-md mx-auto space-y-6 pt-12">
-          <DashboardSkeleton />
-        </div>
-      </div>
-    );
+    return <LoadingSprite />;
   }
 
   // Handle pull to refresh
@@ -378,261 +376,304 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-secondary text-foreground transition-colors font-sans">
-      <ScrollAwareLayout
-        activeTab={view}
-        onTabChange={(tab) => setView(tab as View)}
-        notificationCount={notifications.filter(n => !n.read).length}
-        onNotificationClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-        onSettingsClick={() => setIsSettingsOpen(!isSettingsOpen)}
-        forceHide={isAchievementDialogOpen}
-        renderFab={(isVisible) => (
-          <FabStack
-            isVisible={isVisible && !isSettingsOpen && !isNotificationsOpen && !isAchievementDialogOpen}
-            onOpenAI={() => setIsAIAssistantOpen(true)}
-            onAddTransaction={openAddTransaction}
-            onMigrate={() => setIsTransferFormOpen(true)}
-          />
+    <>
+      <AnimatePresence mode="wait">
+        {(authStatus === 'guest' || authStatus === 'authenticating') && (
+          <motion.div
+            key="login-container"
+            className="fixed inset-0 z-0"
+            exit={{ opacity: 0, scale: 0.95, filter: "blur(20px)" }}
+            transition={{ duration: 0.8 }}
+          >
+            <LoginScreen />
+          </motion.div>
         )}
-      >
-        <PullToRefresh onRefresh={handleRefresh}>
-          <ErrorBoundary>
-            <Suspense fallback={
-              <div className="space-y-6 pt-12">
-                <DashboardSkeleton />
-                <p className="text-center text-slate-500 text-sm">Loading Component...</p>
-              </div>
-            }>
-              {view === "dashboard" && (
-                <div className="space-y-6">
-                  <Dashboard
-                    expenses={expenses}
-                    incomes={incomes}
-                    currency={settings.currency}
-                    goals={goals}
-                    liabilities={liabilities}
-                    debts={debts}
-                    investments={investments}
-                    accounts={accounts}
-                    emergencyFundAmount={emergencyFundAmount}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {authStatus === 'authenticating' && (
+          <motion.div
+            key="loading-sprite"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="fixed inset-0 z-50"
+          >
+            <LoadingSprite />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {authStatus === 'authenticated' && (
+          <motion.div
+            key="main-app"
+            className="relative z-10"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <div className="min-h-screen bg-transparent text-foreground transition-colors font-sans">
+              <ScrollAwareLayout
+                activeTab={view}
+                onTabChange={(tab: string) => setView(tab as View)}
+                notificationCount={notifications.filter((n: any) => !n.read).length}
+                onNotificationClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                onSettingsClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                forceHide={isAchievementDialogOpen}
+                renderFab={(isVisible: boolean) => (
+                  <FabStack
+                    isVisible={isVisible && !isSettingsOpen && !isNotificationsOpen && !isAchievementDialogOpen}
+                    onOpenAI={() => setIsAIAssistantOpen(true)}
+                    onAddTransaction={openAddTransaction}
+                    onMigrate={() => setIsTransferFormOpen(true)}
                   />
-                </div>
-              )}
+                )}
+              >
+                <PullToRefresh onRefresh={handleRefresh}>
+                  <ErrorBoundary>
+                    <Suspense fallback={
+                      <div className="space-y-6 pt-12">
+                        <DashboardSkeleton />
+                        <p className="text-center text-slate-500 text-sm">Loading Component...</p>
+                      </div>
+                    }>
+                      {view === "dashboard" && (
+                        <div className="space-y-6">
+                          <Dashboard
+                            expenses={expenses}
+                            incomes={incomes}
+                            currency={settings.currency}
+                            goals={goals}
+                            liabilities={liabilities}
+                            debts={debts}
+                            investments={investments}
+                            accounts={accounts}
+                            emergencyFundAmount={emergencyFundAmount}
+                          />
+                        </div>
+                      )}
 
-              {view === "transactions" && (
-                <TransactionList
-                  expenses={expenses}
-                  incomes={incomes}
-                  debts={debts}
-                  accounts={accounts}
+                      {view === "transactions" && (
+                        <TransactionList
+                          expenses={expenses}
+                          incomes={incomes}
+                          debts={debts}
+                          accounts={accounts}
+                          currency={settings.currency}
+                          onEditExpense={handleEditExpense}
+                          onDeleteExpense={deleteExpense}
+                          onEditIncome={handleEditIncome}
+                          onDeleteIncome={deleteIncome}
+                          onEditDebt={handleEditDebt}
+                          onDeleteDebt={deleteDebt}
+                          onSettleDebt={settleDebt}
+                        />
+                      )}
+
+                      {view === "goals" && (
+                        <GoalsTracker
+                          goals={goals}
+                          currency={settings.currency}
+                          accounts={accounts}
+                          expenses={expenses}
+                          incomes={incomes}
+                          onCreateGoal={createGoal}
+                          onUpdateGoal={updateGoal}
+                          onDeleteGoal={deleteGoal}
+                          onDeductFromAccount={async (accountId: string, amount: number) => {
+                            const account = accounts.find((a: any) => a.id === accountId);
+                            if (account) {
+                              await updateAccount(accountId, {
+                                balance: account.balance - amount
+                              });
+                            }
+                          }}
+                        />
+                      )}
+
+                      {view === "accounts" && (
+                        <AccountsManager
+                          accounts={accounts}
+                          currency={settings.currency}
+                          onCreateAccount={createAccount}
+                          onUpdateAccount={updateAccount}
+                          onDeleteAccount={deleteAccount}
+                        />
+                      )}
+
+                      {view === "investments" && (
+                        <InvestmentsTab />
+                      )}
+
+                      {view === "emergency" && (
+                        <EmergencyFundsTab
+                          currency={settings.currency}
+                          userId={userId}
+                          expenses={expenses}
+                          incomes={incomes}
+                          accounts={accounts}
+                          onEmergencyFundUpdate={(amount) => setEmergencyFundAmount(amount)}
+                        />
+                      )}
+
+                      {view === "liability" && (
+                        <div className="space-y-6">
+                          {/* Only show LiabilityDashboard when specifically in liability tab */}
+                          <LiabilityDashboard
+                            liabilities={liabilities}
+                            currency={settings.currency}
+                            totalMonthlyIncome={totalIncome}
+                          />
+                          <LiabilityTab
+                            currency={settings.currency}
+                            expenses={expenses}
+                            accounts={accounts}
+                          />
+                        </div>
+                      )}
+
+                      {view === "recurring" && (
+                        <RecurringTransactions />
+                      )}
+
+                      {view === "more" && (
+                        <MoreTab
+                          onNavigate={(targetView: View) => setView(targetView)}
+                          onOpenSettings={() => setIsSettingsOpen(true)}
+                          onOpenNotifications={() => setIsNotificationsOpen(true)}
+                          emergencyFundAmount={emergencyFundAmount}
+                          bankAccountsCount={accounts.filter((a: any) => a.type === 'bank').length}
+                          cardsCount={accounts.filter((a: any) => a.type === 'credit_card').length}
+                          currency={settings.currency}
+                        />
+                      )}
+                    </Suspense>
+                  </ErrorBoundary>
+                </PullToRefresh>
+              </ScrollAwareLayout>
+
+              {/* Modals */}
+              <TransactionForm
+                isOpen={isTransactionFormOpen}
+                onClose={() => {
+                  setIsTransactionFormOpen(false);
+                  setEditingTransaction(null);
+                }}
+                type={transactionFormType}
+                onSubmit={handleTransactionSubmit}
+                initialData={editingTransaction}
+                accounts={accounts}
+                currency={settings.currency}
+                roundUpEnabled={settings.roundUpEnabled}
+              />
+
+              {/* Round Up Dialog */}
+              {roundUpData && (
+                <RoundUpDialog
+                  isOpen={isRoundUpOpen}
+                  onClose={() => setIsRoundUpOpen(false)}
+                  onConfirm={handleRoundUpConfirm}
+                  expenseAmount={roundUpData.expenseAmount}
+                  roundedAmount={roundUpData.roundedAmount}
                   currency={settings.currency}
-                  onEditExpense={handleEditExpense}
-                  onDeleteExpense={deleteExpense}
-                  onEditIncome={handleEditIncome}
-                  onDeleteIncome={deleteIncome}
-                  onEditDebt={handleEditDebt}
-                  onDeleteDebt={deleteDebt}
-                  onSettleDebt={settleDebt}
-                />
-              )}
-
-              {view === "goals" && (
-                <GoalsTracker
                   goals={goals}
-                  currency={settings.currency}
-                  accounts={accounts}
-                  expenses={expenses}
-                  incomes={incomes}
-                  onCreateGoal={createGoal}
-                  onUpdateGoal={updateGoal}
-                  onDeleteGoal={deleteGoal}
-                  onDeductFromAccount={async (accountId, amount) => {
-                    const account = accounts.find(a => a.id === accountId);
-                    if (account) {
-                      await updateAccount(accountId, {
-                        balance: account.balance - amount
-                      });
-                    }
-                  }}
+                  onMute={handleRoundUpMute}
                 />
               )}
 
-              {view === "accounts" && (
-                <AccountsManager
-                  accounts={accounts}
-                  currency={settings.currency}
-                  onCreateAccount={createAccount}
-                  onUpdateAccount={updateAccount}
-                  onDeleteAccount={deleteAccount}
-                />
-              )}
+              {/* Replaced AIAssistant with Overlay */}
+              <AIChatOverlay
+                isOpen={isAIAssistantOpen}
+                onClose={() => setIsAIAssistantOpen(false)}
+                context={aiContext}
+                settings={settings}
+              />
 
-              {view === "investments" && (
-                <InvestmentsTab />
-              )}
+              <EnhancedSettingsPanel
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                settings={settings}
+                onUpdateSettings={updateSettings}
+                onAchievementClick={(achievementId: string) => {
+                  setSelectedAchievementId(achievementId);
+                  setIsAchievementDialogOpen(true);
+                  setIsSettingsOpen(false);
+                }}
+              />
 
-              {view === "emergency" && (
-                <EmergencyFundsTab
-                  currency={settings.currency}
-                  userId={userId}
-                  expenses={expenses}
-                  incomes={incomes}
-                  accounts={accounts}
-                  onEmergencyFundUpdate={(amount) => setEmergencyFundAmount(amount)}
-                />
-              )}
+              <NotificationsPanel
+                isOpen={isNotificationsOpen}
+                onClose={() => setIsNotificationsOpen(false)}
+                notifications={notifications}
+                onNotificationClick={(notification: any) => {
+                  if (notification.achievementId) {
+                    setSelectedAchievementId(notification.achievementId);
+                    setIsAchievementDialogOpen(true);
+                  }
+                  setIsNotificationsOpen(false);
+                }}
+                onMarkAsRead={(id: string) => {
+                  setNotifications((prev: any[]) =>
+                    prev.map((n: any) => n.id === id ? { ...n, read: true } : n)
+                  );
+                }}
+                onClearRead={() => {
+                  setNotifications((prev: any[]) => prev.filter((n: any) => !n.read));
+                  toast.success('Read notifications cleared');
+                }}
+              />
 
-              {view === "liability" && (
-                <div className="space-y-6">
-                  {/* Only show LiabilityDashboard when specifically in liability tab */}
-                  <LiabilityDashboard
-                    liabilities={liabilities}
-                    currency={settings.currency}
-                    totalMonthlyIncome={totalIncome}
-                  />
-                  <LiabilityTab
-                    currency={settings.currency}
-                    expenses={expenses}
-                    accounts={accounts}
-                  />
-                </div>
-              )}
+              <AchievementDetailDialog
+                isOpen={isAchievementDialogOpen}
+                onClose={() => {
+                  setIsAchievementDialogOpen(false);
+                  setSelectedAchievementId(null);
+                }}
+                achievementId={selectedAchievementId}
+              />
 
-              {view === "recurring" && (
-                <RecurringTransactions />
-              )}
+              <FundAllocationDialog
+                isOpen={isFundAllocationOpen}
+                onClose={closeFundAllocation}
+                accounts={accounts}
+                goals={goals}
+                currency={settings.currency}
+                destinationType={fundAllocationType}
+                emergencyFund={{
+                  currentAmount: emergencyFundAmount,
+                  targetAmount: 100000
+                }}
+                onAllocate={performFundAllocation}
+              />
 
-              {view === "more" && (
-                <MoreTab
-                  onNavigate={(targetView) => setView(targetView)}
-                  onOpenSettings={() => setIsSettingsOpen(true)}
-                  onOpenNotifications={() => setIsNotificationsOpen(true)}
-                  emergencyFundAmount={emergencyFundAmount}
-                  bankAccountsCount={accounts.filter(a => a.type === 'bank').length}
-                  cardsCount={accounts.filter(a => a.type === 'credit_card').length}
-                  currency={settings.currency}
-                />
-              )}
-            </Suspense>
-          </ErrorBoundary>
-        </PullToRefresh>
-      </ScrollAwareLayout>
+              <TransferForm
+                isOpen={isTransferFormOpen}
+                onClose={() => setIsTransferFormOpen(false)}
+                accounts={accounts}
+                currency={settings.currency}
+                onTransfer={transferFunds}
+              />
 
-      {/* Modals */}
-      <TransactionForm
-        isOpen={isTransactionFormOpen}
-        onClose={() => {
-          setIsTransactionFormOpen(false);
-          setEditingTransaction(null);
-        }}
-        type={transactionFormType}
-        onSubmit={handleTransactionSubmit}
-        initialData={editingTransaction}
-        accounts={accounts}
-        roundUpEnabled={settings.roundUpEnabled}
-      />
-
-      {/* Round Up Dialog */}
-      {roundUpData && (
-        <RoundUpDialog
-          isOpen={isRoundUpOpen}
-          onClose={() => setIsRoundUpOpen(false)}
-          onConfirm={handleRoundUpConfirm}
-          expenseAmount={roundUpData.expenseAmount}
-          roundedAmount={roundUpData.roundedAmount}
-          currency={settings.currency}
-          goals={goals}
-          onMute={handleRoundUpMute}
-        />
-      )}
-
-      {/* Replaced AIAssistant with Overlay */}
-      <AIChatOverlay
-        isOpen={isAIAssistantOpen}
-        onClose={() => setIsAIAssistantOpen(false)}
-        context={aiContext}
-        settings={settings}
-      />
-
-      <EnhancedSettingsPanel
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        settings={settings}
-        onUpdateSettings={updateSettings}
-        onAchievementClick={(achievementId) => {
-          setSelectedAchievementId(achievementId);
-          setIsAchievementDialogOpen(true);
-          setIsSettingsOpen(false);
-        }}
-      />
-
-      <NotificationsPanel
-        isOpen={isNotificationsOpen}
-        onClose={() => setIsNotificationsOpen(false)}
-        notifications={notifications}
-        onNotificationClick={(notification) => {
-          if (notification.achievementId) {
-            setSelectedAchievementId(notification.achievementId);
-            setIsAchievementDialogOpen(true);
-          }
-          setIsNotificationsOpen(false);
-        }}
-        onMarkAsRead={(id) => {
-          setNotifications(prev =>
-            prev.map(n => n.id === id ? { ...n, read: true } : n)
-          );
-        }}
-        onClearRead={() => {
-          setNotifications(prev => prev.filter(n => !n.read));
-          toast.success('Read notifications cleared');
-        }}
-      />
-
-      <AchievementDetailDialog
-        isOpen={isAchievementDialogOpen}
-        onClose={() => {
-          setIsAchievementDialogOpen(false);
-          setSelectedAchievementId(null);
-        }}
-        achievementId={selectedAchievementId}
-      />
-
-      <FundAllocationDialog
-        isOpen={isFundAllocationOpen}
-        onClose={closeFundAllocation}
-        accounts={accounts}
-        goals={goals}
-        currency={settings.currency}
-        destinationType={fundAllocationType}
-        emergencyFund={{
-          currentAmount: emergencyFundAmount,
-          targetAmount: 100000
-        }}
-        onAllocate={performFundAllocation}
-      />
-
-      <TransferForm
-        isOpen={isTransferFormOpen}
-        onClose={() => setIsTransferFormOpen(false)}
-        accounts={accounts}
-        currency={settings.currency}
-        onTransfer={transferFunds}
-      />
-
-      <Toaster
-        position="bottom-center"
-        richColors
-        theme="dark"
-        toastOptions={{
-          style: {
-            background: '#1C1C1E',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            color: '#FFFFFF',
-            borderRadius: '20px',
-            backdropFilter: 'none',
-          },
-        }}
-      />
-    </div>
+              <Toaster
+                position="bottom-center"
+                richColors
+                theme="dark"
+                toastOptions={{
+                  style: {
+                    background: '#1C1C1E',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#FFFFFF',
+                    borderRadius: '20px',
+                    backdropFilter: 'none',
+                  },
+                }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

@@ -6,14 +6,16 @@ import { NumberInput } from './ui/number-input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Plus, Search, Loader2, Calendar, TrendingUp, Wallet, ArrowUpRight, RefreshCw } from 'lucide-react';
+import { TrendingUp, Plus, RefreshCw, Search, Calendar, Loader2, ArrowUpRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { searchSymbols, getPopularSymbols, fetchHistoricalPrice, fetchCurrentPrice, refreshPrices, detectUserLocation, getStocksByExchange } from '../utils/stockData';
 import { Investment } from '../types';
 import { formatCurrency } from '../utils/numberFormat';
-import { InteractiveFinancialValue } from '@/components/ui/InteractiveFinancialValue';
+import { InteractiveFinancialValue } from './ui/InteractiveFinancialValue';
 import { useFinance } from '../context/FinanceContext';
+import { CyberButton } from './ui/CyberButton';
 import { WealthBuilderSimulator } from './WealthBuilderSimulator';
+import { MeshBackground } from './ui/MeshBackground';
 import { PortfolioAllocationChart } from './investments/PortfolioAllocationChart';
 import { InvestmentList } from './investments/InvestmentList';
 import { EmptyState } from './EmptyState';
@@ -420,105 +422,115 @@ export function InvestmentsTab() {
     <div className="space-y-6 pb-24">
       {/* Portfolio Summary Card (Inspired by Bills Tab) */}
       {/* Investment Growth Summary Card (Segmented Stack Pattern) */}
-      <div className="segmented-stack">
-        {/* stack-cap */}
-        <div className="stack-cap flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="w-10 h-10 bg-[#0A84FF]/10 rounded-xl flex items-center justify-center border border-[#0A84FF]/20 shrink-0">
-              <Wallet className="w-5 h-5 text-[#0A84FF]" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-balance text-lg text-white truncate">Investment Growth</h3>
-              <p className="text-label text-[10px] truncate">Net portfolio performance</p>
-            </div>
-          </div>
-          <div className="text-right shrink-0">
-            <p className="text-label text-[10px] opacity-60">Current Value</p>
-            <div className="text-balance text-xl text-white">
-              <InteractiveFinancialValue value={totalValue} currency={currency} />
-            </div>
-          </div>
-        </div>
+      <div className="mesh-gradient-card sq-2xl overflow-hidden group relative">
+        <MeshBackground variant="invest" />
+        <div className="bg-transparent p-0 relative z-10">
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/graphy-dark.png')] opacity-[0.03] pointer-events-none z-0" />
 
-        {/* stack-body */}
-        <div className="stack-body py-4 px-6">
-          <div className="flex justify-between items-center mb-6">
-            <div className="space-y-1">
-              <p className="text-label text-[10px] opacity-60">Net P&L</p>
-              <div className={`text-balance text-xl font-bold ${totalGainLoss >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]'}`}>
-                {totalGainLoss >= 0 ? '+' : ''}
-                <InteractiveFinancialValue value={totalGainLoss} currency={currency} />
+          {/* stack-cap */}
+          <div className="p-6 flex items-center justify-between gap-4 relative z-10">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="w-12 h-12 bg-blue-500/10 sq-md flex items-center justify-center border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                <TrendingUp className="w-6 h-6 text-blue-400" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-white font-black text-xs uppercase tracking-[0.3em]">Growth Node</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                  Active Capital Projection
+                </p>
               </div>
             </div>
-            <div className={`px-3 py-1.5 rounded-full text-[10px] font-bold border transition-colors ${totalGainLoss >= 0
-              ? 'bg-[#30D158]/10 border-[#30D158]/20 text-[#30D158]'
-              : 'bg-[#FF453A]/10 border-[#FF453A]/20 text-[#FF453A]'
-              }`}>
-              {totalGainLoss >= 0 ? '▲' : '▼'} {gainLossPercentage.toFixed(2)}% Overall
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5 mb-6">
-            <div>
-              <p className="text-label text-[10px] opacity-60 mb-1">Allocated Capital</p>
-              <div className="text-sm font-bold text-slate-300">
-                <InteractiveFinancialValue value={calculateTotalCost()} currency={currency} />
-              </div>
-            </div>
-            <div>
-              <p className="text-label text-[10px] opacity-60 mb-1">Total Yield</p>
-              <div className="text-sm font-bold text-[#30D158]">
-                <InteractiveFinancialValue value={calculateTotalYield()} currency={currency} />
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Investment Transactions */}
-          {investmentTransactions.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-label text-[8px] opacity-50 uppercase font-black tracking-widest mb-3">Audit Trail</p>
-              {investmentTransactions.map((transaction: any, idx: number) => (
-                <div key={idx} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors px-2 -mx-2 rounded-lg">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-200 truncate">{transaction.description || transaction.source}</p>
-                    <p className="text-label text-[8px] mt-0.5 opacity-50">
-                      {transaction.category} • {new Date(transaction.date).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className={`text-balance text-xs font-bold shrink-0 ${transaction.source ? 'text-[#30D158]' : 'text-zinc-400'}`}>
-                    {transaction.source ? '+' : '-'}
-                    <InteractiveFinancialValue value={transaction.amount} currency={currency} />
-                  </div>
+            <div className="text-right">
+              <p className="text-[9px] text-slate-500 uppercase font-black tracking-[0.2em] mb-1">Portfolio Valuation</p>
+              <div className="relative">
+                <div className="text-xl font-black text-white tabular-nums font-mono">
+                  <InteractiveFinancialValue value={totalValue} currency={currency} />
                 </div>
-              ))}
+                <div className="absolute inset-0 bg-blue-500/20 blur-xl -z-10 animate-pulse" />
+              </div>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* stack-footer */}
-        <div className="stack-footer">
-          <div className="flex items-center justify-between w-full">
-            <Select value={timeRange} onValueChange={(v: any) => setTimeRange(v)}>
-              <SelectTrigger className="h-9 w-32 bg-black/20 border-white/5 text-label text-[10px] rounded-xl">
-                <SelectValue placeholder="Period" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1C1C1E] border-white/10 text-white">
-                <SelectItem value="1M">30 Days</SelectItem>
-                <SelectItem value="3M">90 Days</SelectItem>
-                <SelectItem value="All">All Time</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* stack-body */}
+          <div className="py-4 px-6 relative z-10 border-t border-white/5">
+            <div className="flex justify-between items-center mb-6">
+              <div className="space-y-1">
+                <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Aggregate P&L</p>
+                <div className={`text-xl font-black font-mono tabular-nums ${totalGainLoss >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
+                  {totalGainLoss >= 0 ? '+' : ''}
+                  <InteractiveFinancialValue value={totalGainLoss} currency={currency} />
+                </div>
+              </div>
+              <div className={`px-4 py-2 sq-md text-[10px] font-black tracking-widest border transition-all ${totalGainLoss >= 0
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]'
+                : 'bg-rose-500/10 border-rose-500/20 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.1)]'
+                }`}>
+                {totalGainLoss >= 0 ? '▲' : '▼'} {gainLossPercentage.toFixed(2)}% ROI
+              </div>
+            </div>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRefreshPrices}
-              disabled={isRefreshing || investments.length === 0}
-              className="h-9 px-4 text-label text-[10px] text-[#0A84FF] hover:text-[#007AFF] hover:bg-[#0A84FF]/10 rounded-xl"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Sync Market
-            </Button>
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5 mb-6">
+              <div className="bg-white/5 p-3 sq-md border border-white/5">
+                <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-1.5 opacity-60">Locked Capital</p>
+                <div className="text-sm font-black text-slate-200 font-mono tabular-nums">
+                  <InteractiveFinancialValue value={calculateTotalCost()} currency={currency} />
+                </div>
+              </div>
+              <div className="bg-white/5 p-3 sq-md border border-white/5">
+                <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-1.5 opacity-60">Yield Injection</p>
+                <div className="text-sm font-black text-blue-400 font-mono tabular-nums">
+                  <InteractiveFinancialValue value={calculateTotalYield()} currency={currency} />
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Investment Transactions */}
+            {investmentTransactions.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-label text-[8px] opacity-50 uppercase font-black tracking-widest mb-3">Audit Trail</p>
+                {investmentTransactions.map((transaction: any, idx: number) => (
+                  <div key={idx} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors px-2 -mx-2 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-200 truncate">{transaction.description || transaction.source}</p>
+                      <p className="text-label text-[8px] mt-0.5 opacity-50">
+                        {transaction.category} • {new Date(transaction.date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className={`text-balance text-xs font-bold shrink-0 ${transaction.source ? 'text-[#30D158]' : 'text-zinc-400'}`}>
+                      {transaction.source ? '+' : '-'}
+                      <InteractiveFinancialValue value={transaction.amount} currency={currency} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* stack-footer */}
+          <div className="stack-footer">
+            <div className="flex items-center justify-between w-full">
+              <Select value={timeRange} onValueChange={(v: any) => setTimeRange(v)}>
+                <SelectTrigger className="h-9 w-32 bg-black/20 border-white/5 text-label text-[10px] sq-md">
+                  <SelectValue placeholder="Period" />
+                </SelectTrigger>
+                <SelectContent className="bg-black border-white/10 text-white">
+                  <SelectItem value="1M">30 Days</SelectItem>
+                  <SelectItem value="3M">90 Days</SelectItem>
+                  <SelectItem value="All">All Time</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRefreshPrices}
+                disabled={isRefreshing || investments.length === 0}
+                className="h-9 px-4 text-label text-[10px] text-[#0A84FF] hover:text-[#007AFF] hover:bg-[#0A84FF]/10 sq-md"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Sync Market
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -529,19 +541,18 @@ export function InvestmentsTab() {
           <h2 className="text-xl font-bold text-slate-100 tracking-tight truncate">Active Portfolio</h2>
           <p className="text-xs text-slate-500 mt-1 truncate">Manage stocks, mutual funds and assets</p>
         </div>
-        <Button
+        <CyberButton
           onClick={() => setIsAddDialogOpen(true)}
-          className="bg-[#0A84FF] hover:bg-[#007AFF] text-white rounded-xl h-12 px-6 border-none shadow-lg shadow-blue-600/10 flex items-center gap-2 group transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0"
+          icon={Plus}
+          className="h-12"
         >
-          <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
-          <span className="font-bold hidden sm:inline">Add Asset</span>
-          <span className="font-bold sm:hidden">Add</span>
-        </Button>
+          Add Asset
+        </CyberButton>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
         {investments.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center py-20 bg-[#1C1C1E] rounded-[32px] border border-dashed border-white/10">
+          <div className="h-full flex flex-col items-center justify-center py-20 bg-black sq-2xl border border-dashed border-white/10">
             <EmptyState
               icon={TrendingUp}
               title="No assets tracked yet"
@@ -568,7 +579,7 @@ export function InvestmentsTab() {
 
             {/* Knowledge Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="p-6 bg-[#1C1C1E] border border-white/5 rounded-[24px]">
+              <Card className="p-6 bg-black border border-white/5 sq-xl">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-8 h-8 rounded-lg bg-[#30D158]/10 flex items-center justify-center">
                     <ArrowUpRight className="w-4 h-4 text-[#30D158]" />
@@ -579,7 +590,7 @@ export function InvestmentsTab() {
                   FinHub automatically suggests prices based on your purchase date and fetches real-time quotes for accurate tracking.
                 </p>
               </Card>
-              <Card className="p-6 bg-[#1C1C1E] border border-white/5 rounded-[24px]">
+              <Card className="p-6 bg-black border border-white/5 sq-xl">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
                     <TrendingUp className="w-4 h-4 text-purple-400" />
@@ -601,7 +612,7 @@ export function InvestmentsTab() {
         setIsAddDialogOpen(open);
         if (!open) resetForm();
       }}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-slate-900 border-white/10 text-white p-0">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-black border-white/10 text-white p-0 sq-2xl">
           <div className="p-8 border-b border-white/5">
             <DialogHeader className="p-0">
               <DialogTitle className="text-xl font-bold tracking-tight text-white">Add Investment</DialogTitle>
@@ -623,10 +634,10 @@ export function InvestmentsTab() {
                     setSymbolSuggestions(getPopularSymbols(value, currency));
                   }
                 }}>
-                  <SelectTrigger id="add-investment-type" name="type" className="bg-white/5 border-white/5 rounded-2xl h-14 text-white">
+                  <SelectTrigger id="add-investment-type" name="type" className="bg-white/5 border-white/5 sq-md h-14 text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-white/10 text-white">
+                  <SelectContent className="bg-black border-white/10 text-white">
                     <SelectItem value="stock">Stock</SelectItem>
                     <SelectItem value="mutual_fund">Mutual Fund</SelectItem>
                     <SelectItem value="sip">SIP</SelectItem>
@@ -643,10 +654,10 @@ export function InvestmentsTab() {
                     setFormData({ ...formData, exchange: value });
                     setSymbolSuggestions(getStocksByExchange(value));
                   }}>
-                    <SelectTrigger id="add-investment-exchange" name="exchange" className="bg-white/5 border-white/5 rounded-2xl h-14 text-white">
+                    <SelectTrigger id="add-investment-exchange" name="exchange" className="bg-white/5 border-white/5 sq-md h-14 text-white">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-white/10 text-white">
+                    <SelectContent className="bg-black border-white/10 text-white">
                       <SelectItem value="NSE">NSE (National Stock Exchange)</SelectItem>
                       <SelectItem value="BSE">BSE (Bombay Stock Exchange)</SelectItem>
                       <SelectItem value="NASDAQ">NASDAQ (US)</SelectItem>
@@ -668,7 +679,7 @@ export function InvestmentsTab() {
                   onBlur={() => {
                     setTimeout(() => setShowSuggestions(false), 200);
                   }}
-                  className="bg-white/5 border-white/5 rounded-2xl h-14 text-white pr-10"
+                  className="bg-white/5 border-white/5 sq-md h-14 text-white pr-10"
                   placeholder="Search for symbol..."
                   autoComplete="off"
                 />
@@ -676,7 +687,7 @@ export function InvestmentsTab() {
               </div>
 
               {showSuggestions && symbolSuggestions.length > 0 && (
-                <div className="absolute z-10 w-full mt-2 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto overflow-x-hidden backdrop-blur-xl">
+                <div className="absolute z-10 w-full mt-2 bg-black border border-white/10 sq-md shadow-2xl max-h-60 overflow-y-auto overflow-x-hidden">
                   {symbolSuggestions.map((suggestion, idx) => (
                     <button
                       key={idx}
@@ -704,10 +715,10 @@ export function InvestmentsTab() {
             <div>
               <Label htmlFor="add-investment-account" className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Source/Holding Account</Label>
               <Select value={formData.sourceAccountId} onValueChange={(value) => setFormData({ ...formData, sourceAccountId: value })}>
-                <SelectTrigger id="add-investment-account" className="bg-white/5 border-white/5 rounded-2xl h-14 text-white">
+                <SelectTrigger id="add-investment-account" className="bg-white/5 border-white/5 sq-md h-14 text-white">
                   <SelectValue placeholder="Select account..." />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-white/10 text-white">
+                <SelectContent className="bg-black border-white/10 text-white">
                   <SelectItem value="none">No Linking (Physical Only)</SelectItem>
                   {accounts.map(acc => (
                     <SelectItem key={acc.id} value={acc.id}>
@@ -726,7 +737,7 @@ export function InvestmentsTab() {
                 name="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="bg-white/5 border-white/5 rounded-2xl h-14 text-white"
+                className="bg-white/5 border-white/5 sq-md h-14 text-white"
                 placeholder="e.g., Apple Inc."
                 autoComplete="off"
               />
@@ -743,7 +754,7 @@ export function InvestmentsTab() {
                 type="date"
                 value={formData.purchaseDate}
                 onChange={(e) => handlePurchaseDateChange(e.target.value)}
-                className="bg-white/5 border-white/5 rounded-2xl h-14 text-white"
+                className="bg-white/5 border-white/5 sq-md h-14 text-white"
                 max={new Date().toISOString().split('T')[0]}
                 autoComplete="off"
               />
@@ -759,7 +770,7 @@ export function InvestmentsTab() {
                 name="quantity"
                 value={formData.quantity}
                 onChange={(value) => setFormData({ ...formData, quantity: value })}
-                className="bg-white/5 border-white/5 rounded-2xl h-14 text-white"
+                className="bg-white/5 border-white/5 sq-md h-14 text-white"
                 placeholder="Number of shares/units"
                 autoComplete="off"
               />
@@ -780,7 +791,7 @@ export function InvestmentsTab() {
                 name="buyPrice"
                 value={formData.buyPrice}
                 onChange={(value) => setFormData({ ...formData, buyPrice: value })}
-                className="bg-white/5 border-white/5 rounded-2xl h-14 text-white"
+                className="bg-white/5 border-white/5 sq-md h-14 text-white"
                 placeholder="Auto-filled based on purchase date"
                 disabled={isLoadingPrice}
                 autoComplete="off"
@@ -839,7 +850,7 @@ export function InvestmentsTab() {
         setIsEditDialogOpen(open);
         if (!open) resetForm();
       }}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-slate-900 border-white/10 text-white p-0">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-black border-white/10 text-white p-0 sq-2xl">
           <div className="p-8 border-b border-white/5">
             <DialogHeader className="p-0">
               <DialogTitle className="text-xl font-bold tracking-tight text-white">Edit Asset</DialogTitle>
@@ -906,7 +917,7 @@ export function InvestmentsTab() {
                   onBlur={() => {
                     setTimeout(() => setShowSuggestions(false), 200);
                   }}
-                  className="bg-white/5 border-white/5 rounded-2xl h-14 text-white pr-10"
+                  className="bg-white/5 border-white/5 sq-md h-14 text-white pr-10"
                   placeholder="Search for symbol..."
                   autoComplete="off"
                 />
@@ -914,7 +925,7 @@ export function InvestmentsTab() {
               </div>
 
               {showSuggestions && symbolSuggestions.length > 0 && (
-                <div className="absolute z-10 w-full mt-2 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto overflow-x-hidden backdrop-blur-xl">
+                <div className="absolute z-10 w-full mt-2 bg-black border border-white/10 sq-md shadow-2xl max-h-60 overflow-y-auto overflow-x-hidden">
                   {symbolSuggestions.map((suggestion, idx) => (
                     <button
                       key={idx}
@@ -962,7 +973,7 @@ export function InvestmentsTab() {
                 name="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="bg-white/5 border-white/5 rounded-2xl h-14 text-white"
+                className="bg-white/5 border-white/5 sq-md h-14 text-white"
                 placeholder="e.g., Apple Inc."
                 autoComplete="off"
               />
@@ -979,7 +990,7 @@ export function InvestmentsTab() {
                 type="date"
                 value={formData.purchaseDate}
                 onChange={(e) => handlePurchaseDateChange(e.target.value)}
-                className="bg-white/5 border-white/5 rounded-2xl h-14 text-white"
+                className="bg-white/5 border-white/5 sq-md h-14 text-white"
                 max={new Date().toISOString().split('T')[0]}
                 autoComplete="off"
               />
@@ -994,7 +1005,7 @@ export function InvestmentsTab() {
                 name="quantity"
                 value={formData.quantity}
                 onChange={(value) => setFormData({ ...formData, quantity: value })}
-                className="bg-white/5 border-white/5 rounded-2xl h-14 text-white"
+                className="bg-white/5 border-white/5 sq-md h-14 text-white"
                 placeholder="Number of shares/units"
                 autoComplete="off"
               />
@@ -1015,7 +1026,7 @@ export function InvestmentsTab() {
                 name="buyPrice"
                 value={formData.buyPrice}
                 onChange={(value) => setFormData({ ...formData, buyPrice: value })}
-                className="bg-white/5 border-white/5 rounded-2xl h-14 text-white"
+                className="bg-white/5 border-white/5 sq-md h-14 text-white"
                 placeholder="Auto-filled based on purchase date"
                 disabled={isLoadingPrice}
                 autoComplete="off"
@@ -1077,7 +1088,7 @@ export function InvestmentsTab() {
           setSelectedAccount('');
         }
       }}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-slate-900 border-white/10 text-white p-0">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-black border-white/10 text-white p-0 sq-2xl">
           <div className="p-8 border-b border-white/5">
             <DialogHeader className="p-0">
               <DialogTitle className="text-xl font-bold tracking-tight text-white">Full Exit Protocol</DialogTitle>
@@ -1159,6 +1170,6 @@ export function InvestmentsTab() {
       <div className="mt-8">
         <WealthBuilderSimulator />
       </div>
-    </div >
+    </div>
   );
 }
