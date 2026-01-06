@@ -297,9 +297,13 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="col-span-full mb-8 segmented-stack mesh-gradient-card mesh-invest relative overflow-hidden"
+                        className={`col-span-full mb-8 segmented-stack relative overflow-hidden ${analysis.alertColor === '#730800' ? 'garnet-alert border-2 shadow-2xl shadow-red-900/20 text-red-100' : 'mesh-gradient-card mesh-invest'}`}
                     >
-                        <MeshBackground variant="invest" />
+                        {analysis.alertColor === '#730800' ? (
+                            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top_right,#730800,transparent)]" />
+                        ) : (
+                            <MeshBackground variant="invest" />
+                        )}
                         <div className="stack-cap flex justify-between items-center relative z-10">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-blue-500/10 flex items-center justify-center rounded-lg border border-blue-500/20">
@@ -313,7 +317,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                             <div className="text-right">
                                 <p className="text-[8px] text-slate-500 uppercase font-black mb-1">Current Protocol</p>
                                 <span
-                                    className="px-2 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[9px] font-black text-blue-400 uppercase"
+                                    className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${analysis.alertColor === '#730800' ? 'garnet-pill' : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'}`}
                                 >
                                     {analysis.priority === 3 ? 'GROWTH' : 'RECOVERY'}
                                 </span>
@@ -411,6 +415,29 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                     </div>
                                 </motion.div>
                             )}
+
+                            {/* Optimistic Pivot Actions */}
+                            {analysis.pivotActions && analysis.pivotActions.length > 0 && (
+                                <div className="mt-8 pt-8 border-t border-white/5">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="px-2 py-0.5 bg-red-500/10 border border-red-500/20 rounded text-[8px] font-black text-red-400 uppercase tracking-tighter">
+                                            Optimistic Pivot
+                                        </div>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Actionable Guidance</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {analysis.pivotActions.map((action, idx) => (
+                                            <div key={idx} className="flex items-start gap-3 p-3 bg-white/[0.02] border border-white/5 rounded-xl">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" />
+                                                <p className="text-[11px] text-slate-300 font-medium leading-relaxed">
+                                                    {action}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
 
                             {/* Strategic Triggers Session */}
                             {analysis.triggers && analysis.triggers.length > 0 && (

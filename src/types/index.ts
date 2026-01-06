@@ -69,6 +69,8 @@ export interface Goal {
   emoji: string;
   type?: GoalType; // Defaults to 'growth' if undefined
   status?: 'active' | 'completed' | 'leaking'; // Defaults to 'active'
+  monthly_contribution?: number;
+  is_discretionary?: boolean;
   createdAt: string;
 }
 
@@ -216,6 +218,7 @@ export interface Investment {
   isPhysicalAsset?: boolean;
   accountId?: string; // ID of the holding account (for Source Independence)
   purchaseDate: string;
+  expected_return?: number; // annual percentage, e.g. 0.12
   currency: string;
   createdAt: string;
 }
@@ -227,11 +230,17 @@ export interface Liability {
   type: 'home_loan' | 'car_loan' | 'personal_loan' | 'credit_card' | 'education_loan' | 'other';
   principal: number;
   outstanding: number;
-  interestRate: number;
+  interestRate: number; // nominal APR
   emiAmount: number;
   startDate: string;
   tenure: number; // in months
   accountId?: string;
+  // Strategic Fields
+  apr_nominal?: number;
+  effective_rate?: number;
+  min_payment?: number;
+  penalty_applied?: boolean;
+  next_due_date?: string;
 }
 
 // Notification
