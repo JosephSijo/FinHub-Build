@@ -225,14 +225,16 @@ export default function App() {
     incomes,
     accounts,
     investments,
+    liabilities,
+    goals,
     savingsRate: healthScore.savingsRate,
     healthScore: healthScore.score,
     brainSummary: generateBrainSummary(
-      { incomes, expenses, investments, accounts, healthScore: healthScore.score, savingsRate: healthScore.savingsRate, totalIncome: incomes.reduce((sum: number, i: Income) => sum + i.amount, 0), totalExpenses: expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0), activeDebts: debts.filter((d: Debt) => d.status === "pending").length, goalsCount: goals.length, recentTransactions: [] },
+      { incomes, expenses, investments, accounts, liabilities, goals, healthScore: healthScore.score, savingsRate: healthScore.savingsRate, totalIncome: incomes.reduce((sum: number, i: Income) => sum + i.amount, 0), totalExpenses: expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0), activeDebts: debts.filter((d: Debt) => d.status === "pending").length, goalsCount: goals.length, recentTransactions: [] },
       settings.currency,
       view
     )
-  }), [incomes, expenses, debts, goals.length, healthScore.savingsRate, healthScore.score, accounts, investments, settings.currency, view]);
+  }), [incomes, expenses, debts, goals, healthScore.savingsRate, healthScore.score, accounts, investments, liabilities, settings.currency, view]);
 
   // Calculate totals
   const totalIncome = useMemo(() => incomes.reduce((sum: number, i: Income) => sum + i.amount, 0), [incomes]);
@@ -458,6 +460,8 @@ export default function App() {
                             investments={investments}
                             accounts={accounts}
                             emergencyFundAmount={emergencyFundAmount}
+                            healthScore={healthScore.score}
+                            userName={settings.name}
                           />
                         </div>
                       )}

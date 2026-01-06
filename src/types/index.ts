@@ -102,9 +102,12 @@ export interface AIContext {
   incomes: Income[];
   accounts: Account[];
   investments: Investment[];
+  liabilities: Liability[];
+  goals: Goal[];
   savingsRate: number;
   healthScore: number;
   brainSummary?: string;
+  userName?: string;
 }
 
 // Categories for Money Out

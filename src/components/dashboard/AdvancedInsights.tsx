@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     ResponsiveContainer,
     Radar,
@@ -17,22 +17,28 @@ import {
     BarChart,
     Bar
 } from 'recharts';
-import { CircleDot } from 'lucide-react';
+import { CircleDot, ShieldCheck, Zap, TrendingUp, AlertTriangle, ShieldAlert, TrendingDown, ChevronDown, Info } from 'lucide-react';
 import { formatCurrency, formatFinancialValue } from '@/utils/numberFormat';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Haptics } from '@/utils/haptics';
 import { MeshBackground } from '../ui/MeshBackground';
 
-import { Expense, Income, Account } from '@/types';
+import { Expense, Income, Account, Goal, Liability } from '@/types';
+import { analyzeFinancialFreedom } from '@/utils/architect';
 
 interface AdvancedInsightsProps {
     currency: string;
     expenses: Expense[];
     incomes: Income[];
     accounts: Account[];
+    goals: Goal[];
+    liabilities: Liability[];
     savingsRate: number;
     dtiRatio: number;
     outflowRatio: number;
+    healthScore: number;
+    userName?: string;
+    investments?: any[];
 }
 
 const COLORS = ['#FF3B3B', '#3B82F6', '#A855F7', '#F59E0B'];
@@ -65,10 +71,17 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
     expenses,
     incomes,
     accounts,
+    goals,
+    liabilities,
     savingsRate,
     dtiRatio,
-    outflowRatio
+    outflowRatio,
+    healthScore,
+    userName = "User",
+    investments = []
 }) => {
+
+    const [expandedTrigger, setExpandedTrigger] = useState<string | null>(null);
 
     const {
         healthData,
@@ -255,6 +268,237 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
     return (
         <div className="col-span-full mt-12 mb-4">
             {/* Section Header */}
+            <div className="flex items-center gap-6 mb-10">
+                <div className="h-px bg-white/5 flex-1"></div>
+                <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.5em]">Antigravity Architect</span>
+                <div className="h-px bg-white/5 flex-1"></div>
+            </div>
+
+            {/* Architect Strategic Card */}
+            {(() => {
+                const analysis = analyzeFinancialFreedom({
+                    totalIncome: incomes.reduce((sum, i) => sum + i.amount, 0),
+                    totalExpenses: expenses.reduce((sum, e) => sum + e.amount, 0),
+                    activeDebts: liabilities.length,
+                    goalsCount: goals.length,
+                    recentTransactions: [],
+                    expenses,
+                    incomes,
+                    accounts,
+                    investments,
+                    liabilities,
+                    goals,
+                    savingsRate: savingsRate / 100,
+                    healthScore: healthScore,
+                    userName: userName
+                });
+
+                return (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="col-span-full mb-8 segmented-stack mesh-gradient-card mesh-invest relative overflow-hidden"
+                    >
+                        <MeshBackground variant="invest" />
+                        <div className="stack-cap flex justify-between items-center relative z-10">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-blue-500/10 flex items-center justify-center rounded-lg border border-blue-500/20">
+                                    <ShieldCheck className="w-5 h-5 text-blue-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-white font-black text-[10px] uppercase tracking-widest">{analysis.title}</h3>
+                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Strategic Directive</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[8px] text-slate-500 uppercase font-black mb-1">Current Protocol</p>
+                                <span
+                                    className="px-2 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[9px] font-black text-blue-400 uppercase"
+                                >
+                                    {analysis.priority === 3 ? 'GROWTH' : 'RECOVERY'}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="stack-body px-8 py-6 relative z-10">
+                            <p className="text-sm text-slate-300 font-medium leading-relaxed mb-6 italic opacity-90">
+                                "{analysis.message}"
+                            </p>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">80/20 Sanity Allocation</span>
+                                        <span className="text-[10px] font-bold text-blue-400">Tactical Balance</span>
+                                    </div>
+                                    <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden flex border border-white/5 relative z-10">
+                                        <div className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)] w-[80%]" />
+                                        <div className="h-full bg-emerald-400/50 w-[20%]" />
+                                    </div>
+                                    <div className="flex justify-between text-[8px] font-black uppercase tracking-tighter">
+                                        <span className="text-blue-400">80% Priority: {analysis.priority === 0 ? 'DEBT' : analysis.priority === 1 ? 'INSURANCE' : analysis.priority === 2 ? 'BUFFER' : 'GROWTH'}</span>
+                                        <span className="text-emerald-400">20% Motivation: LEISURE</span>
+                                    </div>
+
+                                    {/* Real Freedom Honesty Check */}
+                                    {analysis.realReturn && (
+                                        <div className="mt-4 p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex items-center justify-between group overflow-hidden relative">
+                                            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                                            <div>
+                                                <p className="text-[8px] text-emerald-500/60 uppercase font-black mb-0.5 tracking-widest">Real Freedom Yield</p>
+                                                <p className="text-[10px] font-bold text-emerald-400 italic">
+                                                    {analysis.realReturn.message}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-xs font-black text-emerald-400">
+                                                    +{(analysis.realReturn.value * 100).toFixed(1)}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[8px] text-slate-500 uppercase font-black mb-1">Next Milestone</p>
+                                        <p className="text-xs font-bold text-white uppercase tracking-widest">{analysis.nextMilestone}</p>
+                                    </div>
+                                    <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center">
+                                        <Zap className="w-5 h-5 text-amber-400" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Devil's Advocate Section */}
+                            {analysis.tradeOff && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="mt-8 pt-8 border-t border-white/5"
+                                >
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded text-[8px] font-black text-amber-400 uppercase tracking-tighter">
+                                            Devil's Advocate
+                                        </div>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Trade-Off Analysis</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="group p-4 bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-help">
+                                            <p className="text-[9px] text-slate-500 font-black uppercase mb-2">Option A: Acceleration</p>
+                                            <p className="text-sm font-bold text-white">Save {analysis.tradeOff.timeSavedMonths} Months</p>
+                                            <p className="text-[10px] text-slate-400 mt-1 leading-relaxed italic">
+                                                By plugging the leak now, you reach {analysis.nextMilestone} significantly sooner.
+                                            </p>
+                                        </div>
+
+                                        <div className="group p-4 bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-help">
+                                            <p className="text-[9px] text-slate-500 font-black uppercase mb-2">Option B: Wealth Building</p>
+                                            <p className="text-sm font-bold text-emerald-400">+{formatCurrency(analysis.tradeOff.potentialGrowthAmount, currency)} Potential</p>
+                                            <p className="text-[10px] text-slate-400 mt-1 leading-relaxed italic">
+                                                Investing this surplus instead could yield this growth over the same period.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4 flex items-start gap-3 p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                                        <div className="w-4 h-4 mt-0.5 flex-shrink-0">
+                                            <ShieldCheck className="w-full h-full text-blue-400/50" />
+                                        </div>
+                                        <p className="text-[11px] text-slate-300 font-medium italic">
+                                            "Architect's Note: {analysis.tradeOff.comparisonMessage}"
+                                        </p>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* Strategic Triggers Session */}
+                            {analysis.triggers && analysis.triggers.length > 0 && (
+                                <div className="mt-8 space-y-3">
+                                    {analysis.triggers.map((trigger) => (
+                                        <motion.div
+                                            key={trigger.id}
+                                            initial={{ x: -20, opacity: 0 }}
+                                            animate={{ x: 0, opacity: 1 }}
+                                            onClick={() => setExpandedTrigger(expandedTrigger === trigger.id ? null : trigger.id)}
+                                            className={`relative overflow-hidden p-5 rounded-2xl border transition-all cursor-pointer group ${trigger.id === 'safety_breach' ? 'bg-red-500/10 border-red-500/20 hover:bg-red-500/15' :
+                                                trigger.id === 'debt_spike' ? 'bg-orange-500/10 border-orange-500/20 hover:bg-orange-500/15' :
+                                                    trigger.id === 'inflation_alert' ? 'bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/15' :
+                                                        trigger.severity === 'success' ? 'bg-emerald-500/10 border-emerald-500/20' :
+                                                            'bg-blue-500/10 border-blue-500/20'
+                                                }`}
+                                        >
+                                            {/* Accent Gradient */}
+                                            <div className={`absolute top-0 left-0 w-1 h-full ${trigger.id === 'safety_breach' ? 'bg-red-500' :
+                                                trigger.id === 'debt_spike' ? 'bg-orange-500' :
+                                                    trigger.id === 'inflation_alert' ? 'bg-indigo-500' :
+                                                        'bg-slate-700'
+                                                }`} />
+
+                                            <div className="flex items-start gap-4 flex-1">
+                                                <div className={`p-2.5 rounded-xl ${trigger.id === 'safety_breach' ? 'bg-red-500/20 text-red-400' :
+                                                    trigger.id === 'debt_spike' ? 'bg-orange-500/20 text-orange-400' :
+                                                        trigger.id === 'inflation_alert' ? 'bg-indigo-500/20 text-indigo-400' :
+                                                            trigger.severity === 'success' ? 'bg-emerald-500/20 text-emerald-400' :
+                                                                'bg-blue-500/20 text-blue-400'
+                                                    }`}>
+                                                    {trigger.id === 'safety_breach' ? <ShieldAlert className="w-5 h-5" /> :
+                                                        trigger.id === 'debt_spike' ? <Zap className="w-5 h-5" /> :
+                                                            trigger.id === 'inflation_alert' ? <TrendingDown className="w-5 h-5" /> :
+                                                                trigger.type === 'windfall' ? <TrendingUp className="w-5 h-5" /> :
+                                                                    <AlertTriangle className="w-5 h-5" />}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-white">
+                                                            {trigger.title}
+                                                        </h4>
+                                                        <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-300 ${expandedTrigger === trigger.id ? 'rotate-180' : ''}`} />
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                                                        {trigger.message}
+                                                    </p>
+
+                                                    <AnimatePresence>
+                                                        {expandedTrigger === trigger.id && trigger.explanation && (
+                                                            <motion.div
+                                                                initial={{ height: 0, opacity: 0 }}
+                                                                animate={{ height: 'auto', opacity: 1 }}
+                                                                exit={{ height: 0, opacity: 0 }}
+                                                                className="overflow-hidden"
+                                                            >
+                                                                <div className="mt-4 pt-4 border-t border-white/5">
+                                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                                                        <Info className="w-3 h-3" />
+                                                                        Architect's Logic
+                                                                    </p>
+                                                                    <p className="text-[11px] text-slate-300 leading-relaxed italic pr-4">
+                                                                        "{trigger.explanation}"
+                                                                    </p>
+                                                                    {trigger.actionLabel && (
+                                                                        <button className={`mt-4 w-full py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${trigger.id === 'safety_breach' ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' :
+                                                                            trigger.id === 'debt_spike' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' :
+                                                                                trigger.id === 'inflation_alert' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' :
+                                                                                    'bg-slate-700 text-white'
+                                                                            }`}>
+                                                                            {trigger.actionLabel}
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                );
+            })()}
+
             <div className="flex items-center gap-6 mb-10">
                 <div className="h-px bg-white/5 flex-1"></div>
                 <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.5em]">Intelligence Center</span>

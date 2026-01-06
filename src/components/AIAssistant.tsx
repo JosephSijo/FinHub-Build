@@ -31,7 +31,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: "Hi! I'm your AI Finance Analyst 🧠 connected to your real financial data. I can help analyze spending, suggest budgets, and more. What's on your mind?"
+      content: "I am the Antigravity Financial Architect. My mission is to move you toward financial freedom using a Safety-First, Growth-Always framework. I've analyzed your financial fabric—how shall we fortify your path today?"
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
@@ -60,7 +60,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         userPrompt: userMessage,
         context,
         settings,
-        persona: 'ANALYST' // Chat uses Analyst persona
+        persona: 'ARCHITECT' // Chat uses Architect persona
       });
 
       if (response.text) {
@@ -134,8 +134,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                 <Bot className="w-6 h-6 text-[#0A84FF]" />
               </div>
               <div>
-                <h3 className="text-balance text-xl text-slate-100">AI Finance Guru</h3>
-                <p className="text-label text-[10px] opacity-60">Neural Analytics Core</p>
+                <h3 className="text-balance text-xl text-slate-100">Financial Architect</h3>
+                <p className="text-label text-[10px] opacity-60">Freedom Protocol Engine</p>
               </div>
             </div>
             <Button

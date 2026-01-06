@@ -36,7 +36,8 @@ export const InsightsCard: React.FC<InsightsCardProps> = ({
     const tabs: { id: TabType; label: string; hasAlert?: boolean }[] = [
         { id: 'flow', label: 'Flow' },
         { id: 'budget', label: 'Budget', hasAlert: spendingPercentage >= 90 },
-        { id: 'growth', label: 'Growth' }
+        { id: 'growth', label: 'Growth' },
+        { id: 'architect' as any, label: 'Architect' }
     ];
 
     // Colors

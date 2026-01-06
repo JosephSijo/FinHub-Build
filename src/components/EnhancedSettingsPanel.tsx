@@ -9,8 +9,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collap
 import { Separator } from './ui/separator';
 import {
   User, Camera, TrendingUp, ArrowRightLeft, Trophy, Bot, X,
-  Loader2, CheckCircle2, Trash2, ChevronDown, Settings2, LogOut, AlertOctagon
+  Loader2, CheckCircle2, Trash2, ChevronDown, Settings2, LogOut, AlertOctagon, RefreshCcw
 } from 'lucide-react';
+import {
+  Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area
+} from 'recharts';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,6 +57,51 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
   const [amount, setAmount] = useState<string>('100');
   const [convertedAmount, setConvertedAmount] = useState<number | null>(null);
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+
+  const [infAmount, setInfAmount] = useState<string>('100000');
+  const [infYears, setInfYears] = useState<string>('10');
+  const [infRate, setInfRate] = useState<string>('6');
+  const [isSyncingInflation, setIsSyncingInflation] = useState(false);
+
+  const syncInflation = async () => {
+    const countryMap: Record<string, string> = {
+      'USD': 'US',
+      'INR': 'IN',
+      'GBP': 'GB',
+      'EUR': 'EMU',
+      'AED': 'AE',
+      'SAR': 'SA'
+    };
+
+    const iso2 = countryMap[settings.currency] || 'US';
+    setIsSyncingInflation(true);
+    try {
+      const res = await fetch(`https://api.worldbank.org/v2/country/${iso2}/indicator/FP.CPI.TOTL.ZG?format=json&per_page=1`);
+      const data = await res.json();
+      if (data && data[1] && data[1][0] && data[1][0].value) {
+        const rate = data[1][0].value;
+        setInfRate(rate.toFixed(2));
+        toast.success(`Inflation rate synced for ${settings.currency}`);
+      }
+    } catch (e) {
+      console.error("Inflation sync failed:", e);
+      toast.error("Failed to sync inflation rate.");
+    } finally {
+      setIsSyncingInflation(false);
+    }
+  };
+
+  const projectionData = Array.from({ length: (parseInt(infYears) || 0) + 1 }, (_, i) => {
+    const amountVal = parseFloat(infAmount) || 0;
+    const rateVal = parseFloat(infRate) || 0;
+    const fv = amountVal * Math.pow(1 + rateVal / 100, i);
+    const pv = amountVal / Math.pow(1 + rateVal / 100, i);
+    return {
+      year: i,
+      futureCost: Math.round(fv),
+      purchasingPower: Math.round(pv)
+    };
+  });
 
   const currencies = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SAR'] as const;
   const toCurrency = settings.currency;
@@ -423,6 +471,108 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                     )}
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Inflation Calculator Tool */}
+            <div className="space-y-6">
+              <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 flex items-center gap-2">
+                <TrendingUp className="w-3.5 h-3.5 text-rose-500" />
+                Inflation Projection Node
+              </Label>
+
+              <div className="space-y-6 p-6 bg-slate-900/40 rounded-[32px] border border-white/5 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500 blur-3xl opacity-5 -mr-12 -mt-12" />
+
+                <div className="space-y-4 relative z-10">
+                  <div className="space-y-1.5">
+                    <Label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Current Capital</Label>
+                    <Input
+                      type="number"
+                      value={infAmount}
+                      onChange={(e) => setInfAmount(e.target.value)}
+                      className="bg-white/5 border-white/5 rounded-2xl h-12 font-black"
+                      placeholder="e.g. 1000000"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Horizon (Years)</Label>
+                      <Input
+                        type="number"
+                        value={infYears}
+                        onChange={(e) => setInfYears(e.target.value)}
+                        className="bg-white/5 border-white/5 rounded-2xl h-12 font-black"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between ml-1">
+                        <Label className="text-[9px] font-black uppercase tracking-widest text-slate-500">Rate (%)</Label>
+                        <button
+                          onClick={syncInflation}
+                          disabled={isSyncingInflation}
+                          className="text-[8px] font-black uppercase text-indigo-400 hover:text-indigo-300 disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {isSyncingInflation ? <Loader2 className="w-2 h-2 animate-spin" /> : <RefreshCcw className="w-2 h-2" />}
+                          Sync
+                        </button>
+                      </div>
+                      <Input
+                        type="number"
+                        value={infRate}
+                        onChange={(e) => setInfRate(e.target.value)}
+                        className="bg-white/5 border-white/5 rounded-2xl h-12 font-black"
+                      />
+                    </div>
+                  </div>
+
+                  {infAmount && (
+                    <div className="space-y-4">
+                      <div className="h-32 w-full bg-black/20 rounded-2xl p-2 border border-white/5 overflow-hidden">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={projectionData}>
+                            <defs>
+                              <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#FB7185" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#FB7185" stopOpacity={0} />
+                              </linearGradient>
+                              <linearGradient id="colorPower" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#34D399" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#34D399" stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                            <Tooltip
+                              contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '10px' }}
+                              itemStyle={{ color: '#fff', padding: '2px 0' }}
+                            />
+                            <Area type="monotone" dataKey="futureCost" stroke="#FB7185" fillOpacity={1} fill="url(#colorCost)" />
+                            <Area type="monotone" dataKey="purchasingPower" stroke="#34D399" fillOpacity={1} fill="url(#colorPower)" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      <div className="p-6 bg-white/5 rounded-2xl border border-white/5 space-y-4">
+                        <div>
+                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2">Future Cost</p>
+                          <p className="text-xl font-black text-rose-400 tabular-nums">
+                            {CURRENCY_SYMBOLS[settings.currency]}{Math.round(parseFloat(infAmount) * Math.pow(1 + parseFloat(infRate) / 100, parseFloat(infYears))).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="pt-4 border-t border-white/5">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2">Real Purchasing Power</p>
+                          <p className="text-xl font-black text-emerald-400 tabular-nums">
+                            {CURRENCY_SYMBOLS[settings.currency]}{Math.round(parseFloat(infAmount) / Math.pow(1 + parseFloat(infRate) / 100, parseFloat(infYears))).toLocaleString()}
+                          </p>
+                          <p className="text-[8px] text-slate-600 font-bold uppercase tracking-widest mt-1">
+                            VALUATION IN TODAY'S MONEY
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

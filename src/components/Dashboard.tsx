@@ -40,6 +40,8 @@ export interface DashboardProps {
   debts?: Debt[];
   investments?: any[];
   accounts?: Account[];
+  healthScore?: number;
+  userName?: string;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -51,7 +53,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   liabilities = [],
   debts = [],
   investments = [],
-  accounts = []
+  accounts = [],
+  healthScore = 50,
+  userName = "User"
 }) => {
 
   // 1. Cross-Account Reconciliation Logic
@@ -739,9 +743,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
               expenses={reconciledExpenses}
               incomes={reconciledIncomes}
               accounts={accounts}
+              goals={goals}
+              liabilities={liabilities}
               savingsRate={grossIncome > 0 ? ((grossIncome - grossBurn) / grossIncome * 100) : 0}
               dtiRatio={grossIncome > 0 ? (totalMonthlyDebt / grossIncome) : 0}
               outflowRatio={outflowRatio}
+              healthScore={healthScore}
+              userName={userName}
             />
           );
         })()
