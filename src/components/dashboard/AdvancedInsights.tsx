@@ -424,122 +424,146 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                 </div>
 
                 {/* 5. The Risk Meter (DTI) */}
-                <div className="segmented-stack col-span-full mesh-ghost-blue relative">
+                <div className="segmented-stack col-span-full mesh-ghost-blue relative min-h-[180px]">
                     <MeshBackground variant="ghost" />
-                    <div className="stack-cap flex justify-between items-start border-white/5 relative z-10">
-                        <div>
-                            <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] mb-2">The Risk Meter (DTI)</h3>
-                            <div className="text-4xl font-black text-white">{(dtiRatio * 100).toFixed(1)}%<span className="text-sm text-slate-500 font-normal ml-2">Debt-to-Income</span></div>
-                        </div>
-                        <div className={`text-[9px] font-black px-3 py-1.5 rounded-full border uppercase tracking-widest ${dtiRatio < 0.20 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : dtiRatio < 0.40 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
-                            {dtiRatio < 0.20 ? 'Safe' : dtiRatio < 0.40 ? 'Caution' : 'Danger'}
-                        </div>
-                    </div>
-
-                    <div className="stack-body px-8 py-10">
-                        <div className="space-y-6">
-                            <div className="relative h-4 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
-                                {/* Color Gradient Track */}
-                                <div className="absolute inset-0 flex">
-                                    <div className="h-full flex-1 bg-emerald-500/20" />
-                                    <div className="h-full flex-1 bg-amber-500/20" />
-                                    <div className="h-full flex-1 bg-rose-500/20" />
+                    {dtiRatio > 0 ? (
+                        <>
+                            <div className="stack-cap flex justify-between items-start border-white/5 relative z-10">
+                                <div>
+                                    <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] mb-2">The Risk Meter (DTI)</h3>
+                                    <div className="text-4xl font-black text-white">{(dtiRatio * 100).toFixed(1)}%<span className="text-sm text-slate-500 font-normal ml-2">Debt-to-Income</span></div>
                                 </div>
-                                {/* Progress Fill */}
-                                <motion.div
-                                    className={`absolute inset-y-0 left-0 ${dtiRatio < 0.20 ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : dtiRatio < 0.40 ? 'bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)]' : 'bg-rose-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]'}`}
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${Math.min(100, (dtiRatio / 0.50) * 100)}%` }}
-                                    transition={{ duration: 1, ease: "easeOut" }}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-4">
-                                <div className="text-center">
-                                    <span className="text-[8px] text-slate-500 uppercase font-black block mb-1">Risk Score</span>
-                                    <span className={`text-xl font-bold ${scoreDebt > 70 ? 'text-emerald-400' : scoreDebt > 30 ? 'text-amber-400' : 'text-rose-400'}`}>
-                                        {Math.round(scoreDebt)}/100
-                                    </span>
-                                </div>
-                                <div className="text-center border-x border-white/5">
-                                    <span className="text-[8px] text-slate-500 uppercase font-black block mb-1">Threshold</span>
-                                    <span className="text-xl font-bold text-slate-200">50%</span>
-                                </div>
-                                <div className="text-center">
-                                    <span className="text-[8px] text-slate-500 uppercase font-black block mb-1">Status</span>
-                                    <span className={`text-xl font-bold ${dtiRatio < 0.36 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                        {dtiRatio < 0.36 ? 'Healthy' : 'Aggressive'}
-                                    </span>
+                                <div className={`text-[9px] font-black px-3 py-1.5 rounded-full border uppercase tracking-widest ${dtiRatio < 0.20 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : dtiRatio < 0.40 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
+                                    {dtiRatio < 0.20 ? 'Safe' : dtiRatio < 0.40 ? 'Caution' : 'Danger'}
                                 </div>
                             </div>
+
+                            <div className="stack-body px-8 py-10">
+                                <div className="space-y-6">
+                                    <div className="relative h-4 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                                        {/* Color Gradient Track */}
+                                        <div className="absolute inset-0 flex">
+                                            <div className="h-full flex-1 bg-emerald-500/20" />
+                                            <div className="h-full flex-1 bg-amber-500/20" />
+                                            <div className="h-full flex-1 bg-rose-500/20" />
+                                        </div>
+                                        {/* Progress Fill */}
+                                        <motion.div
+                                            className={`absolute inset-y-0 left-0 ${dtiRatio < 0.20 ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : dtiRatio < 0.40 ? 'bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)]' : 'bg-rose-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]'}`}
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${Math.min(100, (dtiRatio / 0.50) * 100)}%` }}
+                                            transition={{ duration: 1, ease: "easeOut" }}
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className="text-center">
+                                            <span className="text-[8px] text-slate-500 uppercase font-black block mb-1">Risk Score</span>
+                                            <span className={`text-xl font-bold ${scoreDebt > 70 ? 'text-emerald-400' : scoreDebt > 30 ? 'text-amber-400' : 'text-rose-400'}`}>
+                                                {Math.round(scoreDebt)}/100
+                                            </span>
+                                        </div>
+                                        <div className="text-center border-x border-white/5">
+                                            <span className="text-[8px] text-slate-500 uppercase font-black block mb-1">Threshold</span>
+                                            <span className="text-xl font-bold text-slate-200">50%</span>
+                                        </div>
+                                        <div className="text-center">
+                                            <span className="text-[8px] text-slate-500 uppercase font-black block mb-1">Status</span>
+                                            <span className={`text-xl font-bold ${dtiRatio < 0.36 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                {dtiRatio < 0.36 ? 'Healthy' : 'Aggressive'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="stack-footer">
+                                <p className="text-[10px] text-slate-500 text-center italic">
+                                    Protocol: A DTI below 36% is considered healthy for asset growth management.
+                                </p>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center relative z-10">
+                            <div className="w-12 h-12 bg-slate-800/50 rounded-full flex items-center justify-center mb-3 border border-white/5">
+                                <span className="text-xl">🛡️</span>
+                            </div>
+                            <h3 className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] mb-1">System Scanning...</h3>
+                            <p className="text-[10px] text-slate-600 uppercase tracking-widest max-w-[240px]">No Risk Detected</p>
                         </div>
-                    </div>
-                    <div className="stack-footer">
-                        <p className="text-[10px] text-slate-500 text-center italic">
-                            Protocol: A DTI below 36% is considered healthy for asset growth management.
-                        </p>
-                    </div>
+                    )}
                 </div>
 
                 {/* 6. The Leakage Tracker (Outflow) */}
-                <div className="segmented-stack col-span-full mesh-ghost-blue relative">
+                <div className="segmented-stack col-span-full mesh-ghost-blue relative min-h-[180px]">
                     <MeshBackground variant="ghost" />
-                    <div className="stack-cap flex justify-between items-start border-white/5 relative z-10">
-                        <div>
-                            <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] mb-2">Leakage Tracker</h3>
-                            <div className="text-4xl font-black text-white">{(outflowRatio * 100).toFixed(1)}%<span className="text-sm text-slate-500 font-normal ml-2">Total Outflow</span></div>
-                        </div>
-                        <div className={`text-[9px] font-black px-3 py-1.5 rounded-full border uppercase tracking-widest ${outflowRatio <= 0.7 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : outflowRatio < 0.9 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
-                            {outflowRatio <= 0.70 ? 'Tight' : outflowRatio < 0.9 ? 'Loose' : 'Leakage'}
-                        </div>
-                    </div>
-
-                    <div className="stack-body py-10">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 bg-slate-900 border border-white/5 rounded-xl">
-                                        <span className="text-[8px] text-slate-500 uppercase font-black block mb-1">Monthly Inflow</span>
-                                        <span className="text-sm font-bold text-emerald-400">{formatFinancialValue(totalIncome, currency)}</span>
-                                    </div>
-                                    <div className="p-4 bg-slate-900 border border-white/5 rounded-xl">
-                                        <span className="text-[8px] text-slate-500 uppercase font-black block mb-1">Total Outflow</span>
-                                        <span className="text-sm font-bold text-rose-400">{formatFinancialValue(totalSpent, currency)}</span>
-                                    </div>
+                    {(totalIncome > 1 || totalSpent > 0) ? (
+                        <>
+                            <div className="stack-cap flex justify-between items-start border-white/5 relative z-10">
+                                <div>
+                                    <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] mb-2">Leakage Tracker</h3>
+                                    <div className="text-4xl font-black text-white">{(outflowRatio * 100).toFixed(1)}%<span className="text-sm text-slate-500 font-normal ml-2">Total Outflow</span></div>
                                 </div>
-
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-[8px] text-slate-500 uppercase font-black">
-                                        <span>Efficiency Status</span>
-                                        <span className={scoreLeakage > 70 ? 'text-emerald-400' : 'text-amber-400'}>{scoreLeakage.toFixed(0)}/100</span>
-                                    </div>
-                                    <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
-                                        <motion.div
-                                            className={`h-full ${scoreLeakage > 70 ? 'bg-emerald-500' : scoreLeakage > 30 ? 'bg-amber-500' : 'bg-rose-500'}`}
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${scoreLeakage}%` }}
-                                            transition={{ duration: 1.5 }}
-                                        />
-                                    </div>
+                                <div className={`text-[9px] font-black px-3 py-1.5 rounded-full border uppercase tracking-widest ${outflowRatio <= 0.7 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : outflowRatio < 0.9 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
+                                    {outflowRatio <= 0.70 ? 'Tight' : outflowRatio < 0.9 ? 'Loose' : 'Leakage'}
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-blue-500/5 border border-blue-500/10 rounded-xl">
-                                <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">Protocol Interpretation</h4>
-                                <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                                    {outflowRatio <= 0.7
-                                        ? "Perfect circulation. Your liquid accumulation (30%+) is optimal for future high-power asset allocation."
-                                        : outflowRatio >= 1.0
-                                            ? "Critical Leakage. System is in absolute burn state. No liquid accumulation is occurring. Immediate consolidation needed."
-                                            : "Standard Circulation. System is functional, but efficiency can be increased by reducing non-essential burn categories."}
-                                </p>
-                                <div className="flex items-center gap-2">
-                                    <div className="h-1 w-1 bg-blue-500 rounded-full" />
-                                    <span className="text-[8px] text-slate-500 uppercase font-bold tracking-widest">Efficiency Benchmark: 70.0%</span>
+                            <div className="stack-body py-10">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="p-4 bg-slate-900 border border-white/5 rounded-xl">
+                                                <span className="text-[8px] text-slate-500 uppercase font-black block mb-1">Monthly Inflow</span>
+                                                <span className="text-sm font-bold text-emerald-400">{formatFinancialValue(totalIncome, currency)}</span>
+                                            </div>
+                                            <div className="p-4 bg-slate-900 border border-white/5 rounded-xl">
+                                                <span className="text-[8px] text-slate-500 uppercase font-black block mb-1">Total Outflow</span>
+                                                <span className="text-sm font-bold text-rose-400">{formatFinancialValue(totalSpent, currency)}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-[8px] text-slate-500 uppercase font-black">
+                                                <span>Efficiency Status</span>
+                                                <span className={scoreLeakage > 70 ? 'text-emerald-400' : 'text-amber-400'}>{scoreLeakage.toFixed(0)}/100</span>
+                                            </div>
+                                            <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                                                <motion.div
+                                                    className={`h-full ${scoreLeakage > 70 ? 'bg-emerald-500' : scoreLeakage > 30 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${scoreLeakage}%` }}
+                                                    transition={{ duration: 1.5 }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 bg-blue-500/5 border border-blue-500/10 rounded-xl">
+                                        <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">Protocol Interpretation</h4>
+                                        <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                                            {outflowRatio <= 0.7
+                                                ? "Perfect circulation. Your liquid accumulation (30%+) is optimal for future high-power asset allocation."
+                                                : outflowRatio >= 1.0
+                                                    ? "Critical Leakage. System is in absolute burn state. No liquid accumulation is occurring. Immediate consolidation needed."
+                                                    : "Standard Circulation. System is functional, but efficiency can be increased by reducing non-essential burn categories."}
+                                        </p>
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-1 w-1 bg-blue-500 rounded-full" />
+                                            <span className="text-[8px] text-slate-500 uppercase font-bold tracking-widest">Efficiency Benchmark: 70.0%</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+                        </>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center relative z-10">
+                            <div className="w-12 h-12 bg-slate-800/50 rounded-full flex items-center justify-center mb-3 border border-white/5">
+                                <span className="text-xl">💧</span>
+                            </div>
+                            <h3 className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] mb-1">System Scanning...</h3>
+                            <p className="text-[10px] text-slate-600 uppercase tracking-widest max-w-[240px]">No Risk Detected</p>
                         </div>
-                    </div>
+                    )}
                 </div>
 
             </div>

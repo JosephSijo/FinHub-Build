@@ -9,6 +9,7 @@ import { Plus, Trash2, RefreshCw, Calendar, Sparkles, ArrowUpRight, Wallet, Hist
 import { MONEY_OUT_CATEGORIES, RecurringTransaction } from '../types';
 import { useFinance } from '../context/FinanceContext';
 import { formatCurrency } from '../utils/numberFormat';
+import { MeshBackground } from './ui/MeshBackground';
 
 export function RecurringTransactions() {
   const {
@@ -232,6 +233,7 @@ export function RecurringTransactions() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Summary Dashboard Card */}
       <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700 text-white rounded-[32px] border-white/10 shadow-2xl p-8">
+        <MeshBackground variant="spending" className="opacity-50" />
         <div className="absolute top-0 right-0 p-8 opacity-10 scale-150 rotate-12">
           <History className="w-32 h-32" />
         </div>

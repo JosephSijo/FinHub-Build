@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { ArrowRight, TrendingDown, AlertCircle } from 'lucide-react';
-import { Account, Goal } from '../types';
+import { ArrowRight, AlertCircle, Sparkles, Wallet, Target, Info, ChevronUp } from 'lucide-react';
+import { Account, Goal, Liability } from '../types';
 import { formatCurrency } from '../utils/numberFormat';
 import { toast } from 'sonner';
+import { useShadowWallet } from '../hooks/useShadowWallet';
+import { MeshBackground } from './ui/MeshBackground';
+import { CyberButton } from './ui/CyberButton';
 
 interface FundAllocationDialogProps {
   isOpen: boolean;
@@ -26,6 +28,8 @@ interface FundAllocationDialogProps {
     amount: number;
     destinationType: 'goal' | 'emergency';
   }) => void;
+  liabilities?: Liability[];
+  expenses?: any[];
 }
 
 export function FundAllocationDialog({
@@ -36,16 +40,75 @@ export function FundAllocationDialog({
   currency,
   destinationType,
   emergencyFund,
-  onAllocate
+  onAllocate,
+  liabilities = [],
+  expenses = []
 }: FundAllocationDialogProps) {
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [selectedDestinationId, setSelectedDestinationId] = useState('');
   const [amount, setAmount] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  const [showCalculation, setShowCalculation] = useState(false);
+
+  // Get surplus from shadow wallet
+  const {
+    availableToSpend,
+    totalBankBalance,
+    shadowWalletTotal,
+    totalCommitments
+  } = useShadowWallet({
+    accounts,
+    goals,
+    liabilities,
+    expenses,
+    emergencyFundAmount: emergencyFund?.currentAmount || 0
+  });
+
+  // Smart source suggestion
+  useEffect(() => {
+    if (isOpen && !selectedAccountId && accounts.length > 0) {
+      const liquidAccounts = accounts.filter(a => a.type === 'bank' || a.type === 'cash');
+      if (liquidAccounts.length > 0) {
+        // Suggest account with enough balance, or highest balance
+        const bestFit = liquidAccounts.find(a => a.balance >= availableToSpend) ||
+          [...liquidAccounts].sort((a, b) => b.balance - a.balance)[0];
+        setSelectedAccountId(bestFit.id);
+      }
+    }
+  }, [isOpen, availableToSpend, accounts, selectedAccountId]);
 
   const selectedAccount = accounts.find(a => a.id === selectedAccountId);
   const selectedGoal = goals.find(g => g.id === selectedDestinationId);
   const amountNum = parseFloat(amount) || 0;
+
+  // Auto-fill logic
+  const handleAutoFill = () => {
+    if (availableToSpend > 0) {
+      setAmount(availableToSpend.toString());
+
+      // Suggest distribution if destination not selected
+      if (destinationType === 'goal' && !selectedDestinationId && goals.length > 0) {
+        const sortedGoals = [...goals].sort((a, b) => {
+          // Priority 1: Goal proximity (Target date closest to today)
+          const dateA = new Date(a.targetDate).getTime();
+          const dateB = new Date(b.targetDate).getTime();
+          if (dateA !== dateB) return dateA - dateB;
+
+          // Priority 2: Percentage completion (lowest synchronized value)
+          const progressA = (a.currentAmount / a.targetAmount);
+          const progressB = (b.currentAmount / b.targetAmount);
+          return progressA - progressB;
+        });
+
+        setSelectedDestinationId(sortedGoals[0].id);
+        toast.info(`Suggested: ${sortedGoals[0].name} based on timeline & progress`, {
+          icon: <Sparkles className="w-4 h-4 text-blue-400" />
+        });
+      }
+    } else {
+      toast.error('No surplus liquidity available for auto-fill');
+    }
+  };
 
   const handlePreview = () => {
     if (!selectedAccountId) {
@@ -92,241 +155,326 @@ export function FundAllocationDialog({
     setSelectedDestinationId('');
     setAmount('');
     setShowPreview(false);
+    setShowCalculation(false);
     onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={resetAndClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {destinationType === 'goal' ? '🎯 Allocate to Goal' : '🛡️ Allocate to Emergency Fund'}
-          </DialogTitle>
-          <DialogDescription>
-            Move funds from your account to {destinationType === 'goal' ? 'a savings goal' : 'emergency fund'}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-md bg-black border-white/5 text-white p-0 custom-scrollbar sq-2xl overflow-hidden">
+        <div className="max-h-[85vh] overflow-y-auto p-8 custom-scrollbar">
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-xl font-black tracking-tight text-white mb-1">
+              {destinationType === 'goal' ? '🎯 ALLOCATE TO GOAL' : '🛡️ ALLOCATE TO RESERVE'}
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 text-[10px] uppercase font-black tracking-widest">
+              Protocol: Move liquidity from account to {destinationType === 'goal' ? 'savings milestone' : 'emergency reserve'}
+            </DialogDescription>
+          </DialogHeader>
 
-        {!showPreview ? (
-          <div className="space-y-6 py-4">
-            {/* Source Account Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="allocate-from-account">From Account</Label>
-              <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-                <SelectTrigger id="allocate-from-account" name="fromAccountId">
-                  <SelectValue placeholder="Select account" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map(account => (
-                    <SelectItem key={account.id} value={account.id}>
-                      <div className="flex items-center justify-between w-full">
-                        <span>{account.name}</span>
-                        <span className="text-sm text-gray-500 ml-4">
-                          {formatCurrency(account.balance, currency)}
-                        </span>
+          {!showPreview ? (
+            <div className="space-y-6">
+              {/* Prominent Surplus Card */}
+              {availableToSpend > 0 && (
+                <div className="relative group overflow-hidden sq-xl border border-emerald-500/20 bg-emerald-500/5 p-5 transition-all hover:bg-emerald-500/10 mb-2">
+                  <MeshBackground variant="savings" />
+                  <div className="relative z-10 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-emerald-500/20 sq-md flex items-center justify-center border border-emerald-500/30">
+                          <Sparkles className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-emerald-500/70 font-black uppercase tracking-widest">Surplus Detected</p>
+                          <h4 className="text-xl font-black text-white tabular-nums">
+                            {formatCurrency(availableToSpend, currency)}
+                          </h4>
+                        </div>
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedAccount && (
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Available: {formatCurrency(selectedAccount.balance, currency)}
-                </p>
-              )}
-            </div>
+                      <button
+                        onClick={() => setShowCalculation(!showCalculation)}
+                        className="p-2 hover:bg-white/5 rounded-full transition-colors text-slate-500 hover:text-white"
+                        title="Show Calculation"
+                      >
+                        {showCalculation ? <ChevronUp className="w-4 h-4" /> : <Info className="w-4 h-4" />}
+                      </button>
+                    </div>
 
-            {/* Destination Selection */}
-            {destinationType === 'goal' ? (
-              <div className="space-y-2">
-                <Label htmlFor="allocate-to-goal">To Goal</Label>
-                <Select value={selectedDestinationId} onValueChange={setSelectedDestinationId}>
-                  <SelectTrigger id="allocate-to-goal" name="toGoalId">
-                    <SelectValue placeholder="Select goal" />
+                    {showCalculation && (
+                      <div className="py-3 border-t border-emerald-500/10 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex justify-between text-[10px] text-emerald-500/60 font-medium">
+                          <span>Total Liquidity</span>
+                          <span>{formatCurrency(totalBankBalance, currency)}</span>
+                        </div>
+                        <div className="flex justify-between text-[10px] text-rose-500/60 font-medium">
+                          <span>Shadow Wallet (Goals + EF)</span>
+                          <span>-{formatCurrency(shadowWalletTotal, currency)}</span>
+                        </div>
+                        <div className="flex justify-between text-[10px] text-rose-500/60 font-medium pb-2 border-b border-emerald-500/10">
+                          <span>Total Commitments (Bills)</span>
+                          <span>-{formatCurrency(totalCommitments, currency)}</span>
+                        </div>
+                        <div className="flex justify-between text-[10px] text-emerald-400 font-bold uppercase pt-1">
+                          <span>Available Safety Margin</span>
+                          <span>{formatCurrency(availableToSpend, currency)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <CyberButton
+                      onClick={() => {
+                        handleAutoFill();
+                        if (availableToSpend > selectedAccount?.balance!) {
+                          toast.warning('Surplus exceeds selected account balance. Source adjusted.');
+                        }
+                      }}
+                      className="w-full h-11 bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-black tracking-widest"
+                    >
+                      Allocate All Surplus
+                    </CyberButton>
+                  </div>
+                </div>
+              )}
+              {/* Source Account Selection */}
+              <div className="space-y-2 text-label">
+                <Label htmlFor="allocate-from-account" className="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2 block">Source Node</Label>
+                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                  <SelectTrigger id="allocate-from-account" name="fromAccountId" className="bg-black border-white/5 sq-md h-14 text-white focus:ring-1 focus:ring-blue-500/50">
+                    <SelectValue placeholder="Select Capital Source" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {goals.map(goal => {
-                      const progress = (goal.currentAmount / goal.targetAmount) * 100;
-                      return (
-                        <SelectItem key={goal.id} value={goal.id}>
-                          <div className="flex items-center gap-2">
-                            <span>{goal.emoji}</span>
-                            <div>
-                              <div>{goal.name}</div>
-                              <div className="text-xs text-gray-500">
-                                {Math.round(progress)}% • {formatCurrency(goal.currentAmount, currency)} / {formatCurrency(goal.targetAmount, currency)}
-                              </div>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
+                  <SelectContent className="bg-black border-white/10 text-white sq-xl">
+                    {accounts.map(account => (
+                      <SelectItem key={account.id} value={account.id} className="hover:bg-white/5">
+                        <div className="flex items-center justify-between w-full">
+                          <span>{account.icon} {account.name}</span>
+                          <span className="text-[10px] text-slate-500 ml-4 font-mono">
+                            {formatCurrency(account.balance, currency)}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {selectedAccount && (
+                  <p className="text-[10px] text-slate-500 mt-2 italic px-1">
+                    Available Liquidity: {formatCurrency(selectedAccount.balance, currency)}
+                  </p>
+                )}
               </div>
-            ) : (
-              <div className="space-y-2">
-                <Label>To Emergency Fund</Label>
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-lg">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                      🛡️
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">Emergency Fund</p>
-                      {emergencyFund && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {formatCurrency(emergencyFund.currentAmount, currency)} / {formatCurrency(emergencyFund.targetAmount, currency)}
-                        </p>
-                      )}
+
+              {/* Destination Selection */}
+              {destinationType === 'goal' ? (
+                <div className="space-y-2 text-label">
+                  <Label htmlFor="allocate-to-goal" className="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2 block">Target Milestone</Label>
+                  <Select value={selectedDestinationId} onValueChange={setSelectedDestinationId}>
+                    <SelectTrigger id="allocate-to-goal" name="toGoalId" className="bg-black border-white/5 sq-md h-14 text-white focus:ring-1 focus:ring-emerald-500/50">
+                      <SelectValue placeholder="Choose Destination Goal" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black border-white/10 text-white sq-xl">
+                      {goals.map(goal => {
+                        const progress = (goal.currentAmount / goal.targetAmount) * 100;
+                        return (
+                          <SelectItem key={goal.id} value={goal.id} className="hover:bg-white/5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">{goal.emoji}</span>
+                              <div className="min-w-0">
+                                <div className="font-bold text-xs uppercase tracking-tight">{goal.name}</div>
+                                <div className="text-[9px] text-slate-500 font-mono">
+                                  {Math.round(progress)}% SYNCHRONIZED • {formatCurrency(goal.currentAmount, currency)}
+                                </div>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-2 text-label">
+                  <Label className="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2 block">Stability Reserve</Label>
+                  <div className="p-4 bg-white/5 border border-white/10 sq-md">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-500/10 sq-md flex items-center justify-center border border-blue-500/20">
+                        🛡️
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-black text-xs uppercase tracking-widest text-white">Emergency Fund</p>
+                        {emergencyFund && (
+                          <p className="text-[9px] text-slate-500 font-mono mt-1">
+                            {formatCurrency(emergencyFund.currentAmount, currency)} / {formatCurrency(emergencyFund.targetAmount, currency)}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Amount Input */}
-            <div className="space-y-2">
-              <Label htmlFor="allocate-amount">Amount to Allocate</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                  {currency === 'INR' ? '₹' : '$'}
-                </span>
-                <Input
-                  id="allocate-amount"
-                  name="amount"
-                  type="number"
-                  placeholder="0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="pl-8"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-              {selectedAccount && amountNum > selectedAccount.balance && (
-                <div className="flex items-center gap-2 text-sm text-red-600">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>Amount exceeds available balance</span>
                 </div>
               )}
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={resetAndClose} className="flex-1">
-                Cancel
-              </Button>
-              <Button onClick={handlePreview} className="flex-1">
-                Preview
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6 py-4">
-            {/* Preview Header */}
-            <div className="text-center">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Review your allocation
-              </p>
-            </div>
+              {/* Amount Input */}
+              <div className="space-y-2 text-label">
+                <div className="flex justify-between items-center mb-1">
+                  <Label htmlFor="allocate-amount" className="text-[10px] uppercase tracking-widest font-black text-slate-500 block">Contribution Volume</Label>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    {currency === 'INR' ? '₹' : '$'}
+                  </span>
+                  <Input
+                    id="allocate-amount"
+                    name="amount"
+                    type="number"
+                    placeholder="0"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="pl-8 bg-black border-white/5 h-12"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                {selectedAccount && amountNum > selectedAccount.balance && (
+                  <div className="flex items-center gap-2 text-sm text-red-600">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>Amount exceeds available balance</span>
+                  </div>
+                )}
+              </div>
 
-            {/* Visual Flow */}
-            <div className="space-y-4">
-              {/* Source Account - Before */}
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700">
-                <p className="text-xs text-gray-500 mb-2">FROM</p>
-                <p className="font-medium">{selectedAccount?.name}</p>
-                <div className="mt-3 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Current Balance:</span>
-                    <span className="font-medium">{formatCurrency(selectedAccount?.balance || 0, currency)}</span>
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4">
+                <CyberButton
+                  onClick={resetAndClose}
+                  className="flex-1 h-12 text-slate-500 hover:text-white border-white/5 font-black tracking-[0.2em]"
+                >
+                  Abort
+                </CyberButton>
+                <CyberButton
+                  onClick={handlePreview}
+                  className="flex-1 h-12 bg-blue-600/20 text-blue-400 border-blue-500/30 font-black tracking-[0.2em] shadow-lg shadow-blue-500/10"
+                >
+                  Preview Mode
+                </CyberButton>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              {/* Preview Header */}
+              <div className="text-center pt-2">
+                <p className="text-[10px] text-emerald-500 uppercase font-black tracking-[0.2em] animate-pulse">
+                  Capital Allocation Protocol Ready
+                </p>
+              </div>
+
+              {/* Visual Flow */}
+              <div className="space-y-4">
+                {/* Source Account - Before */}
+                <div className="p-5 bg-white/5 sq-md border border-white/10 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-2 opacity-5">
+                    <Wallet className="w-8 h-8" />
                   </div>
-                  <div className="flex justify-between text-sm text-red-600 dark:text-red-400">
-                    <span>Allocation:</span>
-                    <span>-{formatCurrency(amountNum, currency)}</span>
+                  <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3 opacity-60">Debit Source</p>
+                  <p className="font-black text-sm text-white tracking-tight">{selectedAccount?.name}</p>
+
+                  <div className="mt-4 space-y-2.5">
+                    <div className="flex justify-between text-[11px] font-medium">
+                      <span className="text-slate-400 uppercase tracking-tighter">Current Liquidity</span>
+                      <span className="font-mono text-white">{formatCurrency(selectedAccount?.balance || 0, currency)}</span>
+                    </div>
+                    <div className="flex justify-between text-[11px] font-bold text-rose-500">
+                      <span className="uppercase tracking-tighter">Debit Volume</span>
+                      <span className="font-mono">-{formatCurrency(amountNum, currency)}</span>
+                    </div>
+                    <div className="h-px bg-white/5"></div>
+                    <div className="flex justify-between text-xs font-black">
+                      <span className="text-slate-500 uppercase tracking-widest">Post-Debit Projection</span>
+                      <span className="text-blue-400 font-mono">
+                        {formatCurrency((selectedAccount?.balance || 0) - amountNum, currency)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="h-px bg-gray-300 dark:bg-gray-600"></div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">New Balance:</span>
-                    <span className="font-medium text-blue-600 dark:text-blue-400">
-                      {formatCurrency((selectedAccount?.balance || 0) - amountNum, currency)}
-                    </span>
+                </div>
+
+                {/* Arrow */}
+                <div className="flex justify-center -my-2 relative z-10">
+                  <div className="w-10 h-10 bg-blue-600 sq-md flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.3)] border border-blue-400/20">
+                    <ArrowRight className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+
+                {/* Destination - After */}
+                <div className={`p-5 sq-md border relative overflow-hidden ${destinationType === 'goal'
+                  ? 'bg-emerald-500/5 border-emerald-500/20'
+                  : 'bg-blue-500/5 border-blue-500/20'
+                  }`}>
+                  <div className="absolute top-0 right-0 p-2 opacity-10">
+                    {destinationType === 'goal' ? <Sparkles className="w-8 h-8 text-emerald-500" /> : <Target className="w-8 h-8 text-blue-500" />}
+                  </div>
+                  <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3 opacity-60">Credit Destination</p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-xl">{destinationType === 'goal' ? selectedGoal?.emoji : '🛡️'}</span>
+                    <p className="font-black text-sm text-white tracking-tight">
+                      {destinationType === 'goal' ? selectedGoal?.name : 'Emergency Reserve'}
+                    </p>
+                  </div>
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between text-[11px] font-medium">
+                      <span className="text-slate-400 uppercase tracking-tighter">Current Level</span>
+                      <span className="font-mono text-white">
+                        {formatCurrency((destinationType === 'goal'
+                          ? selectedGoal?.currentAmount
+                          : emergencyFund?.currentAmount) || 0, currency)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-[11px] font-bold text-emerald-400">
+                      <span className="uppercase tracking-tighter">Credit Volume</span>
+                      <span className="font-mono">+{formatCurrency(amountNum, currency)}</span>
+                    </div>
+                    <div className="h-px bg-white/5"></div>
+                    <div className="flex justify-between text-xs font-black">
+                      <span className="text-slate-500 uppercase tracking-widest">Post-Credit Value</span>
+                      <span className="text-emerald-400 font-mono">
+                        {formatCurrency(((destinationType === 'goal'
+                          ? selectedGoal?.currentAmount
+                          : emergencyFund?.currentAmount) || 0) + amountNum, currency)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Arrow */}
-              <div className="flex justify-center">
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                  <ArrowRight className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-              </div>
-
-              {/* Destination - After */}
-              <div className={`p-4 rounded-lg border-2 ${destinationType === 'goal'
-                ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800'
-                : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                }`}>
-                <p className="text-xs text-gray-500 mb-2">TO</p>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-xl">{destinationType === 'goal' ? selectedGoal?.emoji : '🛡️'}</span>
-                  <p className="font-medium">
-                    {destinationType === 'goal' ? selectedGoal?.name : 'Emergency Fund'}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Current Amount:</span>
-                    <span className="font-medium">
-                      {formatCurrency((destinationType === 'goal'
-                        ? selectedGoal?.currentAmount
-                        : emergencyFund?.currentAmount) || 0, currency)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
-                    <span>Adding:</span>
-                    <span>+{formatCurrency(amountNum, currency)}</span>
-                  </div>
-                  <div className="h-px bg-gray-300 dark:bg-gray-600"></div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">New Amount:</span>
-                    <span className="font-medium text-green-600 dark:text-green-400">
-                      {formatCurrency(((destinationType === 'goal'
-                        ? selectedGoal?.currentAmount
-                        : emergencyFund?.currentAmount) || 0) + amountNum, currency)}
-                    </span>
+              {/* Dashboard Impact Notice */}
+              <div className="p-4 bg-amber-500/5 border border-amber-500/20 sq-md">
+                <div className="flex gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div className="text-[10px]">
+                    <p className="font-black text-amber-400 uppercase tracking-widest mb-1">
+                      Node Equilibrium Warning
+                    </p>
+                    <p className="text-amber-500/70 font-bold leading-relaxed">
+                      Net Liquidity and {selectedAccount?.name} reserves will be reduced by {formatCurrency(amountNum, currency)} immediately. This action is final.
+                    </p>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Dashboard Impact Notice */}
-            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-              <div className="flex gap-2">
-                <TrendingDown className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-yellow-900 dark:text-yellow-100 mb-1">
-                    Dashboard Balance Impact
-                  </p>
-                  <p className="text-yellow-700 dark:text-yellow-300">
-                    Your Net Balance and {selectedAccount?.name} balance will be reduced by {formatCurrency(amountNum, currency)} immediately.
-                  </p>
-                </div>
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4">
+                <CyberButton
+                  onClick={handleBack}
+                  className="flex-1 h-12 text-slate-500 hover:text-white border-white/5 font-black tracking-[0.2em]"
+                >
+                  Re-Configure
+                </CyberButton>
+                <CyberButton
+                  onClick={handleConfirm}
+                  className="flex-1 h-12 bg-emerald-600/20 text-emerald-400 border-emerald-500/30 font-black tracking-[0.2em] shadow-lg shadow-emerald-500/10"
+                >
+                  Execute Move
+                </CyberButton>
               </div>
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={handleBack} className="flex-1">
-                Back
-              </Button>
-              <Button onClick={handleConfirm} className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700">
-                Confirm Allocation
-              </Button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card } from './ui/card';
 import { Slider } from './ui/slider';
 import { Label } from './ui/label';
@@ -11,7 +11,7 @@ import {
     Tooltip,
     ResponsiveContainer
 } from 'recharts';
-import { TrendingUp, Sparkles } from 'lucide-react';
+import { TrendingUp, Sparkles, AlertTriangle } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { formatCurrency as globalFormatCurrency } from '../utils/numberFormat';
 import { Haptics } from '../utils/haptics';
@@ -48,7 +48,13 @@ const WealthTooltip = ({ active, payload, label, currency }: any) => {
 };
 
 export function WealthBuilderSimulator() {
-    const { settings } = useFinance();
+    const { settings, liabilities } = useFinance();
+
+    const avgDebtRate = useMemo(() => {
+        const outstanding = liabilities.reduce((sum, l) => sum + (l.outstanding || 0), 0);
+        const weightedInterestSum = liabilities.reduce((sum, l) => sum + ((l.interestRate || 0) * (l.outstanding || 0)), 0);
+        return outstanding > 0 ? weightedInterestSum / outstanding : 0;
+    }, [liabilities]);
 
     const [monthlyInvestment, setMonthlyInvestment] = useState(5000);
     const [expectedReturn, setExpectedReturn] = useState(12); // 12% is typical for SIPs
@@ -262,11 +268,21 @@ export function WealthBuilderSimulator() {
                         </AreaChart>
                     </ResponsiveContainer>
 
-                    <div className="mt-6 p-4 bg-[#30D158]/5 rounded-xl border border-[#30D158]/10 text-center">
+                    <div className="mt-6 p-4 bg-[#30D158]/5 rounded-xl border border-[#30D158]/10 text-center space-y-3">
                         <p className="text-xs text-slate-300 leading-relaxed">
                             By investing <span className="text-white font-black">{globalFormatCurrency(monthlyInvestment, settings.currency)}</span> monthly for <span className="text-white font-black">{timePeriod} years</span> at <span className="text-[#30D158] font-black">{expectedReturn}%</span>,
                             you earn <span className="font-black text-[#30D158] text-lg">{formatValue(summary.returns)}</span> in pure profit! 🚀
                         </p>
+                        {avgDebtRate > expectedReturn && (
+                            <div className="pt-3 border-t border-rose-500/20">
+                                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+                                    <AlertTriangle className="w-3" /> Priority Alert: Opportunity Leakage
+                                </p>
+                                <p className="text-[9px] text-slate-500 mt-1">
+                                    Your current debt (Avg. ~{avgDebtRate.toFixed(1)}%) is higher than this return. Priority should be clearing liabilities first.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

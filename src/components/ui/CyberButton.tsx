@@ -26,7 +26,7 @@ export const CyberButton: React.FC<CyberButtonProps> = ({
     return (
         <button
             className={cn(
-                "relative group flex items-center justify-center gap-2 px-6 py-3",
+                "relative group flex items-center justify-center gap-2 px-6 h-11",
                 "bg-[#0A141E]/80 backdrop-blur-md border-2 rounded-2xl transition-all duration-300",
                 "font-mono font-bold uppercase tracking-widest text-[10px]",
                 "hover:scale-[1.02] active:scale-[0.98]",

@@ -117,7 +117,7 @@
     background: var(--q-obsidian);
     border: 1px solid var(--q-card-border);
     border-radius: var(--q-radius-lg);
-    padding: 1.25rem;
+    padding: 1.5rem;
   }
 
   .dotted-divider {
@@ -133,13 +133,13 @@
     border: 0.5px solid #38383A;
     border-radius: 18px;
     /* Flexible Geometry Rule */
-    padding: 1rem;
+    padding: 1.5rem;
     /* Global Internal Padding */
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1rem;
     transition: all var(--q-transition-standard);
-    min-height: 5rem;
+    min-height: 180px;
   }
 
   /* Constraint: Adaptive Radius for Small Heights */
@@ -187,7 +187,7 @@
   .main-grid {
     display: grid;
     gap: 0.75rem;
-    padding: 6.25rem 1.25rem 9.375rem 1.25rem;
+    padding: 6.25rem 1.5rem 6.25rem 1.5rem;
     max-width: 1400px;
     margin: 0 auto;
   }

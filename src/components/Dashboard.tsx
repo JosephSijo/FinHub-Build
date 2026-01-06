@@ -8,10 +8,17 @@ import {
   ShieldCheck,
   Zap,
   Activity,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Info
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { InteractiveFinancialValue } from './ui/InteractiveFinancialValue';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 import { TruthBanner } from './dashboard/TruthBanner';
 import { TacticalRecovery } from './dashboard/TacticalRecovery';
@@ -249,7 +256,40 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div>
-              <p className="text-label text-[10px] mb-1.5 opacity-60 font-black">Daily Spend</p>
+              <div className="flex items-center gap-1.5 mb-1.5 opacity-60">
+                <p className="text-label text-[10px] font-black uppercase">Daily Spend</p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger><Info className="w-3 h-3 text-slate-500" /></TooltipTrigger>
+                    <TooltipContent className="bg-slate-900 border-white/10 p-4 sq-xl shadow-2xl backdrop-blur-xl z-[100]">
+                      <div className="space-y-2 text-[10px] font-bold uppercase tracking-widest min-w-[200px]">
+                        <p className="text-slate-500 mb-2 border-b border-white/5 pb-2">DSL Protocol Breakdown</p>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-slate-400">Total Liquidity</span>
+                          <span className="text-white">{formatCurrency(m1Assets, currency)}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-slate-400">Reserved (Goals + EF)</span>
+                          <span className="text-rose-500">-{formatCurrency(shadowWalletTotal, currency)}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-slate-400">Obligations (EMI/Bills)</span>
+                          <span className="text-rose-500">-{formatCurrency(totalCommitments, currency)}</span>
+                        </div>
+                        <div className="h-px bg-white/5 my-2" />
+                        <div className="flex justify-between gap-4 text-emerald-400">
+                          <span>Available Safety</span>
+                          <span>{formatCurrency(availableToSpend, currency)}</span>
+                        </div>
+                        <div className="flex justify-between gap-4 text-blue-400 pt-1">
+                          <span>Cycle ({daysRemaining} days)</span>
+                          <span>{formatCurrency(safeDailyLimit, currency)}/day</span>
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <div className="hero-text text-[clamp(1.5rem,5vw,1.875rem)] text-white tabular-nums font-mono">
                 {formatCurrency(safeDailyLimit, currency)}
               </div>

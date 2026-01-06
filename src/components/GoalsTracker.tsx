@@ -161,6 +161,21 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
 
   return (
     <div className="space-y-6 pb-20">
+      {/* Header & Actions - Moved to top */}
+      <div className="flex items-center justify-between px-2 pt-2">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold text-slate-100 tracking-tight truncate">Saving Milestones</h2>
+          <p className="text-xs text-slate-500 mt-1 truncate">Track progress toward long-term targets</p>
+        </div>
+        <CyberButton
+          onClick={() => handleOpenDialog()}
+          icon={Plus}
+          className="h-12"
+        >
+          New Goal
+        </CyberButton>
+      </div>
+
       {/* Goal Allocation Summary Card (Segmented Stack Pattern) */}
       <div className="mesh-gradient-card sq-2xl overflow-hidden group relative">
         <MeshBackground variant="savings" />
@@ -227,8 +242,9 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
             <Button
               variant="ghost"
               onClick={() => {
-                if ((window as any).showFundAllocation) {
-                  (window as any).showFundAllocation('goal');
+                const showFundAllocation = (window as any).showFundAllocation;
+                if (showFundAllocation) {
+                  showFundAllocation('goal');
                 }
               }}
               className="w-full h-10 text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 flex items-center justify-center transition-all bg-emerald-500/5 sq-md border border-emerald-500/10"
@@ -238,21 +254,6 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
             </Button>
           </div>
         </div>
-      </div>
-
-      {/* Header & Actions - Aligned with Growth Tab design */}
-      <div className="flex items-center justify-between px-2">
-        <div className="min-w-0">
-          <h2 className="text-xl font-bold text-slate-100 tracking-tight truncate">Saving Milestones</h2>
-          <p className="text-xs text-slate-500 mt-1 truncate">Track progress toward long-term targets</p>
-        </div>
-        <CyberButton
-          onClick={() => handleOpenDialog()}
-          icon={Plus}
-          className="h-12"
-        >
-          New Goal
-        </CyberButton>
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

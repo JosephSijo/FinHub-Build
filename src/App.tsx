@@ -137,6 +137,13 @@ export default function App() {
     }
   }, [settings.theme]);
 
+  const { openFundAllocation } = useFinance();
+
+  // Expose fund allocation to window for components that use it via window.showFundAllocation
+  useEffect(() => {
+    (window as any).showFundAllocation = openFundAllocation;
+  }, [openFundAllocation]);
+
   // Calculate financial health score
   const healthScore = useMemo(() => {
     const totalIncomeCalc = incomes.reduce((sum: number, i: Income) => sum + i.amount, 0);
@@ -646,6 +653,8 @@ export default function App() {
                   targetAmount: 100000
                 }}
                 onAllocate={performFundAllocation}
+                liabilities={liabilities}
+                expenses={expenses}
               />
 
               <TransferForm

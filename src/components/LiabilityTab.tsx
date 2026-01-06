@@ -334,7 +334,7 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
             {liabilities.map((liability) => {
               const monthsPaid = calculateMonthsPaid(liability);
               const progress = liability.principal > 0
-                ? ((liability.principal - liability.outstanding) / liability.principal) * 100
+                ? Math.max(0, ((liability.principal - liability.outstanding) / liability.principal) * 100)
                 : 0;
               const typeInfo = LIABILITY_TYPES.find(t => t.value === liability.type);
 

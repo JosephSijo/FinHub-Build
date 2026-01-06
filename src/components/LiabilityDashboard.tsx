@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
+import { MeshBackground } from './ui/MeshBackground';
 import { formatCurrency, formatDuration, formatFinancialValue } from '../utils/numberFormat';
 import {
   Tooltip,
@@ -112,7 +113,8 @@ export const LiabilityDashboard = React.memo(({ liabilities, currency, totalMont
         description: 'Pay off highest interest rate loans first',
         savings: 'Saves the most money on interest',
         order: avalancheSorted.slice(0, 3),
-        recommended: highest && highest.interestRate > 10
+        recommended: liabilities.length > 1 && liabilities.some(l => l.interestRate > 12),
+        reason: 'High interest detected (>12%)'
       },
       {
         id: 'snowball',
@@ -125,7 +127,8 @@ export const LiabilityDashboard = React.memo(({ liabilities, currency, totalMont
         description: 'Pay off smallest balances first',
         savings: 'Builds momentum with quick wins',
         order: snowballSorted.slice(0, 3),
-        recommended: liabilities.length > 3
+        recommended: liabilities.filter(l => l.outstanding < 50000).length >= 3,
+        reason: 'Significant volume of small-balance debts (>3)'
       },
       {
         id: 'consolidation',
@@ -137,7 +140,8 @@ export const LiabilityDashboard = React.memo(({ liabilities, currency, totalMont
         textColor: 'text-green-600',
         description: 'Combine multiple debts into one loan',
         savings: 'Simplifies payments, may lower rate',
-        recommended: liabilities.length >= 3 && avgRate > 8,
+        recommended: liabilities.length > 4,
+        reason: 'Complex debt structure detected (>4 active streams)',
         consolidationRate: Math.max(6, avgRate - 2) // Potential consolidated rate
       }
     ];
@@ -147,7 +151,7 @@ export const LiabilityDashboard = React.memo(({ liabilities, currency, totalMont
       totalPrincipal: principal,
       totalEMI: emi,
       averageInterestRate: avgRate,
-      payoffProgress: principal > 0 ? ((principal - outstanding) / principal) * 100 : 0,
+      payoffProgress: principal > 0 ? Math.max(0, ((principal - outstanding) / principal) * 100) : 0,
       monthsToFreedom: Math.ceil(maxMonths),
       totalEstimatedInterest: estimatedInterest,
       highestInterestLoan: highest,
@@ -230,8 +234,9 @@ export const LiabilityDashboard = React.memo(({ liabilities, currency, totalMont
 
   return (
     <div className="space-y-4">
-      <div className="mesh-gradient-card card-debt rounded-[32px] overflow-hidden group">
-        <div className="frosted-plate p-0">
+      <div className="mesh-gradient-card card-debt rounded-[32px] overflow-hidden group relative">
+        <MeshBackground variant="debt" />
+        <div className="frosted-plate p-0 relative z-10">
           {/* Collapsible Header */}
           <div
             className="p-5 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors relative z-20"
@@ -456,7 +461,12 @@ export const LiabilityDashboard = React.memo(({ liabilities, currency, totalMont
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
                                       <h5 className="font-bold text-slate-100">{strategy.title}</h5>
-                                      {strategy.recommended && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20 font-bold uppercase">Optimal</span>}
+                                      {strategy.recommended && (
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20 font-bold uppercase">Optimal</span>
+                                          <span className="text-[9px] text-slate-500 font-medium italic">({(strategy as any).reason})</span>
+                                        </div>
+                                      )}
                                     </div>
                                     <p className="text-xs text-slate-400 mb-4">{strategy.description}</p>
 
