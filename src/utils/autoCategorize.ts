@@ -13,12 +13,26 @@ const KEYWORD_MAP: Record<string, string> = {
     'hotstar': 'Subscription',
     'prime video': 'Subscription',
     'prime membership': 'Subscription',
+    'amazon prime': 'Subscription',
+    'audible': 'Subscription',
+    'kindle': 'Subscription',
     'hulu': 'Subscription',
     'hbomax': 'Subscription',
+    'hbo': 'Subscription',
+    'paramount+': 'Subscription',
+    'peacock': 'Subscription',
+    'crunchyroll': 'Subscription',
     'chaisai': 'Subscription',
     'google play': 'Subscription',
     'google one': 'Subscription',
     'app store': 'Subscription',
+    'microsoft': 'Subscription',
+    'office 365': 'Subscription',
+    'dropbox': 'Subscription',
+    'zoom': 'Subscription',
+    'canva': 'Subscription',
+    'adobe': 'Subscription',
+    'creative cloud': 'Subscription',
 
     // Telecom & Broadband ISPs
     'jio': 'Subscription',
@@ -106,7 +120,12 @@ const KEYWORD_MAP: Record<string, string> = {
     'transfer': 'Transfer',
     'payment': 'Transfer',
     'cc bill': 'Transfer',
-    'internal': 'Transfer'
+    'internal': 'Transfer',
+    'membership': 'Subscription',
+    'subscription': 'Subscription',
+    'recurring': 'Subscription',
+    'premium': 'Subscription',
+    'monthly bill': 'Subscription'
 };
 
 export const autoCategorize = (description: string): { category: string; tags: string[] } | null => {

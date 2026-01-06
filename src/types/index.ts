@@ -55,6 +55,7 @@ export interface Debt {
   tags: string[];
   accountId: string;
   dueDate?: string;
+  interestRate?: number; // Added for Tier 0 Wealth Leaks
   createdAt: string;
 }
 
@@ -101,15 +102,18 @@ export interface AIContext {
   goalsCount: number;
   recentTransactions: any[];
   expenses: Expense[];
+  currentMonthExpenses: Expense[];
   incomes: Income[];
   accounts: Account[];
   investments: Investment[];
   liabilities: Liability[];
   goals: Goal[];
+  debts: Debt[];
   savingsRate: number;
   healthScore: number;
   brainSummary?: string;
   userName?: string;
+  currency?: string;
 }
 
 // Categories for Money Out
@@ -128,6 +132,7 @@ export const MONEY_OUT_CATEGORIES = [
   { value: 'Subscription', emoji: '📺' },
   { value: 'Personal IOU', emoji: '🤝' },
   { value: 'Transfer', emoji: '🔄' },
+  { value: 'Insurance', emoji: '🛡️' }, // Added for Tier 1 Vital Security
   { value: 'Other', emoji: '📦' }
 ];
 

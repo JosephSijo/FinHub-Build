@@ -508,33 +508,78 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         await fetchFromApi();
 
         // 3. Subscription Migration (One-time or periodic scan)
-        const hasMigrationRun = localStorage.getItem('finbase_subscription_migration_v1');
+        const hasMigrationRun = localStorage.getItem('finbase_subscription_migration_v3');
         if (!hasMigrationRun) {
             runCategorizationMigration();
-            localStorage.setItem('finbase_subscription_migration_v1', 'true');
+            localStorage.setItem('finbase_subscription_migration_v3', 'true');
         }
 
         setIsLoading(false);
     };
 
     const runCategorizationMigration = () => {
-        setExpenses(prev => {
-            let updated = false;
-            const next = prev.map(e => {
-                const genericCategories = ['other', 'bills & utilities', 'entertainment', '', undefined];
-                if (genericCategories.includes(e.category?.toLowerCase())) {
-                    const suggestion = autoCategorize(e.description);
-                    if (suggestion && suggestion.category === 'Subscription' && e.category !== 'Subscription') {
-                        updated = true;
-                        return { ...e, category: 'Subscription' };
+        setExpenses(prevExpenses => {
+            let updatedCount = 0;
+            const nextExpenses = prevExpenses.map(e => {
+                const genericCategories = ['other', 'bills & utilities', 'entertainment', 'shopping', '', undefined];
+                const suggestion = autoCategorize(e.description);
+
+                if (suggestion && suggestion.category === 'Subscription') {
+                    const shouldUpdateCategory = genericCategories.includes(e.category?.toLowerCase()) || !e.category;
+                    const shouldUpdateRecurring = !e.isRecurring;
+
+                    if (shouldUpdateCategory || shouldUpdateRecurring) {
+                        updatedCount++;
+                        return {
+                            ...e,
+                            category: 'Subscription',
+                            isRecurring: true
+                        };
                     }
                 }
                 return e;
             });
-            if (updated) {
-                toast.info("Intelligence protocol active: Categorized existing service providers as Subscriptions.");
+
+            if (updatedCount > 0) {
+                toast.info(`Intelligence protocol: Identified and moved ${updatedCount} transactions to Subscriptions.`);
+
+                // One-time auto-creation of RecurringTransaction templates for found subscriptions
+                // We do this by finding the most recent expense for each unique subscription description
+                const subExpenses = nextExpenses.filter(e => e.category === 'Subscription');
+                const uniqueSubs = new Map<string, Expense>();
+
+                subExpenses.forEach(e => {
+                    const name = e.description.toLowerCase().trim();
+                    if (!uniqueSubs.has(name) || new Date(e.date) > new Date(uniqueSubs.get(name)!.date)) {
+                        uniqueSubs.set(name, e);
+                    }
+                });
+
+                // Create recurring entries for those that don't exist yet
+                uniqueSubs.forEach((exp, name) => {
+                    const alreadyTracked = recurringTransactions.some(rt =>
+                        rt.description?.toLowerCase().includes(name) ||
+                        name.includes(rt.description?.toLowerCase() || '')
+                    );
+
+                    if (!alreadyTracked) {
+                        // Create it (using a timeout to avoid triggering multiple state updates synchronously)
+                        setTimeout(() => {
+                            createRecurringTransaction({
+                                type: 'expense',
+                                description: exp.description,
+                                amount: exp.amount,
+                                category: 'Subscription',
+                                accountId: exp.accountId,
+                                frequency: 'monthly',
+                                startDate: exp.date,
+                                tags: ['auto-migrated']
+                            });
+                        }, 100);
+                    }
+                });
             }
-            return next;
+            return nextExpenses;
         });
     };
 

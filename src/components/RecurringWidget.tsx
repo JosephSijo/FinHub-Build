@@ -61,6 +61,9 @@ export function RecurringWidget({ userId, liabilities = [], currency, onNavigate
       r.description?.toLowerCase().includes('netflix') ||
       r.description?.toLowerCase().includes('spotify') ||
       r.description?.toLowerCase().includes('prime') ||
+      r.description?.toLowerCase().includes('google') ||
+      r.description?.toLowerCase().includes('youtube') ||
+      r.description?.toLowerCase().includes('apple') ||
       r.description?.toLowerCase().includes('gym'))
   );
 

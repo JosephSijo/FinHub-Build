@@ -66,12 +66,13 @@ export const InteractiveFinancialValue: React.FC<InteractiveFinancialValueProps>
             <span
                 className={cn(
                     "cursor-pointer transition-all duration-200 select-none",
-                    "border-b border-dotted border-[#38383A] font-mono tabular-nums",
+                    "border-b border-dotted border-[#38383A] font-numeric tabular-nums leading-none inline-block",
+                    "reset-text-fill",
                     isPressed && "scale-105",
                     className
                 )}
             >
-                {toShortScale(value, currency)}
+                {toShortScale(value, currency) || '0'}
             </span>
 
             {showTooltip && (

@@ -12,6 +12,7 @@ interface CollapsibleSectionProps {
     onToggle: () => void;
     children: React.ReactNode;
     className?: string;
+    variant?: 'safe' | 'growth' | 'action';
 }
 
 export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
@@ -23,20 +24,39 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
     isOpen,
     onToggle,
     children,
-    className = ""
+    className = "",
+    variant = 'safe'
 }) => {
+    const variantColors = {
+        safe: {
+            active: 'bg-[#0A84FF]/20 text-[#0A84FF]',
+            border: 'bg-[#0A84FF]/50'
+        },
+        growth: {
+            active: 'bg-[#BF5AF2]/20 text-[#BF5AF2]',
+            border: 'bg-[#BF5AF2]/50'
+        },
+        action: {
+            active: 'bg-[#FF9F0A]/20 text-[#FF9F0A]',
+            border: 'bg-[#FF9F0A]/50'
+        }
+    };
+
+    const colors = variantColors[variant];
+
     return (
-        <div className={`py-4 ${className}`}>
+        <div className={`py-4 relative ${className}`}>
+            {isOpen && <div className={`absolute left-[-16px] top-4 bottom-4 w-1 ${colors.border} rounded-full`} />}
             <motion.div
                 whileTap={{ scale: 0.98 }}
                 onClick={onToggle}
                 className="flex sm:flex-row flex-col sm:items-center justify-between cursor-pointer group/collapsible gap-4"
             >
                 <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center transition-colors ${isOpen ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-slate-500'}`}>
+                    <div className={`w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center transition-colors ${isOpen ? colors.active : 'bg-white/5 text-slate-500'}`}>
                         {icon}
                     </div>
-                    <div className="flex flex-col min-w-0">
+                    <div className="flex flex-col min-w-0 gap-0.5">
                         <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover/collapsible:text-slate-200 truncate leading-tight font-sans">
                             {title}
                         </span>
@@ -47,7 +67,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0 sm:ml-4 ml-11">
                     {value && (
-                        <span className={`text-sm font-bold tabular-nums font-mono ${valueColor}`}>
+                        <span className={`text-sm font-bold tabular-nums font-numeric ${valueColor}`}>
                             {value}
                         </span>
                     )}

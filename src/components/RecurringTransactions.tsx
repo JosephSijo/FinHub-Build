@@ -177,7 +177,7 @@ export function RecurringTransactions() {
     const subscriptions = filteredRecurring.filter(r =>
       r.category === 'Subscription' ||
       r.description?.toLowerCase().includes('subscription') ||
-      ['netflix', 'spotify', 'prime', 'youtube', 'apple', 'hulu', 'disney'].some(kw =>
+      ['netflix', 'spotify', 'prime', 'youtube', 'apple', 'hulu', 'disney', 'google'].some(kw =>
         r.description?.toLowerCase().includes(kw)
       )
     );

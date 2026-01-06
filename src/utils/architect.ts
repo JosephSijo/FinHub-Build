@@ -1,4 +1,5 @@
-import { AIContext, Goal, Liability, Account, Income } from '../types';
+import { AIContext, Goal, Liability, Account, Income, Debt } from '../types';
+import { formatCurrency } from './numberFormat';
 
 export interface ArchitectTrigger {
     id: string;
@@ -32,10 +33,83 @@ export interface ArchitectAnalysis {
     state?: 'leakage' | 'inversion' | 'normal';
     pivotActions?: string[];
     alertColor?: string;
+    summarySentence?: string;
+    interpretation?: {
+        liquidityStatus: string;
+        securityStatus: string;
+        safeZoneValue: number;
+    };
 }
 
+export interface FoundationMetrics {
+    tier0DebtService: number; // Sum of high-interest debt payments (>10%)
+    tier1Security: number; // Insurance premiums
+    tier2Buffer: number; // 3-month basic buffer
+    isRestricted: boolean;
+    remainingDays: number;
+    availableCash: number;
+    foundationLimit: number;
+    maxInterestRate: number;
+    status: 'restricted' | 'growth-ready';
+}
+
+export const calculateFoundationMetrics = (context: AIContext): FoundationMetrics => {
+    const { liabilities, expenses, accounts, currentMonthExpenses } = context;
+
+    // Tier 0: High Interest Debt (>10%)
+    const highInterestDebts = liabilities.filter(l => (l.effective_rate || l.interestRate / 100) >= 0.10 || l.interestRate > 10);
+    const tier0DebtService = highInterestDebts.reduce((sum, l) => sum + (l.emiAmount || 0), 0);
+
+    // Tier 1: Vital Security (Insurance)
+    // We look at expenses from the current month or recurring transactions if needed
+    // But per requirement, we scan currentMonthExpenses for category "Insurance"
+    const tier1Security = currentMonthExpenses
+        .filter(e => e.category === 'Insurance')
+        .reduce((sum, e) => sum + e.amount, 0);
+
+    // Tier 2: 3-month Buffer (Heuristic)
+    const avgMonthlyExpense = expenses.length > 0 ? (expenses.reduce((sum, e) => sum + e.amount, 0) / Math.max(1, expenses.length / 30)) : 20000;
+    const tier2Buffer = avgMonthlyExpense * 3;
+
+    // Available Cash (M1 Assets)
+    const availableCash = accounts
+        .filter(acc => acc.type === 'bank' || acc.type === 'cash')
+        .reduce((sum, acc) => sum + acc.balance, 0);
+
+    // Logic: (Available_Cash - (Total_Debt_Service + Insurance_Premiums)) / Remaining_Days
+    const today = new Date();
+    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const remainingDays = Math.max(1, lastDayOfMonth.getDate() - today.getDate());
+
+    const foundationLimit = Math.max(0, Math.floor((availableCash - (tier0DebtService + tier1Security)) / remainingDays));
+
+    // Status Determination
+    // Tier 0 is complete if no high-interest debts OR if emi is zero (unlikely for active loans)
+    // Tier 1 is complete if insurance expense exists this month
+    const isTier0Complete = highInterestDebts.length === 0;
+    const isTier1Complete = tier1Security > 0;
+
+    const isRestricted = !isTier0Complete || !isTier1Complete;
+
+    const maxInterestRate = highInterestDebts.length > 0
+        ? Math.max(...highInterestDebts.map(l => l.interestRate || (l.effective_rate ? l.effective_rate * 100 : 0)))
+        : 0;
+
+    return {
+        tier0DebtService,
+        tier1Security,
+        tier2Buffer,
+        isRestricted,
+        remainingDays,
+        availableCash,
+        foundationLimit,
+        maxInterestRate,
+        status: isRestricted ? 'restricted' : 'growth-ready'
+    };
+};
+
 export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis => {
-    const { liabilities, expenses, goals, healthScore, totalIncome, totalExpenses, incomes, accounts, investments } = context;
+    const { liabilities, expenses, goals, healthScore, totalIncome, totalExpenses, incomes, accounts, investments, debts } = context;
 
     const surplus = Math.max(0, totalIncome - totalExpenses);
     const monthlyPriorityAllocation = surplus * 0.8;
@@ -47,7 +121,6 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
     };
 
     const SHIELD_MIN = 500;
-    const SHIELD_MAX = 1000;
     const totalLiquidity = accounts.reduce((sum: number, a: Account) => sum + (a.type !== 'credit_card' ? a.balance : 0), 0);
     const avgMonthlyExpense = totalExpenses || 20000;
 
@@ -61,11 +134,11 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
         triggers.push({
             id: 'safety_breach',
             type: 'breach',
-            title: 'Safety Breach Detected',
-            message: 'Liquid buffer is below 3-month survival threshold. Emergency protocols initiated.',
-            actionLabel: 'Pause Optional Goals',
+            title: 'Security Warning: Low Cash',
+            message: 'Your cash reserve is below the 3-month safety mark. Setting up emergency fund first.',
+            actionLabel: '',
             severity: 'critical',
-            explanation: `Your liquidity (${totalLiquidity.toLocaleString()}) is below the 3x monthly expense threshold (${(avgMonthlyExpense * 3).toLocaleString()}). High risk of emergency fund depletion.`
+            explanation: `Your ready cash (${formatCurrency(totalLiquidity, context.currency)}) is less than 3 months of basic living costs (${formatCurrency(avgMonthlyExpense * 3, context.currency)}). This makes you vulnerable to unexpected bills.`
         });
     }
 
@@ -76,11 +149,11 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
         triggers.push({
             id: 'windfall_alert',
             type: 'windfall',
-            title: 'Windfall Detected',
-            message: `A significant credit of ${largeIncome.amount} was detected. This is a massive opportunity for tier-skipping.`,
-            actionLabel: 'Calculate Strategic Split',
+            title: 'Nice! Extra Income Detected',
+            message: `A large credit of ${largeIncome.amount} was found. This is a great chance to speed up your goals.`,
+            actionLabel: 'Plan Extra Cash',
             severity: 'success',
-            explanation: "This large surplus is a rare opportunity to bypass multiple tiers of financial growth. Reinvesting this instead of spending it could accelerate your freedom by months."
+            explanation: "Getting extra money is a rare chance to skip months of saving. Using this for debt or goals now instead of spending it will get you to freedom much faster."
         });
     }
 
@@ -91,11 +164,11 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
         triggers.push({
             id: 'debt_spike',
             type: 'spike',
-            title: 'Red Alert: Debt Spike',
-            message: 'New liability detected or interest burden increased. Priority shifted to aggressive liquidation.',
-            actionLabel: 'Freeze Credit Spending',
+            title: 'Alert: Debt Increasing',
+            message: 'We noticed new debt or higher interest. Focusing on paying off costly loans first.',
+            actionLabel: '',
             severity: 'critical',
-            explanation: `Detected ${highInterestDebts.length} high-interest liabilities. Interest rates above 10% compound faster than average market growth, effectively reversing your wealth progress.`
+            explanation: `You have ${highInterestDebts.length} expensive loans. Interest higher than 10% eats your money faster than investments can grow it, effectively working against your wealth.`
         });
     }
 
@@ -111,10 +184,10 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
         triggers.push({
             id: 'inflation_alert',
             type: 'spike',
-            title: 'Inflation Alert: Purchasing Power Decay',
-            message: 'Significant idle liquidity detected with low inflation protection.',
-            explanation: `Your liquid cash of ${totalLiquidAssets.toLocaleString()} is losing purchasing power at ~6% annually. Without hedging, you lose approximately ${(totalLiquidAssets * 0.06).toLocaleString()} in real value every year.`,
-            actionLabel: 'Shield Wealth',
+            title: 'Watch out: Prices are Rising',
+            message: 'You have a lot of cash in the bank that is losing value to inflation.',
+            explanation: `Your bank cash of ${formatCurrency(totalLiquidAssets, context.currency)} is losing its value at ~6% because prices are rising. Without investing, you lose about ${formatCurrency(totalLiquidAssets * 0.06, context.currency)} in value every single year.`,
+            actionLabel: '',
             severity: 'warning'
         });
     }
@@ -141,11 +214,11 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
         triggers.push({
             id: 'milestone_shift',
             type: 'milestone',
-            title: 'Survival Protocol: Nominal',
-            message: 'Tier 1 (Protection) is verified. You are now authorized for more aggressive Freedom Tier strategies.',
-            actionLabel: 'View Growth Strategies',
+            title: 'Basic Security: OK',
+            message: 'Your basic protection is set. You can now move to building real wealth.',
+            actionLabel: 'View Growth Plan',
             severity: 'success',
-            explanation: "Lower tiers (Protection) are now fully secured. The Architect authorizes a transition from 'Defense' to 'Offense', prioritizing high-yield assets over survival buffers."
+            explanation: "You've secured your basic needs (insurance/savings). Now we can shift from just 'staying safe' to 'growing your money' with better investments."
         });
     }
 
@@ -155,11 +228,11 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
             triggers.push({
                 id: `penalty_${l.id}`,
                 type: 'spike',
-                title: 'Interest Spike: Penalty Detected',
-                message: `A penalty has been applied to ${l.name}. Effective rate is now ${(l.effective_rate ? l.effective_rate * 100 : 0).toFixed(1)}%.`,
-                actionLabel: l.type === 'credit_card' ? 'Freeze Card' : 'Immediate Settlement',
+                title: 'High Interest: Penalty Detected',
+                message: `A penalty was added to ${l.name}. Your actual interest rate is now ${(l.effective_rate ? l.effective_rate * 100 : 0).toFixed(1)}%.`,
+                actionLabel: l.type === 'credit_card' ? 'Stop Using Card' : 'Pay it Now',
                 severity: 'critical',
-                explanation: "Penalties trigger high-friction wealth decay. Stopping this leak is Priority #1."
+                explanation: "Penalties are like a giant hole in your wallet. Stopping this drain is your top priority."
             });
         }
     });
@@ -180,20 +253,47 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
     }
 
     if (isHighInterestActive) {
-        // Step 1: Freeze
-        pivotActions.push("FREEZE: Pausing discretionary goals (New Laptop, Vacation) for 2 billing cycles.");
-        // Step 2: Swap
+        // Step 1: Pause
+        pivotActions.push("STOP: Pause non-essential goals (like new gadgets) for 2 months.");
+        // Step 2: Pay Debt
         const topDebt = highInterestDebts.sort((a, b) => (b.effective_rate || 0) - (a.effective_rate || 0))[0];
-        pivotActions.push(`SWAP: Redirecting surplus toward ${topDebt.name} (${((topDebt.effective_rate || 0) * 100).toFixed(1)}% eff. rate).`);
-        // Step 3: Shield
+        pivotActions.push(`PAY: Putting extra cash into ${topDebt.name} (costs you ${((topDebt.effective_rate || 0) * 100).toFixed(1)}% in interest).`);
+        // Step 3: Safety Net
         if (totalLiquidity < SHIELD_MIN) {
-            pivotActions.push(`SHIELD: Allocating portion to rebuild $${SHIELD_MIN} Starter Shield (Target: $${SHIELD_MAX}).`);
+            pivotActions.push(`SAVE: Setting aside money to rebuild your ${formatCurrency(SHIELD_MIN, context.currency)} safety fund.`);
         } else {
-            pivotActions.push(`SHIELD: Survival buffer verified at $${totalLiquidity.toLocaleString()}.`);
+            pivotActions.push(`DONE: Your basic safety fund is verified at ${formatCurrency(totalLiquidity, context.currency)}.`);
         }
     }
 
     // --- PRIMARY ARCHITECT LOGIC ---
+
+    // 0. Priority 0: Personal IOUs (Borrowed money from individuals)
+    const borrowedDebts = debts.filter((d: Debt) => d.type === 'borrowed' && d.status === 'pending');
+    if (borrowedDebts.length > 0 && !isHighInterestActive) {
+        const topBorrowed = borrowedDebts.sort((a: Debt, b: Debt) => b.amount - a.amount)[0];
+
+        return {
+            priority: 0,
+            title: "Priority: Honor Personal Trust",
+            message: `You owe ${formatCurrency(topBorrowed.amount, context.currency)} to ${topBorrowed.personName}. In a personal economy, "Trust capital" is more valuable than bank interest.`,
+            allocation: { survival: 70, leisure: 30 },
+            nextMilestone: `Settle debt with ${topBorrowed.personName}`,
+            triggers,
+            pivotActions: [
+                `MESSAGE: Send a quick update to ${topBorrowed.personName} about your repayment plan.`,
+                `ALLOCATE: Set aside ${formatCurrency(monthlyPriorityAllocation, context.currency)} this month specifically for this IOU.`,
+                ...pivotActions
+            ],
+            alertColor: '#f59e0b', // Amber for trust priority
+            summarySentence: `Solving your IOU with ${topBorrowed.personName} is the primary goal. Repaying personal trust improves your overall financial security score.`,
+            interpretation: {
+                liquidityStatus: totalLiquidity > SHIELD_MIN ? 'Stable' : 'Building',
+                securityStatus: 'Personal Trust Gap',
+                safeZoneValue: 30
+            }
+        };
+    }
 
     // 1. Priority 0: High-Interest Debt (>10%)
     if (isHighInterestActive) {
@@ -211,21 +311,32 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
         const potentialGrowth = monthlyPriorityAllocation * (Math.pow(1 + growthRate, monthsToPayoffNoSurplus) - 1) / growthRate;
         const interestSaved = topDebt.outstanding * (effectiveRatePercent / 100) * (timeSaved / 12);
 
+        const iouReminder = borrowedDebts.length > 0 ? `. You also have personal IOUs with ${borrowedDebts[0].personName}, which should be handled with "Trust Capital" once this leak is stopped.` : '';
+        const summaryIOU = borrowedDebts.length > 0 ? ` and your personal trust obligations` : '';
+
         return {
             priority: 0,
-            title: state === 'leakage' ? "CRITICAL: Wealth Leakage" : "Priority 0: Plug the Leak",
-            message: `Your ${topDebt.name} is at ${effectiveRatePercent.toFixed(1)}%. Killing this debt is a GUARANTEED ${effectiveRatePercent.toFixed(1)}% return on your money.`,
+            title: state === 'leakage' ? "ALERT: Money is Leaking" : "Priority: Stop the Leak",
+            message: `Your ${topDebt.name} is costs you ${effectiveRatePercent.toFixed(1)}%. Paying this off is like a GUARANTEED ${effectiveRatePercent.toFixed(1)}% profit${iouReminder}`,
             allocation: { survival: 80, leisure: 20 },
             nextMilestone: `Liquidate ${topDebt.name}`,
             tradeOff: {
                 timeSavedMonths: Math.round(timeSaved),
                 potentialGrowthAmount: Math.round(potentialGrowth),
-                comparisonMessage: `Mathematically, this is an "Inversion" state. Every $1 invested loses to $${(effectiveRatePercent / 12).toFixed(2)} in interest friction. Plugging this saves approximately $${interestSaved.toLocaleString()} in pure interest.`
+                comparisonMessage: `You're in a "Debt Trap"—paying more in interest than you're earning. Paying this debt now will save you about ${formatCurrency(interestSaved, context.currency)} in interest.`
             },
             triggers,
-            state,
-            pivotActions,
-            alertColor: '#730800'
+            pivotActions: [
+                ...pivotActions,
+                ...(borrowedDebts.length > 0 ? [`TRUST: Settle your ${formatCurrency(borrowedDebts[0].amount, context.currency)} IOU with ${borrowedDebts[0].personName} as the next sub-priority.`] : [])
+            ],
+            alertColor: '#730800',
+            summarySentence: `Your ${topDebt.name}${summaryIOU} is a critical drag. This chart shows how its ${(effectiveRatePercent).toFixed(1)}% cost is preventing your 'Safe Zone' from expanding.`,
+            interpretation: {
+                liquidityStatus: totalLiquidity > SHIELD_MIN ? 'Stable' : 'Critical',
+                securityStatus: 'Threatened',
+                safeZoneValue: Math.round(healthScore)
+            }
         };
     }
 
@@ -236,11 +347,17 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
     if (!hasInsuranceGoalCheck && !paidInsuranceCheck) {
         return {
             priority: 1,
-            title: "Priority 1: Secure Survival",
-            message: "You lack visible health or term insurance. One health crisis can reset your progress to zero.",
+            title: "Priority: Get Protected",
+            message: "We can't see any insurance in your plan. One health emergency could wipe out all your savings.",
             allocation: { survival: 80, leisure: 20 },
-            nextMilestone: "Establish Health & Term Insurance",
-            triggers
+            nextMilestone: "Get Health and Life Insurance",
+            triggers,
+            summarySentence: "Your lack of Insurance is a major security gap. Even with high liquidity, one event could set you back to zero.",
+            interpretation: {
+                liquidityStatus: totalLiquidity > avgMonthlyExpense * 3 ? 'High' : 'Moderate',
+                securityStatus: 'Unset',
+                safeZoneValue: 20
+            }
         };
     }
 
@@ -255,16 +372,22 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
 
         return {
             priority: 2,
-            title: "Priority 2: Build the Buffer",
-            message: `Your current liquid buffer is at ${emergencyFundMonths.toFixed(1)} months. We need 3 months for absolute stability.`,
+            title: "Priority: Build a Buffer",
+            message: `You have ${emergencyFundMonths.toFixed(1)} months of cash. We need 3 months to be fully safe.`,
             allocation: { survival: 80, leisure: 20 },
-            nextMilestone: "3-Month Emergency Fund",
+            nextMilestone: "Finish 3-Month Safety Fund",
             tradeOff: {
                 timeSavedMonths: Math.round(timeToBuild * 0.5),
                 potentialGrowthAmount: Math.round(neededAmount * 0.05),
-                comparisonMessage: "Peace of mind is an unquantifiable asset. Build the buffer first."
+                comparisonMessage: "Peace of mind is priceless. Build your safety net first."
             },
-            triggers
+            triggers,
+            summarySentence: `Your buffer is only at ${emergencyFundMonths.toFixed(1)} months. We need to reach 3 months to move out of the 'Caution' zone.`,
+            interpretation: {
+                liquidityStatus: 'Building',
+                securityStatus: (isInsuranceFunded || hasActiveInsuranceExpense) ? 'Locked' : 'Lagging',
+                safeZoneValue: Math.round(emergencyFundMonths / 3 * 100)
+            }
         };
     }
 
@@ -279,27 +402,39 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
 
         return {
             priority: 3,
-            title: "Priority 3: Accelerate Freedom",
-            message: "Survival protocols are nominal. It's time to aggressively scale your income-generating assets.",
+            title: "Goal Area: Grow Your Wealth",
+            message: "Your basic needs are met. It's time to focus on growing your investments and wealth.",
             allocation: { survival: 80, leisure: 20 },
             nextMilestone: "Diversified Asset Growth",
             tradeOff: {
                 timeSavedMonths: Math.round(timeSaved),
                 potentialGrowthAmount: Math.round(remaining * 0.12),
-                comparisonMessage: "You are in the Growth Zone. Compounding is your greatest ally now."
+                comparisonMessage: "You're in the 'Growth Phase'. Let your money work for you."
             },
             realReturn: {
                 value: realReturnVal,
-                message: `Your wealth is outrunning the cost of living by ${(realReturnVal * 100).toFixed(1)}%.`
+                message: `Your wealth is growing ${(realReturnVal * 100).toFixed(1)}% faster than prices are rising.`
             },
             triggers
         };
     }
 
+    const liquidityStatus = totalLiquidity > avgMonthlyExpense * 3 ? 'High' : 'Lagging';
+    const securityStatus = (isInsuranceFunded || hasActiveInsuranceExpense) ? 'Locked' : 'Lagging';
+    const safeZoneValue = healthScore || 40;
+
+    const summarySentence = `Your Liquidity is ${liquidityStatus.toLowerCase()}, but your Security (Insurance) is ${securityStatus.toLowerCase()}. This chart shows why your 'Safe Zone' is currently at ${safeZoneValue}%.`;
+
     return {
         priority: 3,
-        title: "Priority 3: Accelerate Freedom",
-        message: "Survival protocols are nominal. It's time to aggressively scale your income-generating assets.",
+        title: "Goal Area: Grow Your Wealth",
+        message: "Your basic needs are met. It's time to focus on growing your investments and wealth.",
+        summarySentence,
+        interpretation: {
+            liquidityStatus,
+            securityStatus,
+            safeZoneValue
+        },
         allocation: { survival: 80, leisure: 20 },
         nextMilestone: "Diversified Asset Growth",
         triggers

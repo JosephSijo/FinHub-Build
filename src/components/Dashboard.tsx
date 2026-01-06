@@ -27,8 +27,10 @@ import { CollapsibleSection } from './ui/CollapsibleSection';
 import { useShadowWallet } from '@/hooks/useShadowWallet';
 import { formatCurrency, formatFinancialValue } from '@/utils/numberFormat';
 import { MeshBackground } from './ui/MeshBackground';
+import { CategoryBackdrop } from './ui/CategoryBackdrop';
 import { isTransfer } from '@/utils/isTransfer';
-import { Expense, Income, Account, Debt } from '@/types';
+import { Expense, Income, Account, Debt, AIContext } from '@/types';
+import { calculateFoundationMetrics } from '@/utils/architect';
 
 export interface DashboardProps {
   expenses: Expense[];
@@ -206,8 +208,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const velocityInfo = getVelocityInterpretation(velocityValue);
 
-  // Daily Spending Limit = Available / Days remaining
-  const safeDailyLimit = daysRemaining > 0 ? Math.floor(availableToSpend / daysRemaining) : 0;
+  // 1.5 The Foundation Filter Logic
+  const foundationMetrics = calculateFoundationMetrics({
+    liabilities,
+    expenses,
+    incomes,
+    accounts,
+    goals,
+    debts,
+    investments,
+    healthScore,
+    currentMonthExpenses,
+    totalIncome: grossIncome,
+    totalExpenses: grossBurn,
+    recentTransactions: reconciledExpenses.slice(0, 5),
+    savingsRate: grossIncome > 0 ? (grossIncome - grossBurn) / grossIncome : 0,
+    currency
+  } as AIContext);
+
+  const safeDailyLimit = foundationMetrics.foundationLimit;
 
 
 
@@ -216,41 +235,50 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* AI Truth Banner */}
       <TruthBanner
-        message={`Assessment: ${formatCurrency(totalReserved, currency, true)} reserved. Safe daily spending limit is ${formatCurrency(safeDailyLimit, currency, true)} for the next ${daysRemaining} days.`}
+        message={`Assessment: ${foundationMetrics.isRestricted ? 'Restricted' : 'Growth'}-protocol active. Foundation-adjusted limit is ${formatCurrency(safeDailyLimit, currency, true)} for the next ${foundationMetrics.remainingDays} days.`}
+        icon={foundationMetrics.isRestricted ? <Zap className="w-4 h-4 text-orange-400" /> : <ShieldCheck className="w-4 h-4 text-blue-400" />}
       />
 
-      {/* 1. COLLAPSIBLE BALANCE BOARD */}
+      {/* 1. COLLAPSIBLE BALANCE BOARD - SAFE ZONE */}
       <motion.div
         layout
         initial={false}
-        className={`segmented-stack mesh-gradient-card mesh-invest group transition-all duration-500 col-span-full relative overflow-hidden sq-2xl`}
+        className={`bg-slate-900 border border-white/5 group transition-all duration-500 col-span-full relative overflow-hidden sq-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]`}
       >
-        <MeshBackground variant="invest" />
-        {/* Sub-Component A (The Cap) */}
-        <div className="stack-cap relative z-10">
+        <MeshBackground variant="safe" animate />
+        <CategoryBackdrop variant="safe" />
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-teal-500/50" />
 
-          <div className="flex justify-between items-start relative z-20">
-            <div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 bg-white/5 flex items-center justify-center border border-white/10 group-hover:scale-110 transition-transform duration-500 sq-lg flex-shrink-0">
-                    <Wallet className="text-blue-400 w-5 h-5" />
+        {/* Sub-Component A (The Cap) */}
+        <div className="stack-cap relative z-10 py-10 px-8">
+
+          <div className="flex flex-col items-center text-center relative z-20">
+            <div className="flex flex-col items-center mb-6">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                className="w-14 h-14 bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-2xl backdrop-blur-md mb-4 sq-xl"
+              >
+                <Wallet className="text-blue-400 w-7 h-7" />
+              </motion.div>
+              <div className="space-y-1">
+                <h3 className="text-label text-[11px] font-black tracking-[0.2em] text-blue-400/80 uppercase">Balance Board</h3>
+                <div className="flex items-center gap-2 justify-center">
+                  <div className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border transition-colors ${foundationMetrics.isRestricted ? 'bg-orange-500/10 text-orange-300 border-orange-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}`}>
+                    {foundationMetrics.isRestricted ? 'Restricted Limit' : 'Growth-Ready'}
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="text-label text-[10px] tracking-widest truncate">Balance Board</h3>
-                    <div className="px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-tighter border border-blue-500/20 bg-blue-500/10 text-[var(--q-sapphire)] inline-block">
-                      Total Liquidity
-                    </div>
-                  </div>
+                  <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${foundationMetrics.isRestricted ? 'bg-orange-500' : 'bg-emerald-500'}`} />
                 </div>
               </div>
-              <motion.div
-                layoutId="balance-mount"
-                className="hero-text text-4xl md:text-6xl lg:text-7xl tabular-nums text-white"
-              >
-                <InteractiveFinancialValue value={m1Assets} currency={currency} />
-              </motion.div>
             </div>
+
+            <motion.div
+              layoutId="balance-mount"
+              className="text-[min(12vw,4.5rem)] leading-none tabular-nums text-white font-black tracking-tight"
+            >
+              <InteractiveFinancialValue value={m1Assets} currency={currency} />
+            </motion.div>
+
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em] mt-4">Institutional Nodes Reconciled</p>
           </div>
         </div>
 
@@ -258,7 +286,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="stack-body relative z-10">
           <div className="dotted-divider opacity-50 mb-6" />
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-4 mb-6">
             <div>
               <div className="flex items-center gap-1.5 mb-1.5 opacity-60">
                 <p className="text-label text-[10px] font-black uppercase">Daily Spend</p>
@@ -289,19 +317,44 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           <span>Cycle ({daysRemaining} days)</span>
                           <span>{formatCurrency(safeDailyLimit, currency)}/day</span>
                         </div>
+
+                        {foundationMetrics.tier0DebtService > 0 && (
+                          <div className="mt-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-2.5">
+                            <div className="flex items-center gap-2">
+                              <Zap className="w-3 h-3 text-rose-400" />
+                              <span className="text-[10px] font-black uppercase text-rose-400 tracking-wider">Intelligence: Opportunity Cost</span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-[8px] text-slate-500 uppercase font-black tracking-tight">Leak Rate</span>
+                                <span className="text-[11px] text-rose-300 font-mono font-black leading-none">{foundationMetrics.maxInterestRate}%</span>
+                              </div>
+                              <div className="flex flex-col gap-0.5 border-l border-white/5 pl-2">
+                                <span className="text-[8px] text-slate-500 uppercase font-black tracking-tight">Idle Capital</span>
+                                <span className="text-[11px] text-blue-300 font-mono font-black leading-none">{formatCurrency(shadowWalletTotal, currency)}</span>
+                              </div>
+                            </div>
+
+                            <p className="text-[9px] text-slate-400 leading-relaxed font-medium italic border-t border-rose-500/10 pt-2">
+                              Holding cash while paying <span className="text-rose-300 font-bold">{foundationMetrics.maxInterestRate}%</span> interest is a <span className="not-italic text-rose-400 font-black">negative-sum game</span>.
+                              Reserves cost you <span className="text-rose-300 font-bold">{formatCurrency((shadowWalletTotal * foundationMetrics.maxInterestRate / 100) / 12, currency)}/mo</span>.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <div className="hero-text text-[clamp(1.5rem,5vw,1.875rem)] text-white tabular-nums font-mono">
-                {formatCurrency(safeDailyLimit, currency)}
+              <div className="text-[clamp(1.5rem,5vw,1.875rem)] text-white font-black tabular-nums">
+                <InteractiveFinancialValue value={safeDailyLimit} currency={currency} />
               </div>
             </div>
             <div>
               <p className="text-label text-[10px] mb-1.5 opacity-60 font-black">Budget Left</p>
-              <div className="hero-text text-[clamp(1.5rem,5vw,1.875rem)] text-[var(--q-emerald)] tabular-nums font-mono">
-                {formatCurrency(availableToSpend, currency)}
+              <div className="text-[clamp(1.5rem,5vw,1.875rem)] text-emerald-400 font-black tabular-nums">
+                <InteractiveFinancialValue value={availableToSpend} currency={currency} />
               </div>
             </div>
           </div>
@@ -320,10 +373,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
             value={formatCurrency(m1Assets, currency)}
             isOpen={activeCard === 'liquidity-group'}
             onToggle={() => toggleCard('liquidity-group')}
+            variant="safe"
           >
             <div className="space-y-3">
               {accounts.filter(a => a.type === 'bank' || a.type === 'cash').map(acc => (
-                <div className="flex justify-between items-center p-4 bg-slate-900/50 rounded-2xl border border-white/5">
+                <div id={`acc-${acc.id}`} key={acc.id} className="flex justify-between items-center p-4 bg-slate-900/50 rounded-2xl border border-white/5">
                   <div className="flex items-center gap-3 min-w-0">
                     {acc.type === 'bank' ? <Building2 className="w-4 h-4 text-blue-400 flex-shrink-0" /> : <Wallet className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
                     <div className="min-w-0">
@@ -345,6 +399,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             valueColor="text-rose-400"
             isOpen={activeCard === 'debt-group'}
             onToggle={() => toggleCard('debt-group')}
+            variant="safe"
           >
             <div className="space-y-3">
               {[...liabilities, ...pendingBorrowedDebts, ...accounts.filter(a => a.type === 'credit_card' && a.balance < 0)].length === 0 ? (
@@ -356,7 +411,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               ) : (
                 <>
                   {liabilities.map((l: any) => (
-                    <div key={l.id} className="flex justify-between items-center p-4 bg-slate-900/50 rounded-2xl border border-white/5">
+                    <div id={`liability-${l.id}`} key={l.id} className="flex justify-between items-center p-4 bg-slate-900/50 rounded-2xl border border-white/5">
                       <div className="flex items-center gap-3">
                         <Building2 className="w-4 h-4 text-slate-500" />
                         <div className="min-w-0">
@@ -370,7 +425,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                   ))}
                   {accounts.filter(a => a.type === 'credit_card' && a.balance < 0).map((card: any) => (
-                    <div key={card.id} className="flex justify-between items-center p-4 bg-slate-900/50 rounded-2xl border border-white/5">
+                    <div id={`card-${card.id}`} key={card.id} className="flex justify-between items-center p-4 bg-slate-900/50 rounded-2xl border border-white/5">
                       <div className="flex items-center gap-3">
                         <CreditCard className="w-4 h-4 text-slate-500" />
                         <div className="min-w-0">
@@ -384,7 +439,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                   ))}
                   {pendingBorrowedDebts.map((d: any) => (
-                    <div key={d.id} className="flex justify-between items-center p-4 bg-slate-900/50 rounded-2xl border border-white/5">
+                    <div id={`borrowed-${d.id}`} key={d.id} className="flex justify-between items-center p-4 bg-slate-900/50 rounded-2xl border border-white/5">
                       <div className="flex items-center gap-3">
                         <Target className="w-4 h-4 text-slate-500" />
                         <div className="min-w-0">
@@ -403,13 +458,47 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </CollapsibleSection>
 
           <CollapsibleSection
-            title="Lent & Receivables"
-            subtitle="Capital Displaced"
+            title="Growth Assets"
+            subtitle="Wealth Engines"
             icon={<TrendingUp className="w-4 h-4" />}
+            value={<InteractiveFinancialValue value={totalInvestmentValue} currency={currency} />}
+            isOpen={activeCard === 'invest-group'}
+            onToggle={() => toggleCard('invest-group')}
+            variant="safe"
+          >
+            <div className="space-y-3">
+              {investments.length === 0 ? (
+                <div className="p-6 bg-slate-800/20 border border-dashed border-white/5 squircle-12 text-center">
+                  <TrendingUp className="w-8 h-8 mx-auto text-slate-700 mb-2" />
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">No active investments</p>
+                </div>
+              ) : (
+                investments.slice(0, 3).map((inv: any) => (
+                  <div id={`inv-${inv.id}`} key={inv.id} className="flex justify-between items-center p-4 bg-slate-900/50 rounded-2xl border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <TrendingUp className="w-4 h-4 text-blue-400" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-black text-slate-200 uppercase truncate">{inv.symbol || inv.name}</p>
+                        <p className="text-[9px] text-slate-600 uppercase font-black tracking-widest">{inv.type} Node</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-bold text-white tabular-nums">
+                      {formatCurrency(inv.quantity * (inv.currentPrice || inv.buyPrice), currency)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Lent & Receivables"
+            subtitle="Trust Capital Displaced"
+            icon={<ArrowRightLeft className="w-4 h-4" />}
             value={<InteractiveFinancialValue value={totalMoneyLent} currency={currency} />}
-            valueColor="text-emerald-400"
             isOpen={activeCard === 'receivable-group'}
             onToggle={() => toggleCard('receivable-group')}
+            variant="safe"
           >
             <div className="space-y-3">
               {pendingLentDebts.length === 0 ? (
@@ -420,7 +509,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               ) : (
                 pendingLentDebts.map((d: any) => (
-                  <div key={d.id} className="flex justify-between items-center p-4 bg-slate-900/50 rounded-xl border border-white/5">
+                  <div id={`lent-${d.id}`} key={d.id} className="flex justify-between items-center p-4 bg-slate-900/50 rounded-xl border border-white/5">
                     <div className="flex items-center gap-3">
                       <Target className="w-4 h-4 text-slate-500" />
                       <div className="min-w-0">
@@ -443,15 +532,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* SECONDARY METRICS GRID (2x2 on Desktop) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 col-span-full">
 
-        {/* 2. CIRCULATION ANALYSIS (Spending - Purple) */}
-        <div className="grid-widget mesh-gradient-card mesh-spending relative overflow-hidden h-full">
-          <MeshBackground variant="spending" />
+        {/* 2. CIRCULATION ANALYSIS (Safe Zone - Teal) */}
+        <div className="grid-widget bg-slate-900 border border-white/5 relative overflow-hidden h-full">
+          <MeshBackground variant="safe" animate />
+          <div className="absolute top-0 left-0 w-1 h-full bg-teal-500/50" />
           <div className="relative z-10 p-6 h-full flex flex-col">
             <div className="flex flex-wrap items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 sq-md flex-shrink-0">
                 <Zap className="text-indigo-400 w-5 h-5" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex flex-col gap-0.5">
                 <h3 className="text-white font-black text-[10px] uppercase tracking-[0.2em] truncate">Circulation</h3>
                 <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 truncate">Active Expense Node</p>
               </div>
@@ -467,7 +557,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 isOpen={activeCard === 'flow-speed'}
                 onToggle={() => toggleCard('flow-speed')}
               >
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-4">
                   <div className="bg-slate-900/50 p-4 sq-md border border-white/5">
                     <span className="text-[8px] text-slate-500 uppercase block mb-1">Gross Income (Est)</span>
                     <div className="text-emerald-400 font-bold tabular-nums font-mono">
@@ -501,7 +591,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 isOpen={activeCard === 'spending-flow'}
                 onToggle={() => toggleCard('spending-flow')}
               >
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-4">
                   <div className="p-4 bg-slate-800/50 rounded-xl border border-white/5">
                     <span className="text-[8px] text-slate-500 uppercase block mb-1">Daily Spend Avg</span>
                     <span className="text-sm font-bold tabular-nums">{formatCurrency(Math.floor(grossBurn / 30), currency)}</span>
@@ -516,15 +606,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* 3. RESERVE MANAGEMENT (Savings - Green) */}
-        <div className="grid-widget mesh-gradient-card mesh-savings relative overflow-hidden h-full">
-          <MeshBackground variant="savings" />
+        {/* 3. RESERVE MANAGEMENT (Safe Zone - Blue) */}
+        <div className="grid-widget bg-slate-900 border border-white/5 relative overflow-hidden h-full">
+          <MeshBackground variant="safe" animate />
+          <div className="absolute top-0 left-0 w-1 h-full bg-teal-500/50" />
           <div className="relative z-10 p-6 h-full flex flex-col">
             <div className="flex flex-wrap items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 sq-md flex-shrink-0">
                 <ShieldCheck className="text-emerald-400 w-5 h-5" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex flex-col gap-0.5">
                 <h3 className="text-white font-black text-[10px] uppercase tracking-[0.2em] truncate">Reserves</h3>
                 <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 truncate">Capital Accumulation</p>
               </div>
@@ -571,7 +662,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               >
                 <div className="space-y-3">
                   {goals.map(g => (
-                    <div key={g.id} className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5">
+                    <div id={`goal-${g.id}`} key={g.id} className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5">
                       <div className="flex items-center gap-3">
                         <span className="text-xl">{g.emoji || '🎯'}</span>
                         <div>
@@ -591,15 +682,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* 4. OBLIGATIONS (Debt/Bills - Orange) */}
-        <div className="grid-widget mesh-gradient-card mesh-debt relative overflow-hidden h-full">
-          <MeshBackground variant="debt" />
+        {/* 4. OBLIGATIONS (Safe Zone - Teal) */}
+        <div className="grid-widget bg-slate-900 border border-white/5 relative overflow-hidden h-full">
+          <MeshBackground variant="safe" animate />
+          <div className="absolute top-0 left-0 w-1 h-full bg-teal-500/50" />
           <div className="relative z-10 p-6 h-full flex flex-col">
             <div className="flex flex-wrap items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-rose-500/10 flex items-center justify-center border border-rose-500/20 sq-md flex-shrink-0">
-                <Activity className="text-rose-400 w-5 h-5" />
+              <div className="w-10 h-10 bg-blue-500/10 flex items-center justify-center border border-blue-500/20 sq-md flex-shrink-0">
+                <Activity className="text-blue-400 w-5 h-5" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex flex-col gap-0.5">
                 <h3 className="text-white font-black text-[10px] uppercase tracking-[0.2em] truncate">Obligations</h3>
                 <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 truncate">Institutional Debt</p>
               </div>
@@ -617,7 +709,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               >
                 <div className="space-y-3">
                   {liabilities.map((l: any) => (
-                    <div key={l.id} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
+                    <div id={`ob-liability-${l.id}`} key={l.id} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
                       <span className="text-[10px] font-bold text-slate-300 uppercase truncate">{l.name}</span>
                       <span className="text-xs font-bold text-rose-400 tabular-nums font-mono">
                         {formatCurrency(l.outstanding || l.principal, currency)}
@@ -633,7 +725,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                   )}
                   {pendingBorrowedDebts.map((d: any) => (
-                    <div key={d.id} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
+                    <div id={`ob-borrowed-${d.id}`} key={d.id} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
                       <span className="text-[10px] font-bold text-slate-300 uppercase truncate">{d.personName}</span>
                       <span className="text-xs font-bold text-rose-400 tabular-nums font-mono">
                         {formatCurrency(d.amount, currency)}
@@ -657,15 +749,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* 5. INVESTMENTS (Growth - Blue) */}
-        <div className="grid-widget mesh-gradient-card mesh-invest relative overflow-hidden h-full">
-          <MeshBackground variant="invest" />
+        <div className="grid-widget bg-slate-900 border border-white/5 relative overflow-hidden h-full">
+          <MeshBackground variant="safe" animate />
+          <div className="absolute top-0 left-0 w-1 h-full bg-teal-500/50" />
           <div className="relative z-10 p-6 h-full flex flex-col">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-blue-500/10 flex items-center justify-center border border-blue-500/20 sq-md">
                 <TrendingUp className="text-blue-400 w-5 h-5" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex flex-col gap-0.5">
                 <h3 className="text-white font-black text-[10px] uppercase tracking-[0.2em]">Growth</h3>
                 <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Asset Expansion</p>
               </div>
@@ -750,6 +842,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               outflowRatio={outflowRatio}
               healthScore={healthScore}
               userName={userName}
+              debts={debts}
             />
           );
         })()
