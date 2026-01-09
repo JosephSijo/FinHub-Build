@@ -1,37 +1,69 @@
+# FinHub v0.1(Beta) – Quantum Core
 
-# FinHub v5.0
+## ✨ Our Manifesto: Financial Freedom, the Way It Was Meant to Be
+Using FinHub, you’re going to change the way you think about money.
 
-**The FinHub Manifesto: Why We Exist**
+For years, financial apps did one thing: they showed you where your money went. That’s it.  
+They didn’t tell you where you were going. They didn’t distinguish between a luxury vacation and health insurance. And so, people remained stuck in the Rat Race reacting to expenses instead of building wealth.
 
+I thought… there has to be a better way.  
+And that’s why I built **FinHub**.
 
-**The Problem: The "Tracking" Trap**
+---
 
-Most financial apps are digital mirrors—they show you where your money went, but they don't tell you where you are going. They treat a luxury vacation and health insurance with the same urgency. This lack of hierarchy keeps users in the "Rat Race," reacting to expenses rather than building a fortress.
+## 🔧 Our Logic: Be the Change
+FinHub is built to be the change.  
+We don’t just track; we navigate. Our system identifies the invisible forces holding you back — like **Wealth Leaks** and **Inflation Headwinds** — and prioritizes the shields that keep you wealthy.
 
+---
 
-**Our Logic: The Flight Controller**
+## 🛡️ The Three Zones of Freedom
+We’ve reimagined your financial journey into three simple yet powerful zones:
 
-FinHub is built to mark the change. We don't just track; we navigate. Our system is designed to identify the invisible forces holding you back—like Wealth Leaks (high-interest debt) and Inflation Headwinds—and prioritize the shields that keep you airborne.
+1. **Safe Zone** – Your foundation. Health insurance, term insurance, and a resilient Opportunity Fund.  
+2. **Action Zone** – Where you plug Wealth Leaks. Debts that compound faster than you can grow.  
+3. **Growth Zone** – Where your assets scale, and your passive income buys back the most valuable asset of all: **Time**.  
 
+---
 
-**The Three Zones of Freedom**
+## ⏳ Our Metric: Days to Success
+We don’t measure success by your bank balance.  
+We measure it in **Days of Freedom**.  
 
-We organize your financial life into three distinct logic zones to ensure you never skip a step:
-1.	The Safe Zone: Securing your foundation with Health and Term insurance and a resilient "Opportunity Fund."
-2.	The Action Zone: Identifying and plugging "Wealth Leaks"—debts that compound faster than you can grow.
-3.	The Growth Zone: Helps, scaling your assets until your passive income buys back your most valuable asset: Time.
+Because our goal is not to help you manage money.  
+Our goal is to help you **buy back your freedom**.  
 
+✨ This is FinHub. The beginning of you financial freedom.
 
-**Our Metric: Days to Success**
+---
 
-We don't measure success by your bank balance alone. We measure it in Time and Financial Freedom.
-"Our goal is not to help you manage your money; it is to help you buy back your freedom."
+## 🧠 About FinHub Core
+**Version:** 0.1.0 (Quantum Core)  
+**Architect:** Sijo Joseph  
+**System:** Neural FinBase Fabric  
 
+### Vision
+FinHub is designed to be the **central nervous system of your personal economy**.  
+By merging neural-inspired data models with high-precision financial tracking, we provide clarity to navigate complex wealth landscapes.
 
-## Running the code
+### Core Principles
+1. **Localization** – Your data stays within your node. We believe in sovereign financial identity.  
+2. **Precision** – Clamping logic ensures mathematical stability even in extreme market simulations.  
+3. **Intelligence** – Gemini-powered neural insights provide actionable feedback on wealth leaks and freedom horizons.  
 
-  Run `npm i` to install the dependencies.
+### Acknowledgments
+Developed on the **Obsidian System Node**.  
+Built with **React 19**, **Vite 7**, and **Tailwind CSS 4**.  
 
-  Run `npm run dev` to start the development server.
+---
 
-  Test and share your feedbacks (Uname 9447147230 -Pin 2255)
+##Test and share your feedbacks (Uname 9447147230 -Pin 2255)
+
+---
+
+## 📦 Installation
+```bash
+git clone https://github.com/your-org/finhub.git
+cd finhub
+npm install
+npm run dev
