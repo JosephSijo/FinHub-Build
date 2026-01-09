@@ -41,6 +41,14 @@ export interface ArchitectAnalysis {
     };
 }
 
+/**
+ * Bounds a number between min and max. Prevents NaN/Infinity propagation.
+ */
+const clamp = (val: number, min: number, max: number): number => {
+    const safeVal = Number.isFinite(val) ? val : 0;
+    return Math.max(min, Math.min(max, safeVal));
+};
+
 export interface FoundationMetrics {
     tier0DebtService: number; // Sum of high-interest debt payments (>10%)
     tier1Security: number; // Insurance premiums
@@ -57,7 +65,10 @@ export const calculateFoundationMetrics = (context: AIContext): FoundationMetric
     const { liabilities, expenses, accounts, currentMonthExpenses } = context;
 
     // Tier 0: High Interest Debt (>10%)
-    const highInterestDebts = liabilities.filter(l => (l.effective_rate || l.interestRate / 100) >= 0.10 || l.interestRate > 10);
+    const highInterestDebts = liabilities.filter(l => {
+        const rate = l.effective_rate || l.interestRate / 100;
+        return rate >= 0.10;
+    });
     const tier0DebtService = highInterestDebts.reduce((sum, l) => sum + (l.emiAmount || 0), 0);
 
     // Tier 1: Vital Security (Insurance)
@@ -68,7 +79,9 @@ export const calculateFoundationMetrics = (context: AIContext): FoundationMetric
         .reduce((sum, e) => sum + e.amount, 0);
 
     // Tier 2: 3-month Buffer (Heuristic)
-    const avgMonthlyExpense = expenses.length > 0 ? (expenses.reduce((sum, e) => sum + e.amount, 0) / Math.max(1, expenses.length / 30)) : 20000;
+    const totalExp = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const days = Math.max(1, expenses.length / 30);
+    const avgMonthlyExpense = clamp(expenses.length > 0 ? (totalExp / days) : 20000, 1, 10000000);
     const tier2Buffer = avgMonthlyExpense * 3;
 
     // Available Cash (M1 Assets)
@@ -117,17 +130,28 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
     const inflationRate = 0.06; // Standard 6% inflation heuristic
 
     const calculateRealReturn = (nominal: number) => {
-        return ((1 + nominal) / (1 + inflationRate)) - 1;
+        const safeNominal = clamp(nominal, -0.9, 100);
+        const real = ((1 + safeNominal) / (1 + inflationRate)) - 1;
+        return clamp(real, -0.99, 100);
     };
 
     const SHIELD_MIN = 500;
     const totalLiquidity = accounts.reduce((sum: number, a: Account) => sum + (a.type !== 'credit_card' ? a.balance : 0), 0);
-    const avgMonthlyExpense = totalExpenses || 20000;
+    const avgMonthlyExpense = clamp(totalExpenses || 20000, 1, 10000000);
 
     // High Interest = effective_rate >= 0.10 or interestRate > 10
-    const highInterestDebts = liabilities.filter((l: Liability) => (l.effective_rate || l.interestRate / 100) >= 0.10 || l.interestRate > 10);
-    const totalAnnualDebtCost = liabilities.reduce((sum, l) => sum + (l.outstanding * (l.effective_rate || l.interestRate / 100)), 0);
-    const totalExpectedInvGain = (investments || []).reduce((sum, inv) => sum + ((inv.quantity * (inv.currentPrice || inv.buyPrice)) * (inv.expected_return || 0.08)), 0);
+    const highInterestDebts = liabilities.filter((l: Liability) => {
+        const rate = (l.effective_rate || l.interestRate / 100);
+        return rate >= 0.10;
+    });
+    const totalAnnualDebtCost = liabilities.reduce((sum, l) => {
+        const rate = clamp(l.effective_rate || l.interestRate / 100, 0, 5); // Max 500%
+        return sum + (l.outstanding * rate);
+    }, 0);
+    const totalExpectedInvGain = (investments || []).reduce((sum, inv) => {
+        const rate = clamp(inv.expected_return || 0.08, -0.5, 5); // -50% to 500%
+        return sum + ((inv.quantity * (inv.currentPrice || inv.buyPrice)) * rate);
+    }, 0);
 
     // 1. The Safety Breach
     if (totalLiquidity < avgMonthlyExpense * 3) {
@@ -303,13 +327,13 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
         // Trade-off: Debt vs Growth
         const monthsToPayoffNoSurplus = topDebt.emiAmount > 0 ? (topDebt.outstanding / topDebt.emiAmount) : topDebt.outstanding / 1000;
         const newMonthlyPayment = (topDebt.emiAmount || 0) + monthlyPriorityAllocation;
-        const monthsToPayoffWithSurplus = topDebt.outstanding / newMonthlyPayment;
-        const timeSaved = Math.max(0, monthsToPayoffNoSurplus - monthsToPayoffWithSurplus);
+        const monthsToPayoffWithSurplus = topDebt.outstanding / clamp(newMonthlyPayment, 1, 10000000);
+        const timeSaved = clamp(Math.max(0, monthsToPayoffNoSurplus - monthsToPayoffWithSurplus), 0, 1200);
 
         // Potential Growth if invested instead (12% CAGR)
         const growthRate = 0.12 / 12;
-        const potentialGrowth = monthlyPriorityAllocation * (Math.pow(1 + growthRate, monthsToPayoffNoSurplus) - 1) / growthRate;
-        const interestSaved = topDebt.outstanding * (effectiveRatePercent / 100) * (timeSaved / 12);
+        const potentialGrowth = clamp(monthlyPriorityAllocation * (Math.pow(1 + growthRate, clamp(monthsToPayoffNoSurplus, 0, 1200)) - 1) / growthRate, 0, 1000000000);
+        const interestSaved = clamp(topDebt.outstanding * (effectiveRatePercent / 100) * (timeSaved / 12), 0, 1000000000);
 
         const iouReminder = borrowedDebts.length > 0 ? `. You also have personal IOUs with ${borrowedDebts[0].personName}, which should be handled with "Trust Capital" once this leak is stopped.` : '';
         const summaryIOU = borrowedDebts.length > 0 ? ` and your personal trust obligations` : '';
@@ -377,8 +401,8 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
             allocation: { survival: 80, leisure: 20 },
             nextMilestone: "Finish 3-Month Safety Fund",
             tradeOff: {
-                timeSavedMonths: Math.round(timeToBuild * 0.5),
-                potentialGrowthAmount: Math.round(neededAmount * 0.05),
+                timeSavedMonths: clamp(Math.round(timeToBuild * 0.5), 0, 1200),
+                potentialGrowthAmount: clamp(Math.round(neededAmount * 0.05), 0, 1000000000),
                 comparisonMessage: "Peace of mind is priceless. Build your safety net first."
             },
             triggers,
@@ -407,8 +431,8 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
             allocation: { survival: 80, leisure: 20 },
             nextMilestone: "Diversified Asset Growth",
             tradeOff: {
-                timeSavedMonths: Math.round(timeSaved),
-                potentialGrowthAmount: Math.round(remaining * 0.12),
+                timeSavedMonths: clamp(Math.round(timeSaved), 0, 1200),
+                potentialGrowthAmount: clamp(Math.round(remaining * 0.12), 0, 1000000000),
                 comparisonMessage: "You're in the 'Growth Phase'. Let your money work for you."
             },
             realReturn: {

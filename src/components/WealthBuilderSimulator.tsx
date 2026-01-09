@@ -75,19 +75,30 @@ export function WealthBuilderSimulator() {
         const data = [];
         let currentWealth = 0;
         let totalInvested = 0;
-        const monthlyRate = expectedReturn / 12 / 100;
-        const months = timePeriod * 12;
+
+        // Safety: Clamp inputs during calculation
+        const safeInvestment = Math.max(0, monthlyInvestment);
+        const safeReturn = Math.max(-0.9, expectedReturn / 100);
+        const monthlyRate = safeReturn / 12;
+        const safeYears = Math.min(100, timePeriod); // Cap at 100 years for math safety
+        const months = safeYears * 12;
 
         for (let i = 1; i <= months; i++) {
-            currentWealth = (currentWealth + monthlyInvestment) * (1 + monthlyRate);
-            totalInvested += monthlyInvestment;
+            currentWealth = (currentWealth + safeInvestment) * (1 + monthlyRate);
+            totalInvested += safeInvestment;
+
+            // Safety: Break early if numbers become too large (e.g. Quadrillions)
+            if (!Number.isFinite(currentWealth) || currentWealth > 1e18) {
+                currentWealth = 1e18;
+                break;
+            }
 
             if (i % 12 === 0) { // Record yearly data points
                 data.push({
                     year: i / 12,
                     invested: Math.round(totalInvested),
                     wealth: Math.round(currentWealth),
-                    returns: Math.round(currentWealth - totalInvested)
+                    returns: Math.round(Math.max(0, currentWealth - totalInvested))
                 });
             }
         }
@@ -96,7 +107,7 @@ export function WealthBuilderSimulator() {
         setSummary({
             invested: totalInvested,
             wealth: currentWealth,
-            returns: currentWealth - totalInvested
+            returns: Math.max(0, currentWealth - totalInvested)
         });
     };
 

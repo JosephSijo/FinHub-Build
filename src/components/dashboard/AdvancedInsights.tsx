@@ -41,10 +41,15 @@ interface AdvancedInsightsProps {
     healthScore: number;
     userName?: string;
     investments?: any[];
+    isOffline?: boolean;
 }
 
 const COLORS = ['#FF3B3B', '#3B82F6', '#A855F7', '#F59E0B'];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+const clamp = (val: number, min: number, max: number): number => {
+    return Math.max(min, Math.min(max, val));
+};
 
 /**
  * Normalizes a financial metric into a 0-100 score.
@@ -81,7 +86,8 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
     outflowRatio,
     healthScore,
     userName = "User",
-    investments = []
+    investments = [],
+    isOffline = false
 }) => {
 
     const [expandedTrigger, setExpandedTrigger] = useState<string | null>(null);
@@ -203,24 +209,31 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
         let scoreConsistency = 50;
         if (historicalBurn.length > 1) {
             const avgBurn = historicalBurn.reduce((a, b) => a + b, 0) / historicalBurn.length;
+            const safeAvgBurn = Math.max(1, avgBurn);
             const variance = historicalBurn.reduce((a, b) => a + Math.pow(b - avgBurn, 2), 0) / historicalBurn.length;
             const stdDev = Math.sqrt(variance);
-            const cv = stdDev / avgBurn;
+            const cv = stdDev / safeAvgBurn;
             // CV 0 = Perfect (100), CV 0.5+ = Poor (0)
             scoreConsistency = normalizeScore(cv, 0.5, true, true);
         } else if (historicalBurn.length === 1) {
             scoreConsistency = 75;
         }
 
+        const scoreSavingsClamped = clamp(scoreSavings, 0, 100);
+        const scoreDebtClamped = clamp(scoreDebt, 0, 100);
+        const scoreSpendClamped = clamp(scoreSpend, 0, 100);
+        const scoreBufferClamped = clamp(scoreBuffer, 0, 100);
+        const scoreConsistencyClamped = clamp(scoreConsistency, 0, 100);
+
         const localHealthData = [
-            { subject: 'Savings', A: scoreSavings, fullMark: 100 },
-            { subject: 'Debt', A: scoreDebt, fullMark: 100 },
-            { subject: 'Leakage', A: scoreSpend, fullMark: 100 },
-            { subject: 'Buffer', A: scoreBuffer, fullMark: 100 },
-            { subject: 'Cash Flow Speed', A: scoreConsistency, fullMark: 100 },
+            { subject: 'Savings', A: scoreSavingsClamped, fullMark: 100 },
+            { subject: 'Debt', A: scoreDebtClamped, fullMark: 100 },
+            { subject: 'Leakage', A: scoreSpendClamped, fullMark: 100 },
+            { subject: 'Buffer', A: scoreBufferClamped, fullMark: 100 },
+            { subject: 'Speed', A: scoreConsistencyClamped, fullMark: 100 },
         ];
 
-        const localOverallHealth = Math.round((scoreSavings + scoreDebt + scoreSpend + scoreBuffer + scoreConsistency) / 5);
+        const localOverallHealth = Math.round((scoreSavingsClamped + scoreDebtClamped + scoreSpendClamped + scoreBufferClamped + scoreConsistencyClamped) / 5);
 
         // 3. Spending Nodes
         const categoryTotals = currentMonthExpenses.reduce((acc: Record<string, number>, e) => {
@@ -296,10 +309,23 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
     return (
         <div className="col-span-full mt-12 mb-4">
             {/* Section Header */}
-            <div className="flex items-center gap-6 mb-10">
-                <div className="h-px bg-white/5 flex-1"></div>
-                <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.5em]">Personal Money Plan</span>
-                <div className="h-px bg-white/5 flex-1"></div>
+            <div className="flex flex-col items-center gap-4 mb-10">
+                <div className="flex items-center gap-6 w-full">
+                    <div className="h-px bg-white/5 flex-1"></div>
+                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.5em]">Personal Money Plan</span>
+                    <div className="h-px bg-white/5 flex-1"></div>
+                </div>
+
+                {isOffline && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center gap-2"
+                    >
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Cached View: Offline Mode Active</span>
+                    </motion.div>
+                )}
             </div>
 
             {/* Architect Strategic Card */}

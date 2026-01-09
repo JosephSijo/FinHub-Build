@@ -37,6 +37,7 @@ interface EnhancedSettingsPanelProps {
   settings: UserSettings;
   onUpdateSettings: (settings: Partial<UserSettings>) => void;
   onAchievementClick?: (achievementId: string) => void;
+  onOpenAbout?: () => void;
 }
 
 export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
@@ -44,7 +45,8 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
   onClose,
   settings,
   onUpdateSettings,
-  onAchievementClick
+  onAchievementClick,
+  onOpenAbout
 }) => {
   const [name, setName] = useState(settings.name || '');
   const [photoURL, setPhotoURL] = useState(settings.photoURL || '');
@@ -530,7 +532,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                   {infAmount && (
                     <div className="space-y-4">
                       <div className="h-32 w-full bg-black/20 rounded-2xl p-2 border border-white/5 overflow-hidden">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="99.9%" height="100%" minHeight={128} debounce={100}>
                           <AreaChart data={projectionData}>
                             <defs>
                               <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
@@ -786,6 +788,12 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
             <p className="text-[8px] font-bold text-slate-700 uppercase tracking-widest mt-4">
               © 2025 NEURAL FINBASE FABRIC
             </p>
+            <button
+              onClick={onOpenAbout}
+              className="mt-4 text-[8px] font-black text-indigo-400/60 hover:text-indigo-400 uppercase tracking-[0.2em] transition-colors"
+            >
+              [ Protocol Info // About ]
+            </button>
           </div>
 
           <div className="px-2 pb-10">

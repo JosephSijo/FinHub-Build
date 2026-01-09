@@ -40,7 +40,9 @@ import { AIChatOverlay } from "./components/overlays/AIChatOverlay";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { LoginScreen } from "./components/auth/LoginScreen";
 import { LoadingSprite } from "./components/ui/LoadingSprite";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { AboutUsPopup } from "./components/overlays/AboutUsPopup";
+import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
 
 // Lazy Load Heavy Components
 const Dashboard = lazy(() => import("./components/Dashboard").then(module => ({ default: module.Dashboard })));
@@ -94,7 +96,8 @@ export default function App() {
     closeFundAllocation,
     performFundAllocation,
     transferFunds,
-    authStatus
+    authStatus,
+    isOffline
   } = useFinance();
 
   const [view, setView] = useState<View>("dashboard");
@@ -109,6 +112,7 @@ export default function App() {
   const [selectedAchievementId, setSelectedAchievementId] = useState<string | null>(null);
   const [isAchievementDialogOpen, setIsAchievementDialogOpen] = useState(false);
   const [isTransferFormOpen, setIsTransferFormOpen] = useState(false);
+  const [isAboutUsOpen, setIsAboutUsOpen] = useState(false);
 
   // Round-Up State
   const [isRoundUpOpen, setIsRoundUpOpen] = useState(false);
@@ -145,6 +149,20 @@ export default function App() {
   }, [openFundAllocation]);
 
   // Calculate financial health score
+  const { currentMonthExpenses } = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const reconciledExpenses = expenses.filter(e => !e.isInternalTransfer);
+    const cmExpenses = reconciledExpenses.filter(e => {
+      const d = new Date(e.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+
+    return { currentMonthExpenses: cmExpenses };
+  }, [expenses]);
+
   const healthScore = useMemo(() => {
     const totalIncomeCalc = incomes.reduce((sum: number, i: Income) => sum + i.amount, 0);
     const totalExpenses = expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
@@ -227,14 +245,16 @@ export default function App() {
     investments,
     liabilities,
     goals,
+    debts,
+    currentMonthExpenses,
     savingsRate: healthScore.savingsRate,
     healthScore: healthScore.score,
     brainSummary: generateBrainSummary(
-      { incomes, expenses, investments, accounts, liabilities, goals, healthScore: healthScore.score, savingsRate: healthScore.savingsRate, totalIncome: incomes.reduce((sum: number, i: Income) => sum + i.amount, 0), totalExpenses: expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0), activeDebts: debts.filter((d: Debt) => d.status === "pending").length, goalsCount: goals.length, recentTransactions: [] },
+      { incomes, expenses, investments, accounts, liabilities, goals, debts, currentMonthExpenses, healthScore: healthScore.score, savingsRate: healthScore.savingsRate, totalIncome: incomes.reduce((sum: number, i: Income) => sum + i.amount, 0), totalExpenses: expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0), activeDebts: debts.filter((d: Debt) => d.status === "pending").length, goalsCount: goals.length, recentTransactions: [] },
       settings.currency,
       view
     )
-  }), [incomes, expenses, debts, goals, healthScore.savingsRate, healthScore.score, accounts, investments, liabilities, settings.currency, view]);
+  }), [incomes, expenses, debts, goals, healthScore.savingsRate, healthScore.score, accounts, investments, liabilities, currentMonthExpenses, settings.currency, view]);
 
   // Calculate totals
   const totalIncome = useMemo(() => incomes.reduce((sum: number, i: Income) => sum + i.amount, 0), [incomes]);
@@ -409,13 +429,20 @@ export default function App() {
             transition={{ duration: 0.4 }}
             className="fixed inset-0 z-50"
           >
-            <LoadingSprite />
+            <LoadingSprite
+              message={useFinance().authMessage?.message}
+              subMessage={useFinance().authMessage?.subMessage}
+            />
           </motion.div>
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {authStatus === 'authenticated' && (
+      <AnimatePresence mode="wait">
+        {authStatus === 'authenticated' && (!settings.onboardingPhase || settings.onboardingPhase < 3) && !settings.isSampleMode && (
+          <OnboardingFlow />
+        )}
+
+        {authStatus === 'authenticated' && ((settings.onboardingPhase ?? 0) >= 3 || settings.isSampleMode) && (
           <motion.div
             key="main-app"
             className="relative z-10"
@@ -462,6 +489,9 @@ export default function App() {
                             emergencyFundAmount={emergencyFundAmount}
                             healthScore={healthScore.score}
                             userName={settings.name}
+                            isOffline={isOffline}
+                            isSampleMode={settings.isSampleMode}
+                            onResumeOnboarding={() => updateSettings({ isSampleMode: false })}
                           />
                         </div>
                       )}
@@ -558,6 +588,7 @@ export default function App() {
                           bankAccountsCount={accounts.filter((a: any) => a.type === 'bank').length}
                           cardsCount={accounts.filter((a: any) => a.type === 'credit_card').length}
                           currency={settings.currency}
+                          onOpenAbout={() => setIsAboutUsOpen(true)}
                         />
                       )}
                     </Suspense>
@@ -600,6 +631,7 @@ export default function App() {
                 onClose={() => setIsAIAssistantOpen(false)}
                 context={aiContext}
                 settings={settings}
+                isOffline={isOffline}
               />
 
               <EnhancedSettingsPanel
@@ -612,6 +644,7 @@ export default function App() {
                   setIsAchievementDialogOpen(true);
                   setIsSettingsOpen(false);
                 }}
+                onOpenAbout={() => setIsAboutUsOpen(true)}
               />
 
               <NotificationsPanel
@@ -667,6 +700,11 @@ export default function App() {
                 accounts={accounts}
                 currency={settings.currency}
                 onTransfer={transferFunds}
+              />
+
+              <AboutUsPopup
+                isOpen={isAboutUsOpen}
+                onClose={() => setIsAboutUsOpen(false)}
               />
 
               <Toaster

@@ -1,0 +1,76 @@
+
+> finbase-v5@0.1.1 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 99 modules transformed.
+Γ£ù Build failed in 2.35s
+error during build:
+[vite:esbuild] Transform failed with 6 errors:
+C:/Users/sijok/OneDrive/Desktop/GitHub/Finbasev50-3/src/components/overlays/AboutUsPopup.tsx:93:26: ERROR: Unexpected closing "motion.div" tag does not match opening "div" tag
+C:/Users/sijok/OneDrive/Desktop/GitHub/Finbasev50-3/src/components/overlays/AboutUsPopup.tsx:94:22: ERROR: Unexpected closing "div" tag does not match opening "motion.div" tag
+C:/Users/sijok/OneDrive/Desktop/GitHub/Finbasev50-3/src/components/overlays/AboutUsPopup.tsx:95:18: ERROR: Unexpected closing fragment tag does not match opening "div" tag
+C:/Users/sijok/OneDrive/Desktop/GitHub/Finbasev50-3/src/components/overlays/AboutUsPopup.tsx:96:13: ERROR: The character "}" is not valid inside a JSX element
+C:/Users/sijok/OneDrive/Desktop/GitHub/Finbasev50-3/src/components/overlays/AboutUsPopup.tsx:97:10: ERROR: Unexpected closing "AnimatePresence" tag does not match opening fragment tag
+...
+file: C:/Users/sijok/OneDrive/Desktop/GitHub/Finbasev50-3/src/components/overlays/AboutUsPopup.tsx:93:26
+
+Unexpected closing "motion.div" tag does not match opening "div" tag
+91 |                                      </div>
+92 |                                  </div>
+93 |                          </motion.div>
+   |                            ^
+94 |                      </div>
+95 |                  </>
+
+Unexpected closing "div" tag does not match opening "motion.div" tag
+92 |                                  </div>
+93 |                          </motion.div>
+94 |                      </div>
+   |                        ^
+95 |                  </>
+96 |              )}
+
+Unexpected closing fragment tag does not match opening "div" tag
+93 |                          </motion.div>
+94 |                      </div>
+95 |                  </>
+   |                    ^
+96 |              )}
+97 |          </AnimatePresence>
+
+The character "}" is not valid inside a JSX element
+94 |                      </div>
+95 |                  </>
+96 |              )}
+   |               ^
+97 |          </AnimatePresence>
+98 |      );
+
+Unexpected closing "AnimatePresence" tag does not match opening fragment tag
+95 |                  </>
+96 |              )}
+97 |          </AnimatePresence>
+   |            ^
+98 |      );
+99 |  };
+
+Expected "}" but found ";"
+96 |              )}
+97 |          </AnimatePresence>
+98 |      );
+   |       ^
+99 |  };
+100|  
+
+    at failureErrorWithLog (C:\Users\sijok\OneDrive\Desktop\GitHub\Finbasev50-3\node_modules\esbuild\lib\main.js:1467:15)
+    at C:\Users\sijok\OneDrive\Desktop\GitHub\Finbasev50-3\node_modules\esbuild\lib\main.js:736:50
+    at responseCallbacks.<computed> (C:\Users\sijok\OneDrive\Desktop\GitHub\Finbasev50-3\node_modules\esbuild\lib\main.js:603:9)
+    at handleIncomingPacket (C:\Users\sijok\OneDrive\Desktop\GitHub\Finbasev50-3\node_modules\esbuild\lib\main.js:658:12)
+    at Socket.readFromStdout (C:\Users\sijok\OneDrive\Desktop\GitHub\Finbasev50-3\node_modules\esbuild\lib\main.js:581:7)
+    at Socket.emit (node:events:508:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)

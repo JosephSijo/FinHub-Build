@@ -9,7 +9,8 @@ import {
   Zap,
   Activity,
   ArrowRightLeft,
-  Info
+  Info,
+  ChevronRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { InteractiveFinancialValue } from './ui/InteractiveFinancialValue';
@@ -29,7 +30,7 @@ import { formatCurrency, formatFinancialValue } from '@/utils/numberFormat';
 import { MeshBackground } from './ui/MeshBackground';
 import { CategoryBackdrop } from './ui/CategoryBackdrop';
 import { isTransfer } from '@/utils/isTransfer';
-import { Expense, Income, Account, Debt, AIContext } from '@/types';
+import { Expense, Income, Account, Debt, AIContext, Goal, Liability } from '@/types';
 import { calculateFoundationMetrics } from '@/utils/architect';
 
 export interface DashboardProps {
@@ -44,7 +45,32 @@ export interface DashboardProps {
   accounts?: Account[];
   healthScore?: number;
   userName?: string;
+  isOffline?: boolean;
+  isSampleMode?: boolean;
+  onResumeOnboarding?: () => void;
 }
+
+const GENERIC_AVERAGES = {
+  expenses: [
+    { id: 's1', description: 'Monthly Rent', amount: 35000, category: 'Housing', date: new Date().toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
+    { id: 's2', description: 'Grocery Run', amount: 8000, category: 'Food', date: new Date().toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
+    { id: 's3', description: 'Internet & Power', amount: 4500, category: 'Bills', date: new Date().toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
+    { id: 's4', description: 'Dining Out', amount: 6000, category: 'Leisure', date: new Date().toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
+  ] as Expense[],
+  incomes: [
+    { id: 'i1', amount: 150000, source: 'Monthly Salary', date: new Date().toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
+  ] as Income[],
+  accounts: [
+    { id: 'a1', name: 'Primary Bank', balance: 450000, type: 'bank', color: '#3B82F6', icon: 'building', createdAt: new Date().toISOString() },
+    { id: 'a2', name: 'Cash on Hand', balance: 5000, type: 'cash', color: '#10B981', icon: 'wallet', createdAt: new Date().toISOString() },
+  ] as Account[],
+  goals: [
+    { id: 'g1', name: 'Emergency Fund', targetAmount: 240000, currentAmount: 240000, emoji: '🛡️', type: 'protection', targetDate: new Date().toISOString(), status: 'active', createdAt: new Date().toISOString() },
+    { id: 'g2', name: 'House Fund', targetAmount: 5000000, currentAmount: 1500000, emoji: '🏠', type: 'growth', targetDate: new Date().toISOString(), status: 'active', createdAt: new Date().toISOString() },
+  ] as Goal[],
+  liabilities: [] as Liability[],
+  debts: [] as Debt[]
+};
 
 export const Dashboard: React.FC<DashboardProps> = ({
   expenses,
@@ -57,12 +83,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
   investments = [],
   accounts = [],
   healthScore = 50,
-  userName = "User"
+  userName = "User",
+  isOffline = false,
+  isSampleMode = false,
+  onResumeOnboarding
 }) => {
 
+  const displayExpenses = isSampleMode ? GENERIC_AVERAGES.expenses : expenses;
+  const displayIncomes = isSampleMode ? GENERIC_AVERAGES.incomes : incomes;
+  const displayAccounts = isSampleMode ? GENERIC_AVERAGES.accounts : accounts;
+  const displayGoals = isSampleMode ? GENERIC_AVERAGES.goals : goals;
+  const displayLiabilities = isSampleMode ? GENERIC_AVERAGES.liabilities : liabilities;
+  const displayDebts = isSampleMode ? GENERIC_AVERAGES.debts : debts;
+  const displayHealthScore = isSampleMode ? 85 : healthScore;
+
   // 1. Cross-Account Reconciliation Logic
-  const reconciledExpenses = expenses.map(e => ({ ...e, isInternalTransfer: e.isInternalTransfer || isTransfer(e) }));
-  const reconciledIncomes = incomes.map(i => ({ ...i, isInternalTransfer: i.isInternalTransfer || isTransfer(i) }));
+  const reconciledExpenses = displayExpenses.map(e => ({ ...e, isInternalTransfer: e.isInternalTransfer || isTransfer(e as any) }));
+  const reconciledIncomes = displayIncomes.map(i => ({ ...i, isInternalTransfer: i.isInternalTransfer || isTransfer(i as any) }));
 
   // Auto-detect matching outflow/inflow pairs on the same day across different accounts
   reconciledExpenses.forEach(exp => {
@@ -87,10 +124,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     totalCreditUsage,
     totalCommitments
   } = useShadowWallet({
-    accounts,
-    goals,
-    liabilities,
-    expenses: reconciledExpenses,
+    accounts: displayAccounts as any,
+    goals: displayGoals,
+    liabilities: displayLiabilities,
+    expenses: reconciledExpenses as any,
     emergencyFundAmount
   });
 
@@ -157,7 +194,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     : "0.0";
 
   // Total M1 assets (Bank + Cash)
-  const m1Assets = accounts
+  const m1Assets = displayAccounts
     .filter(acc => acc.type === 'bank' || acc.type === 'cash')
     .reduce((sum, acc) => sum + acc.balance, 0);
 
@@ -209,22 +246,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const velocityInfo = getVelocityInterpretation(velocityValue);
 
   // 1.5 The Foundation Filter Logic
-  const foundationMetrics = calculateFoundationMetrics({
-    liabilities,
-    expenses,
-    incomes,
-    accounts,
-    goals,
-    debts,
-    investments,
-    healthScore,
-    currentMonthExpenses,
-    totalIncome: grossIncome,
-    totalExpenses: grossBurn,
+  const architectureContext: AIContext = {
+    totalIncome: displayIncomes.reduce((sum, i) => sum + i.amount, 0),
+    totalExpenses: displayExpenses.reduce((sum, e) => sum + e.amount, 0),
+    expenses: displayExpenses,
+    incomes: displayIncomes,
+    accounts: displayAccounts as any,
+    liabilities: displayLiabilities as any,
+    goals: displayGoals as any,
+    healthScore: displayHealthScore,
+    currency,
+    investments: investments as any,
+    debts: displayDebts as any,
+    currentMonthExpenses: reconciledExpenses as any,
     recentTransactions: reconciledExpenses.slice(0, 5),
-    savingsRate: grossIncome > 0 ? (grossIncome - grossBurn) / grossIncome : 0,
-    currency
-  } as AIContext);
+    savingsRate: grossIncome > 0 ? (grossIncome - (grossBurn as number)) / (grossIncome as number) : 0,
+    activeDebts: displayLiabilities.length + displayDebts.filter(d => d.status === 'pending').length,
+    goalsCount: displayGoals.length
+  };
+
+  const foundationMetrics = calculateFoundationMetrics(architectureContext);
 
   const safeDailyLimit = foundationMetrics.foundationLimit;
 
@@ -232,6 +273,34 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="main-grid">
+
+      {isSampleMode && (
+        <div className="mx-4 mb-6 pt-4">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-indigo-600/10 border border-indigo-500/20 p-6 squircle-24 relative overflow-hidden group"
+          >
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Zap className="w-12 h-12 text-indigo-400" />
+            </div>
+            <div className="relative z-10 space-y-4">
+              <div className="space-y-1">
+                <div className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em]">Simulation: Healthy Flight Path</div>
+                <p className="text-white font-medium leading-relaxed">
+                  This is what a healthy flight path looks like. To see your actual <span className="text-indigo-400 font-bold">Freedom Days</span>, we need to plug in your specific Shield and Leak data.
+                </p>
+              </div>
+              <button
+                onClick={onResumeOnboarding}
+                className="w-full py-3 bg-indigo-500 text-black font-black uppercase tracking-widest rounded-2xl hover:bg-indigo-400 transition-all flex items-center justify-center gap-2"
+              >
+                Resume Onboarding <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* AI Truth Banner */}
       <TruthBanner
@@ -843,6 +912,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               healthScore={healthScore}
               userName={userName}
               debts={debts}
+              isOffline={isOffline}
             />
           );
         })()

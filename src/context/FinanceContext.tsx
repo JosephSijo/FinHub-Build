@@ -55,6 +55,10 @@ interface FinanceContextType {
     emergencyFundAmount: number;
     isLoading: boolean;
     isRefreshing: boolean;
+    isOffline: boolean;
+    apiStatus: 'online' | 'offline' | 'error';
+    pendingMobile: string;
+    authMessage?: { message: string, subMessage?: string };
 
     // Auth State
     authStatus: 'guest' | 'authenticating' | 'authenticated';
@@ -71,7 +75,11 @@ interface FinanceContextType {
     checkIdentity: (mobile: string) => Promise<boolean>;
     login: (pin: string, rememberMe?: boolean) => Promise<boolean>;
     signup: (mobile: string, pin: string, name: string, rememberMe?: boolean) => Promise<boolean>;
+    sendOtp: (mobile: string) => Promise<boolean>;
+    verifyOtp: (mobile: string, otp: string) => Promise<boolean>;
+    resetPin: (mobile: string, newPin: string) => Promise<boolean>;
     logout: () => void;
+    clearPendingSession: () => void;
     scheduleAccountDeletion: () => Promise<void>;
     cancelAccountDeletion: () => Promise<void>;
     deletionDate: string | null;
@@ -159,6 +167,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         notificationsEnabled: false,
         roundUpEnabled: true,
         aiProvider: "openai",
+        onboardingPhase: 0,
+        passiveIncomeTarget: 0,
+        isSampleMode: false,
     });
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [incomes, setIncomes] = useState<Income[]>([]);
@@ -170,6 +181,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [emergencyFundAmount, setEmergencyFundAmount] = useState(0);
+    const [isOffline, setIsOffline] = useState(false);
+    const [apiStatus, setApiStatus] = useState<'online' | 'offline' | 'error'>('online');
 
     // Auth State
     const [authStatus, setAuthStatus] = useState<'guest' | 'authenticating' | 'authenticated'>('guest');
@@ -179,6 +192,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [isRememberedUser, setIsRememberedUser] = useState(false);
     const [rememberedMobile, setRememberedMobile] = useState('');
     const [deletionDate, setDeletionDate] = useState<string | null>(null);
+    const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
+    const [authMessage, setAuthMessage] = useState<{ message: string, subMessage?: string } | undefined>();
 
     // Pre-defined users for Beta/Demo
     const DEMO_USERS = [
@@ -613,6 +628,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 api.getRecurring(userId).catch(() => ({ success: false, recurring: [] })),
             ]);
 
+            setIsOffline(false);
+            setApiStatus('online');
+
             if (settingsRes.success && settingsRes.settings) {
                 // Merge server settings with local settings to preserve local-only fields like aiProvider and apiKeys
                 setSettings(prev => ({
@@ -637,8 +655,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         } catch (error) {
             console.error("API Sync failed, using local data", error);
-            // We already loaded local data, so just notify user
-            // toast.error("Sync failed - using offline mode"); // Optional: don't annoy user
+            setIsOffline(true);
+            setApiStatus('offline');
+            // toast.error("Sync failed - using offline mode");
         }
     };
 
@@ -673,6 +692,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const login = async (pin: string, rememberMe: boolean = false) => {
         // Authenticating state triggers LoadingSprite
+        setAuthMessage({ message: "Validating PIN", subMessage: "Verifying secure node access..." });
         setAuthStatus('authenticating');
 
         // Artificial delay for Loading Sprite showcase
@@ -705,6 +725,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (authenticatedUser) {
             setCurrentUser(authenticatedUser);
             localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(authenticatedUser));
+            setAuthMessage({ message: "Handshake Success", subMessage: "Synchronizing decrypted ledger..." });
             setAuthStatus('authenticated');
             setIsAwaitingPin(false);
 
@@ -726,12 +747,61 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
             return true;
         } else {
+            setAuthMessage(undefined);
             setAuthStatus('guest'); // Reset to guest on failure
             return false;
         }
     };
 
+    const sendOtp = async (mobile: string) => {
+        setPendingMobile(mobile);
+        // Simulate OTP generation
+        const mockOtp = Math.floor(1000 + Math.random() * 9000).toString();
+        setGeneratedOtp(mockOtp);
+        console.log(`[AUTH-DEBUG] Mock OTP for ${mobile}: ${mockOtp}`);
+
+        // Show simulated toast
+        toast.info("Verification code sent", {
+            description: `Dev Mode: Use ${mockOtp} (Simulated SMS)`
+        });
+
+        return true;
+    };
+
+    const verifyOtp = async (mobile: string, otp: string) => {
+        // Skip check in testing phase as requested, but we'll show logic
+        if (otp === "0000" || otp === generatedOtp) {
+            return true;
+        }
+        return false;
+    };
+
+    const resetPin = async (mobile: string, newPin: string) => {
+        const storedUser = localStorage.getItem(`finbase_user_${mobile}`);
+        if (storedUser) {
+            const parsed = JSON.parse(storedUser);
+            parsed.pin = newPin;
+            localStorage.setItem(`finbase_user_${mobile}`, JSON.stringify(parsed));
+            toast.success("PIN reset successfully");
+            return true;
+        }
+        // Also check demo users (can't really reset them permanently in localStorage easily without shadowing)
+        const demoUserIndex = DEMO_USERS.findIndex(u => u.mobile === mobile);
+        if (demoUserIndex !== -1) {
+            // Shadow demo user in localStorage
+            const shadowedUser = {
+                ...DEMO_USERS[demoUserIndex],
+                pin: newPin
+            };
+            localStorage.setItem(`finbase_user_${mobile}`, JSON.stringify(shadowedUser));
+            toast.success("Demo user PIN updated locally");
+            return true;
+        }
+        return false;
+    };
+
     const signup = async (mobile: string, pin: string, name: string, rememberMe: boolean = false) => {
+        setAuthMessage({ message: "Creating Node", subMessage: "Initializing secure identity protocols..." });
         setAuthStatus('authenticating');
         await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -746,6 +816,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const authUser: AuthUser = { id: newUser.id, mobile: newUser.mobile, name: newUser.name };
         setCurrentUser(authUser);
         localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(authUser));
+        setAuthMessage({ message: "Handshake Success", subMessage: "Synchronizing decrypted ledger..." });
         setAuthStatus('authenticated');
         setIsAwaitingPin(false);
 
@@ -761,7 +832,23 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const logout = () => {
         setAuthStatus('guest');
         setCurrentUser(null);
+        setGeneratedOtp(null);
         localStorage.removeItem(STORAGE_KEYS.AUTH);
+        // If not remembered, clear the pending mobile so it asks for username next time
+        if (!isRememberedUser) {
+            setPendingMobile('');
+        }
+    };
+
+    const clearPendingSession = () => {
+        setAuthStatus('guest');
+        setCurrentUser(null);
+        setPendingMobile('');
+        setGeneratedOtp(null);
+        localStorage.removeItem(STORAGE_KEYS.AUTH);
+        localStorage.removeItem(STORAGE_KEYS.REMEMBERED_MOBILE);
+        setRememberedMobile('');
+        setIsRememberedUser(false);
     };
 
     const scheduleAccountDeletion = async () => {
@@ -805,12 +892,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         toast.info('Session purged successfully.');
     };
 
-    // Auto-login from storage
+    // Auto-login from storage - Restore session context but require PIN
     useEffect(() => {
         const storedAuth = localStorage.getItem(STORAGE_KEYS.AUTH);
         if (storedAuth) {
-            setCurrentUser(JSON.parse(storedAuth));
-            setAuthStatus('authenticated');
+            try {
+                const user = JSON.parse(storedAuth);
+                if (user && user.mobile) {
+                    setPendingMobile(user.mobile);
+                    // We stay as 'guest' so App.tsx shows LoginScreen
+                    // LoginScreen will detect pendingMobile and show PIN verify phase
+                    setAuthStatus('guest');
+                }
+            } catch (e) {
+                console.error("Failed to parse stored auth", e);
+                localStorage.removeItem(STORAGE_KEYS.AUTH);
+            }
         }
     }, []);
 
@@ -1781,6 +1878,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 emergencyFundAmount,
                 isLoading,
                 isRefreshing,
+                isOffline,
+                apiStatus,
                 isFundAllocationOpen,
                 fundAllocationType,
 
@@ -1790,6 +1889,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 isAwaitingPin,
                 isRememberedUser,
                 rememberedMobile,
+                authMessage,
 
                 // Actions
                 refreshData,
@@ -1798,9 +1898,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 login,
                 signup,
                 logout,
+                clearPendingSession,
                 scheduleAccountDeletion,
                 cancelAccountDeletion,
                 deletionDate,
+                sendOtp,
+                verifyOtp,
+                resetPin,
+                pendingMobile,
 
                 createExpense,
                 updateExpense,
