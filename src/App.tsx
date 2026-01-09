@@ -97,7 +97,8 @@ export default function App() {
     performFundAllocation,
     transferFunds,
     authStatus,
-    isOffline
+    isOffline,
+    authMessage
   } = useFinance();
 
   const [view, setView] = useState<View>("dashboard");
@@ -430,8 +431,8 @@ export default function App() {
             className="fixed inset-0 z-50"
           >
             <LoadingSprite
-              message={useFinance().authMessage?.message}
-              subMessage={useFinance().authMessage?.subMessage}
+              message={authMessage?.message}
+              subMessage={authMessage?.subMessage}
             />
           </motion.div>
         )}
