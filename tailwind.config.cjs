@@ -39,6 +39,9 @@ module.exports = {
                 sm: 'var(--space-sm)',
                 md: 'var(--space-md)',
                 lg: 'var(--space-lg)',
+            },
+            transitionTimingFunction: {
+                'quantum': 'cubic-bezier(0.2, 1, 0.3, 1)',
             }
         },
     },

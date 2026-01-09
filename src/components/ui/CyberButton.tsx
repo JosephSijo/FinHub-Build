@@ -35,7 +35,7 @@ export const CyberButton: React.FC<CyberButtonProps> = ({
             )}
             {...props}
         >
-            {Icon && <Icon className="w-4 h-4 transition-all duration-700 ease-[cubic-bezier(0.2,1,0.3,1)] group-hover:rotate-[720deg] active:-rotate-12" />}
+            {Icon && <Icon className="w-4 h-4 transition-all duration-700 ease-quantum group-hover:rotate-[720deg] active:-rotate-12" />}
             <span>{children}</span>
         </button>
     );

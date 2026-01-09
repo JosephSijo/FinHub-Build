@@ -1,7 +1,15 @@
 import { motion } from "framer-motion";
 import { Target, Shield } from "lucide-react";
 
-export const LoadingSprite = () => {
+interface LoadingSpriteProps {
+    message?: string;
+    subMessage?: string;
+}
+
+export const LoadingSprite: React.FC<LoadingSpriteProps> = ({
+    message = "Secure Node Handshake",
+    subMessage = "Re-encrypting local session..."
+}) => {
     return (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#000000] overflow-hidden">
             {/* Ambient Background Glow */}
@@ -63,7 +71,7 @@ export const LoadingSprite = () => {
                     <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 ring-1 ring-white/5 backdrop-blur-md">
                         <Shield className="h-3 w-3 text-sky-400" />
                         <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-white/40">
-                            Secure Node Handshake
+                            {message}
                         </span>
                     </div>
                 </motion.div>
@@ -85,7 +93,7 @@ export const LoadingSprite = () => {
                 </div>
                 <div className="mt-3 text-center">
                     <span className="text-[10px] font-medium text-white/20 italic tracking-wider">
-                        Re-encrypting local session...
+                        {subMessage}
                     </span>
                 </div>
             </div>

@@ -14,6 +14,7 @@
   --q-amethyst: #BF5AF2;   /* Spending/Bills */
   --q-emerald: #30D158;    /* Savings/Inflow */
   --q-ruby: #FF453A;       /* Debt/Liability */
+  --q-garnet: #730800;     /* High Alert Debt (Red Alert) */
   --q-gold: #FF9F0A;       /* Caution/Alert */
   --q-silver: #F2F2F7;     /* UI Text Primary */
   --q-slate: #8E8E93;      /* UI Text Secondary */
@@ -39,4 +40,15 @@
   --q-glow-intensity-low: 0.1;
   --q-glow-intensity-med: 0.4;
   --q-mesh-opacity-cap: 0.3;
+}
+
+.garnet-alert {
+  background-color: rgba(115, 8, 0, 0.15);
+  border-color: rgba(115, 8, 0, 0.4);
+}
+
+.garnet-pill {
+  background-color: rgba(115, 8, 0, 0.2);
+  border-color: rgba(115, 8, 0, 0.4);
+  color: #730800;
 }

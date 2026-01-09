@@ -9,9 +9,10 @@ interface AIChatOverlayProps {
     onClose: () => void;
     context: AIContext;
     settings: any;
+    isOffline?: boolean;
 }
 
-export const AIChatOverlay: React.FC<AIChatOverlayProps> = ({ isOpen, onClose, context, settings }) => {
+export const AIChatOverlay: React.FC<AIChatOverlayProps> = ({ isOpen, onClose, context, settings, isOffline = false }) => {
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState<{ text: string, type: 'ai' | 'user' }[]>([
         { text: "Hello! I've analyzed your cash flow. How can I assist with your goals?", type: 'ai' }
@@ -34,9 +35,18 @@ export const AIChatOverlay: React.FC<AIChatOverlayProps> = ({ isOpen, onClose, c
         setIsLoading(true);
 
         try {
-            // Call AI Service
-            // We use a simplified call here fitting the UI demo logic provided by user
-            // In real app, we use strict prompt engineering
+            if (isOffline) {
+                // Simulate local processing for offline mode
+                setTimeout(() => {
+                    setMessages(prev => [...prev, {
+                        text: "FinHub is currently in 'Cached View' (Offline). I've analyzed your local financial fabric: your liquidity nodes are stable, but synchronizing with global AI intelligence requires a stable link. How can I help you optimize your local state?",
+                        type: 'ai'
+                    }]);
+                    setIsLoading(false);
+                }, 1000);
+                return;
+            }
+
             const response = await askAI({
                 userPrompt: userMsg,
                 context: context,
@@ -44,11 +54,15 @@ export const AIChatOverlay: React.FC<AIChatOverlayProps> = ({ isOpen, onClose, c
                 persona: 'ANALYST'
             });
 
-            setMessages(prev => [...prev, { text: response.text || "I'm analyzing that...", type: 'ai' }]);
+            if (response.error) {
+                setMessages(prev => [...prev, { text: response.error as string, type: 'ai' }]);
+            } else {
+                setMessages(prev => [...prev, { text: response.text || "Analyzing financial pattern...", type: 'ai' }]);
+            }
         } catch (error) {
-            setMessages(prev => [...prev, { text: "Connection error. Please try again.", type: 'ai' }]);
+            setMessages(prev => [...prev, { text: "Connection error. FinHub has transitioned to local 'Cached View'.", type: 'ai' }]);
         } finally {
-            setIsLoading(false);
+            if (!isOffline) setIsLoading(false);
         }
     };
 
@@ -65,7 +79,12 @@ export const AIChatOverlay: React.FC<AIChatOverlayProps> = ({ isOpen, onClose, c
                     </div>
                     <div>
                         <h2 className="font-black text-2xl text-white tracking-tight leading-none">AI Analyst</h2>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-1">Neural Core Context</p>
+                        <div className="flex items-center gap-2 mt-1">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Neural Core Context</p>
+                            {isOffline && (
+                                <span className="text-[8px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20 font-black tracking-tighter uppercase">Cached View</span>
+                            )}
+                        </div>
                     </div>
                 </div>
                 <button

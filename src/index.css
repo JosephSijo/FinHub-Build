@@ -149,6 +149,14 @@
     }
   }
 
+  .font-numeric {
+    font-family: var(--q-font-data), monospace !important;
+  }
+
+  .reset-text-fill {
+    -webkit-text-fill-color: initial !important;
+  }
+
   .hero-text {
     font-family: 'Inter', sans-serif;
     font-weight: 700;
@@ -247,7 +255,7 @@
 
   /* --- SYNCHRONIZED MESH SYSTEM --- */
   .mesh-gradient-card {
-    background: #000000;
+    background: #0A0A0A; /* Deep Black Base per Specs */
     position: relative;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -264,41 +272,65 @@
   /* Shared Navy Base Highlights - Brightness Cap 30% */
   .mesh-blob {
     position: absolute;
-    width: 350px;
-    height: 350px;
+    width: 400px;
+    height: 400px;
     border-radius: 50%;
-    filter: blur(100px);
-    opacity: var(--q-mesh-opacity-cap); /* Brightness/Opacity Cap */
+    filter: blur(120px);
+    opacity: 0.15; /* Standardized to 15% per specs */
     z-index: 0;
     pointer-events: none;
   }
 
-  .mesh-blob-base { background: #001D3D !important; opacity: 0.15; top: 20%; left: 30%; } /* Unified Deep Navy */
+  .mesh-blob-base { background: #001D3D !important; opacity: 0.1; top: 20%; left: 30%; } /* Unified Deep Navy */
 
-  /* Category Specific High-Vibrancy Meshes */
-  .mesh-spending .mesh-blob-1 { background: #BF5AF2 !important; top: -150px; left: -150px; } /* Neon Purple */
-  .mesh-spending .mesh-blob-2 { background: #5E5CE6 !important; bottom: -150px; right: -150px; } /* Indigo */
+  /* ZONAL MESH DEFINITIONS (3 Anchor Points) */
+  /* Safe Zone: Teal to Cobalt Blue */
+  .mesh-safe .mesh-blob-1 { background: #14B8A6 !important; top: -100px; left: -100px; }
+  .mesh-safe .mesh-blob-2 { background: #2563EB !important; bottom: -100px; right: -100px; }
+  .mesh-safe .mesh-blob-3 { background: #0EA5E9 !important; top: 40%; right: -50px; }
 
-  .mesh-savings .mesh-blob-1 { background: #30D158 !important; top: -150px; left: -150px; } /* Emerald */
-  .mesh-savings .mesh-blob-2 { background: #004D40 !important; bottom: -150px; right: -150px; } /* Deep Forest */
+  /* Growth Zone: Royal Purple to Amber Gold */
+  .mesh-growth .mesh-blob-1 { background: #7C3AED !important; top: -100px; left: -100px; }
+  .mesh-growth .mesh-blob-2 { background: #F59E0B !important; bottom: -100px; right: -100px; }
+  .mesh-growth .mesh-blob-3 { background: #D946EF !important; top: 40%; right: -50px; }
 
-  .mesh-debt .mesh-blob-1 { background: #FF9F0A !important; top: -150px; left: -150px; } /* Sunset Orange */
-  .mesh-debt .mesh-blob-2 { background: #FF453A !important; bottom: -150px; right: -150px; } /* Coral/Red */
+  /* Action Zone: Burnt Orange to Warm Sienna */
+  .mesh-action .mesh-blob-1 { background: #EA580C !important; top: -100px; left: -100px; }
+  .mesh-action .mesh-blob-2 { background: #92400E !important; bottom: -100px; right: -100px; }
+  .mesh-action .mesh-blob-3 { background: #F97316 !important; top: 40%; right: -50px; }
 
-  .mesh-invest .mesh-blob-1 { background: #0A84FF !important; top: -150px; left: -150px; } /* Electric Blue */
-  .mesh-invest .mesh-blob-2 { background: #5856D6 !important; bottom: -150px; right: -150px; } /* Royal Blue */
+  /* Legacy Categories (Backward Compatibility) */
+  .mesh-spending .mesh-blob-1 { background: #BF5AF2 !important; top: -150px; left: -150px; }
+  .mesh-spending .mesh-blob-2 { background: #5E5CE6 !important; bottom: -150px; right: -150px; }
+  .mesh-spending .mesh-blob-3 { background: #8B5CF6; top: 30%; right: -50px; }
+
+  .mesh-savings .mesh-blob-1 { background: #30D158 !important; top: -150px; left: -150px; }
+  .mesh-savings .mesh-blob-2 { background: #004D40 !important; bottom: -150px; right: -150px; }
+  .mesh-savings .mesh-blob-3 { background: #10B981; top: 30%; right: -50px; }
+
+  .mesh-debt .mesh-blob-1 { background: #FF9F0A !important; top: -150px; left: -150px; }
+  .mesh-debt .mesh-blob-2 { background: #FF453A !important; bottom: -150px; right: -150px; }
+  .mesh-debt .mesh-blob-3 { background: #F59E0B; top: 30%; right: -50px; }
+
+  .mesh-invest .mesh-blob-1 { background: #0A84FF !important; top: -150px; left: -150px; }
+  .mesh-invest .mesh-blob-2 { background: #5856D6 !important; bottom: -150px; right: -150px; }
+  .mesh-invest .mesh-blob-3 { background: #06B6D4; top: 30%; right: -50px; }
 
   /* Ghost Blue (Low Saturation Intelligence) */
   .mesh-ghost-blue {
-    background: #000000 !important;
-    border: 1px solid rgba(10, 132, 255, 0.2) !important; /* Subtle Glowing Blue Border */
+    background: #0A0A0A !important;
+    border: 1px solid rgba(10, 132, 255, 0.2) !important;
     box-shadow: 0 0 15px rgba(10, 132, 255, 0.05);
   }
   .mesh-ghost-blue .mesh-blob {
     background: #0A84FF !important;
-    opacity: 0.1; /* 10% Ghosting */
-    filter: blur(120px);
-    desaturate: 50%;
+    opacity: 0.1;
+    filter: blur(140px);
+  }
+  .mesh-ghost-blue .mesh-blob-3 {
+    background: #3B82F6 !important;
+    top: 40%;
+    right: -50px;
   }
 
   /* Data-First Chart Atmosphere */

@@ -19,6 +19,7 @@ interface MoreTabProps {
   bankAccountsCount: number;
   cardsCount: number;
   currency: string;
+  onOpenAbout: () => void;
 }
 
 export function MoreTab({
@@ -28,7 +29,8 @@ export function MoreTab({
   emergencyFundAmount,
   bankAccountsCount,
   cardsCount,
-  currency
+  currency,
+  onOpenAbout
 }: MoreTabProps) {
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 px-4 pb-20">
@@ -185,7 +187,10 @@ export function MoreTab({
             </div>
           </Card>
 
-          <Card className="p-6 cursor-pointer bg-black border-white/5 sq-xl border hover:bg-white/5 transition-all group opacity-60 hover:opacity-100">
+          <Card
+            className="p-6 cursor-pointer bg-black border-white/5 sq-xl border hover:bg-white/5 transition-all group opacity-60 hover:opacity-100"
+            onClick={onOpenAbout}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-white/5 sq-md flex items-center justify-center text-slate-400">

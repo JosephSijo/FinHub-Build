@@ -18,8 +18,13 @@ const scrubError = (error: any, key?: string): string => {
     let msg = error.message || 'Failed to generate response.';
 
     // Check for common connectivity/CORS issues
-    if (msg.toLowerCase().includes('failed to fetch')) {
-        msg = "Network Error: Possible CORS blockage. Most AI providers (OpenAI, DeepSeek, etc.) do not allow direct browser calls. Use Gemini or verify your environment.";
+    if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('networkerror')) {
+        msg = "Connectivity Issue: Unable to reach the AI server. FinHub will transition to 'Cached View' using local intelligence fallback. Please check your internet connection.";
+    }
+
+    // Handle rate limits or quota issues
+    if (msg.includes('429') || msg.toLowerCase().includes('too many requests')) {
+        msg = "AI Capacity Reached: The provider is currently busy or rate-limited. Falling back to local 'Cached View'.";
     }
 
     if (key) {

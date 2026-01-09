@@ -55,6 +55,7 @@ export interface Debt {
   tags: string[];
   accountId: string;
   dueDate?: string;
+  interestRate?: number; // Added for Tier 0 Wealth Leaks
   createdAt: string;
 }
 
@@ -69,6 +70,8 @@ export interface Goal {
   emoji: string;
   type?: GoalType; // Defaults to 'growth' if undefined
   status?: 'active' | 'completed' | 'leaking'; // Defaults to 'active'
+  monthly_contribution?: number;
+  is_discretionary?: boolean;
   createdAt: string;
 }
 
@@ -81,6 +84,9 @@ export interface UserSettings {
   photoURL: string;
   notificationsEnabled: boolean;
   roundUpEnabled: boolean;
+  onboardingPhase?: number; // 0: Not started, 1: Shield done, 2: Leaks done, 3: Completion
+  passiveIncomeTarget?: number;
+  isSampleMode?: boolean;
   apiKeys?: {
     openai?: string;
     anthropic?: string;
@@ -99,12 +105,18 @@ export interface AIContext {
   goalsCount: number;
   recentTransactions: any[];
   expenses: Expense[];
+  currentMonthExpenses: Expense[];
   incomes: Income[];
   accounts: Account[];
   investments: Investment[];
+  liabilities: Liability[];
+  goals: Goal[];
+  debts: Debt[];
   savingsRate: number;
   healthScore: number;
   brainSummary?: string;
+  userName?: string;
+  currency?: string;
 }
 
 // Categories for Money Out
@@ -123,6 +135,7 @@ export const MONEY_OUT_CATEGORIES = [
   { value: 'Subscription', emoji: '📺' },
   { value: 'Personal IOU', emoji: '🤝' },
   { value: 'Transfer', emoji: '🔄' },
+  { value: 'Insurance', emoji: '🛡️' }, // Added for Tier 1 Vital Security
   { value: 'Other', emoji: '📦' }
 ];
 
@@ -213,6 +226,7 @@ export interface Investment {
   isPhysicalAsset?: boolean;
   accountId?: string; // ID of the holding account (for Source Independence)
   purchaseDate: string;
+  expected_return?: number; // annual percentage, e.g. 0.12
   currency: string;
   createdAt: string;
 }
@@ -224,11 +238,17 @@ export interface Liability {
   type: 'home_loan' | 'car_loan' | 'personal_loan' | 'credit_card' | 'education_loan' | 'other';
   principal: number;
   outstanding: number;
-  interestRate: number;
+  interestRate: number; // nominal APR
   emiAmount: number;
   startDate: string;
   tenure: number; // in months
   accountId?: string;
+  // Strategic Fields
+  apr_nominal?: number;
+  effective_rate?: number;
+  min_payment?: number;
+  penalty_applied?: boolean;
+  next_due_date?: string;
 }
 
 // Notification

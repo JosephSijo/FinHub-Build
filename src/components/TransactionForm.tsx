@@ -56,6 +56,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
 
   useEffect(() => {
+    if (!isOpen) return;
+
     if (initialData) {
       setFormData({
         description: initialData.description || '',
@@ -78,8 +80,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       // Auto-select first account for new transactions
       setFormData(prev => ({ ...prev, accountId: accounts[0].id }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData]);
+  }, [isOpen, initialData, accounts, formData.accountId]);
 
   useEffect(() => {
     const text = type === 'expense' ? formData.description :
@@ -99,8 +100,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         setSuggestedTags([]);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.description, formData.personName, type]);
+  }, [formData.description, formData.personName, type, initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,7 +213,12 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
   const applySuggestion = () => {
     if (suggestedCategory) {
-      setFormData({ ...formData, category: suggestedCategory, tags: [...new Set([...formData.tags, ...suggestedTags])] });
+      setFormData(prev => ({
+        ...prev,
+        category: suggestedCategory,
+        tags: [...new Set([...prev.tags, ...suggestedTags])],
+        isRecurring: suggestedCategory === 'Subscription' ? true : prev.isRecurring
+      }));
       setSuggestedCategory(null);
       setSuggestedTags([]);
     }

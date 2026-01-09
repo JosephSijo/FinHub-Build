@@ -11,7 +11,7 @@ export const FabStack: React.FC<FabStackProps> = ({ onOpenAI, onAddTransaction, 
     return (
         <div
             id="fab-dock"
-            className={`fixed right-5 bottom-[110px] flex flex-col gap-3.5 z-[110] transition-all duration-500 ease-[cubic-bezier(0.2,1,0.3,1)] ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-[100px] opacity-0'}`}
+            className={`fixed right-5 bottom-[110px] flex flex-col gap-3.5 z-[110] transition-all duration-500 ease-quantum ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-[100px] opacity-0'}`}
         >
             {/* AI Assistant (Purple) */}
             <div
