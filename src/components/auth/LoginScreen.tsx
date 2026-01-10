@@ -187,7 +187,7 @@ export const LoginScreen = () => {
             <div className="absolute inset-0 z-0 bg-[url('/mesh-grid.svg')] opacity-20" />
 
             <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="absolute top-12 z-10">
-                <h1 className="text-xl font-bold tracking-tight text-white/90">FinHub Beta</h1>
+                <h1 className="text-xl font-bold tracking-tight text-white/90">FinHub v0.1 Beta</h1>
             </motion.div>
 
             <div className="z-10 w-full max-w-sm px-8">
@@ -325,7 +325,7 @@ export const LoginScreen = () => {
                             <h3 className="text-xl font-bold text-white">Speed up your next login?</h3>
                             <p className="mt-2 text-sm text-white/50">We can securely remember your ID so you can skip the mobile entry next time.</p>
                             <div className="mt-8 flex flex-col gap-3">
-                                <button onClick={() => { localStorage.setItem('finbase_remembered_mobile', mobile); setShowSmartPrompt(false); }} className="w-full rounded-2xl bg-sky-500 py-4 font-semibold text-white active:scale-95 transition-all">Enable Smart Login</button>
+                                <button onClick={() => { localStorage.setItem('finhub_remembered_mobile', mobile); setShowSmartPrompt(false); }} className="w-full rounded-2xl bg-sky-500 py-4 font-semibold text-white active:scale-95 transition-all">Enable Smart Login</button>
                                 <button onClick={() => setShowSmartPrompt(false)} className="w-full py-2 text-sm font-medium text-white/30 active:text-white/50">Maybe later</button>
                             </div>
                         </motion.div>

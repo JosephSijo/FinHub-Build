@@ -45,7 +45,7 @@ Our goal is to help you **buy back your freedom**.
 
 **Version:** 0.1.0 (Quantum Core)  
 **Architect:** Sijo Joseph  
-**System:** Neural FinBase Fabric  
+**System:** Neural FinHub Fabric  
 
 ### Vision
 

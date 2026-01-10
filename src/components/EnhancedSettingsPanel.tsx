@@ -786,7 +786,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
               Architect: Sijo Joseph // BUILD 50.3.0 // QUANTUM CORE
             </p>
             <p className="text-[8px] font-bold text-slate-700 uppercase tracking-widest mt-4">
-              © 2025 NEURAL FINBASE FABRIC
+              © 2025 NEURAL FINHUB FABRIC
             </p>
             <button
               onClick={onOpenAbout}

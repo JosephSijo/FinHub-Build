@@ -22,20 +22,20 @@ import { autoCategorize } from '../utils/autoCategorize';
 
 // Constants for LocalStorage keys
 const STORAGE_KEYS = {
-    SETTINGS: 'finbase_settings',
-    EXPENSES: 'finbase_expenses',
-    INCOMES: 'finbase_incomes',
-    DEBTS: 'finbase_debts',
-    GOALS: 'finbase_goals',
-    ACCOUNTS: 'finbase_accounts',
-    INVESTMENTS: 'finbase_investments',
-    LIABILITIES: 'finbase_liabilities',
-    NOTIFICATIONS: 'finbase_notifications',
-    EMERGENCY_FUND: 'finbase_emergency_fund',
-    RECURRING: 'finbase_recurring',
-    AUTH: 'finbase_auth',
-    REMEMBERED_MOBILE: 'finbase_remembered_mobile',
-    DELETION_SCHEDULE: 'finbase_deletion_schedule'
+    SETTINGS: 'finhub_settings',
+    EXPENSES: 'finhub_expenses',
+    INCOMES: 'finhub_incomes',
+    DEBTS: 'finhub_debts',
+    GOALS: 'finhub_goals',
+    ACCOUNTS: 'finhub_accounts',
+    INVESTMENTS: 'finhub_investments',
+    LIABILITIES: 'finhub_liabilities',
+    NOTIFICATIONS: 'finhub_notifications',
+    EMERGENCY_FUND: 'finhub_emergency_fund',
+    RECURRING: 'finhub_recurring',
+    AUTH: 'finhub_auth',
+    REMEMBERED_MOBILE: 'finhub_remembered_mobile',
+    DELETION_SCHEDULE: 'finhub_deletion_schedule'
 };
 
 interface FinanceContextType {
@@ -523,10 +523,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         await fetchFromApi();
 
         // 3. Subscription Migration (One-time or periodic scan)
-        const hasMigrationRun = localStorage.getItem('finbase_subscription_migration_v3');
-        if (!hasMigrationRun) {
+        const hasMigrationRun = localStorage.getItem('finhub_subscription_migration_v3');
+        if (!hasMigrationRun && userId) {
             runCategorizationMigration();
-            localStorage.setItem('finbase_subscription_migration_v3', 'true');
+            localStorage.setItem('finhub_subscription_migration_v3', 'true');
         }
 
         setIsLoading(false);
@@ -684,7 +684,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setPendingMobile(mobile);
         // Simulate API check
         const isExistingUser = DEMO_USERS.some(u => u.mobile === mobile) ||
-            localStorage.getItem(`finbase_user_${mobile}`) !== null;
+            localStorage.getItem(`finhub_user_${mobile}`) !== null;
 
         setIsAwaitingPin(true);
         return isExistingUser;
@@ -709,7 +709,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 name: demoUser.name
             };
         } else {
-            const storedUser = localStorage.getItem(`finbase_user_${pendingMobile}`);
+            const storedUser = localStorage.getItem(`finhub_user_${pendingMobile}`);
             if (storedUser) {
                 const parsed = JSON.parse(storedUser);
                 if (parsed.pin === pin) {
@@ -768,7 +768,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return true;
     };
 
-    const verifyOtp = async (mobile: string, otp: string) => {
+    const verifyOtp = async (_mobile: string, otp: string) => {
         // Skip check in testing phase as requested, but we'll show logic
         if (otp === "0000" || otp === generatedOtp) {
             return true;
@@ -777,11 +777,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     const resetPin = async (mobile: string, newPin: string) => {
-        const storedUser = localStorage.getItem(`finbase_user_${mobile}`);
+        const storedUser = localStorage.getItem(`finhub_user_${mobile}`);
         if (storedUser) {
             const parsed = JSON.parse(storedUser);
             parsed.pin = newPin;
-            localStorage.setItem(`finbase_user_${mobile}`, JSON.stringify(parsed));
+            localStorage.setItem(`finhub_user_${mobile}`, JSON.stringify(parsed));
             toast.success("PIN reset successfully");
             return true;
         }
@@ -793,7 +793,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 ...DEMO_USERS[demoUserIndex],
                 pin: newPin
             };
-            localStorage.setItem(`finbase_user_${mobile}`, JSON.stringify(shadowedUser));
+            localStorage.setItem(`finhub_user_${mobile}`, JSON.stringify(shadowedUser));
             toast.success("Demo user PIN updated locally");
             return true;
         }
@@ -812,7 +812,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             pin
         };
 
-        localStorage.setItem(`finbase_user_${mobile}`, JSON.stringify(newUser));
+        localStorage.setItem(`finhub_user_${mobile}`, JSON.stringify(newUser));
         const authUser: AuthUser = { id: newUser.id, mobile: newUser.mobile, name: newUser.name };
         setCurrentUser(authUser);
         localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(authUser));

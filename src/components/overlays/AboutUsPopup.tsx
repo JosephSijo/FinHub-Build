@@ -88,7 +88,7 @@ export const AboutUsPopup: React.FC<AboutUsPopupProps> = ({ isOpen, onClose }) =
                                     {/* Footer */}
                                     <div className="pt-6 border-t border-white/5 flex flex-col items-center gap-2">
                                         <p className="text-[8px] font-bold text-slate-600 uppercase tracking-widest">Architect: Sijo Joseph</p>
-                                        <p className="text-[10px] font-black text-slate-800 uppercase tracking-[0.2em]">© 2025 Neural FinBase Fabric</p>
+                                        <p className="text-[10px] font-black text-slate-800 uppercase tracking-[0.2em]">© 2025 Neural FinHub Fabric</p>
                                     </div>
                                 </div>
                             </div>

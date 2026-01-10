@@ -209,7 +209,7 @@ export function MoreTab({
 
       {/* App Info Footer */}
       <div className="text-center pt-8 border-t border-white/5">
-        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-700 mb-1">Finbase Obsidian System</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-700 mb-1">FinHub Obsidian System</p>
         <p className="text-[9px] font-bold text-slate-800">BUILD 50.3.0 // QUANTUM CORE</p>
       </div>
     </div>
