@@ -29,8 +29,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
             {/* Logo Center */}
             <div className="flex flex-col items-center">
-                <span className="tracking-[0.4em] font-black text-sm italic text-white leading-none">FINHUB</span>
-                <div className="h-[2px] w-6 bg-blue-600 sq-full mt-1.5 shadow-[0_0_10px_#2563EB]"></div>
+                <img
+                    src="/images/logo-dark.png"
+                    alt="FinHub"
+                    className="h-8 w-auto hidden dark:block"
+                />
+                <img
+                    src="/images/logo-light.png"
+                    alt="FinHub"
+                    className="h-8 w-auto block dark:hidden"
+                />
             </div>
 
             {/* Notifications (Right) */}

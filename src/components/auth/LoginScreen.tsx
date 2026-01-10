@@ -186,8 +186,9 @@ export const LoginScreen = () => {
         <div className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden font-sans auth-mesh-gradient">
             <div className="absolute inset-0 z-0 bg-[url('/mesh-grid.svg')] opacity-20" />
 
-            <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="absolute top-12 z-10">
-                <h1 className="text-xl font-bold tracking-tight text-white/90">FinHub v0.1 Beta</h1>
+            <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="absolute top-12 z-10 flex flex-col items-center gap-2">
+                <img src="/images/logo-dark.png" alt="FinHub" className="h-12 w-auto" />
+                <span className="text-xs font-medium text-white/40 tracking-widest uppercase">v0.1 Beta</span>
             </motion.div>
 
             <div className="z-10 w-full max-w-sm px-8">
