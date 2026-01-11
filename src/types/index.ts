@@ -263,6 +263,16 @@ export interface Notification {
   timestamp: Date;
   read: boolean;
   achievementId?: string;
+  action?: {
+    type: 'verify_subscription';
+    payload: {
+      description: string;
+      amount: number;
+      category: string;
+      accountId: string;
+    };
+    status: 'pending' | 'completed' | 'dismissed';
+  };
 }
 
 export interface AuthUser {

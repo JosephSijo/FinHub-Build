@@ -18,7 +18,7 @@ import {
 } from '../types';
 import { checkAchievements, getAchievement } from '../utils/achievements';
 import { generateGurujiInsights, createInsightNotification } from '../utils/insights';
-import { autoCategorize } from '../utils/autoCategorize';
+import { autoCategorize, isKnownSubscription } from '../utils/autoCategorize';
 
 // Constants for LocalStorage keys
 const STORAGE_KEYS = {
@@ -118,6 +118,7 @@ interface FinanceContextType {
 
     // Recurring
     createRecurringTransaction: (data: any) => Promise<void>;
+    createRecurring: (data: any) => Promise<void>;
     deleteRecurringTransaction: (id: string) => Promise<void>;
     processRecurringTransactions: () => Promise<void>;
 
@@ -1175,6 +1176,31 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     toast.success("Recurring expense created!");
                 } else {
                     toast.success("Expense added!");
+
+                    // Verify to Automate Logic: If it's a known subscription but NOT marked recurring, ask user.
+                    if (isKnownSubscription(data.description) && !data.isRecurring) {
+                        const verifyNotif: Notification = {
+                            id: `verify_sub_${response.expense.id}`,
+                            type: 'insight',
+                            priority: 'medium',
+                            category: 'insights',
+                            title: 'Subscription Detected?',
+                            message: `Is '${data.description}' a monthly subscription? Verify to automate tracking.`,
+                            timestamp: new Date(),
+                            read: false,
+                            action: {
+                                type: 'verify_subscription',
+                                payload: {
+                                    description: data.description,
+                                    amount: data.amount,
+                                    category: 'Subscription', // Force category correction
+                                    accountId: data.accountId
+                                },
+                                status: 'pending'
+                            }
+                        };
+                        addNotifications(verifyNotif);
+                    }
                 }
             }
         } catch (error) {

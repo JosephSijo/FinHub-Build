@@ -217,7 +217,6 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         ...prev,
         category: suggestedCategory,
         tags: [...new Set([...prev.tags, ...suggestedTags])],
-        isRecurring: suggestedCategory === 'Subscription' ? true : prev.isRecurring
       }));
       setSuggestedCategory(null);
       setSuggestedTags([]);

@@ -262,6 +262,45 @@ export function NotificationsPanel({
                                     </span>
                                   </div>
                                 )}
+
+                                {notification.action && notification.action.status === 'pending' && (
+                                  <div className="mt-4 flex gap-3 animate-in fade-in slide-in-from-top-1">
+                                    <Button
+                                      size="sm"
+                                      className="h-8 text-[10px] font-black uppercase tracking-widest bg-emerald-600 hover:bg-emerald-500 text-white border-0"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        // This interaction would ideally be passed up via a prop, but for this specific logic
+                                        // we might need a dedicated onAction handler in props.
+                                        // For now, let's assume onNotificationClick handles actions by checking the payload?
+                                        // OR better: we add onAction prop to this component.
+                                        // Since we can't change props easily without breaking usage, let's use onNotificationClick with a modified object or similar.
+                                        // Actually, let's add the onAction prop to the interface and component.
+                                        // WAIT: I cannot change the interface without updating usage in App.tsx (or wherever it's used).
+                                        // Let's rely on onNotificationClick handling execution if it detects an action.
+
+                                        // But wait, "No" needs to just dismiss. "Yes" needs to execute.
+                                        // Let's modify the onNotificationClick signature or just attach a meta property?
+                                        notification.action!.status = 'completed'; // Optimistic update local
+                                        onNotificationClick?.(notification); // Pass to parent to execute actual logic
+                                      }}
+                                    >
+                                      Yes, Automate
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        notification.action!.status = 'dismissed';
+                                        if (!notification.read) onMarkAsRead?.(notification.id);
+                                      }}
+                                    >
+                                      No, One-time
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>

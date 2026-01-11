@@ -98,7 +98,8 @@ export default function App() {
     transferFunds,
     authStatus,
     isOffline,
-    authMessage
+    authMessage,
+    createRecurring
   } = useFinance();
 
   const [view, setView] = useState<View>("dashboard");
@@ -652,12 +653,46 @@ export default function App() {
                 isOpen={isNotificationsOpen}
                 onClose={() => setIsNotificationsOpen(false)}
                 notifications={notifications}
-                onNotificationClick={(notification: any) => {
+                onNotificationClick={async (notification: any) => {
                   if (notification.achievementId) {
                     setSelectedAchievementId(notification.achievementId);
                     setIsAchievementDialogOpen(true);
                   }
-                  setIsNotificationsOpen(false);
+
+                  // Handle Subscription Verification Action
+                  if (notification.action && notification.action.type === 'verify_subscription' && notification.action.status === 'completed') {
+                    const { description, amount, category, accountId } = notification.action.payload;
+                    try {
+                      await createRecurring({
+                        type: 'expense',
+                        description,
+                        amount,
+                        category,
+                        accountId,
+                        frequency: 'monthly',
+                        startDate: new Date().toISOString().split('T')[0],
+                        tags: ['auto-verified', 'subscription']
+                      });
+                      toast.success(`Verified: ${description} is now a recurring subscription.`);
+
+                      // Mark as read
+                      setNotifications((prev: any[]) =>
+                        prev.map((n: any) => n.id === notification.id ? { ...n, read: true } : n)
+                      );
+                    } catch (error) {
+                      toast.error("Failed to automate subscription.");
+                    }
+                  } else if (notification.action && notification.action.status === 'dismissed') {
+                    toast.info("Marked as one-time purchase.");
+                    setNotifications((prev: any[]) =>
+                      prev.map((n: any) => n.id === notification.id ? { ...n, read: true } : n)
+                    );
+                  }
+
+                  // Only close if it wasn't an action interaction (actions stopPropagation, but just in case)
+                  if (!notification.action) {
+                    setIsNotificationsOpen(false);
+                  }
                 }}
                 onMarkAsRead={(id: string) => {
                   setNotifications((prev: any[]) =>
