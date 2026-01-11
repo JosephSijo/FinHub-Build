@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Target, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 
 interface LoadingSpriteProps {
     message?: string;
@@ -25,21 +25,21 @@ export const LoadingSprite: React.FC<LoadingSpriteProps> = ({
             <div className="relative flex flex-col items-center justify-center gap-12">
                 {/* Pulsing Central Sprite */}
                 <div className="relative flex items-center justify-center">
-                    {/* Ring Pulsing around Logo */}
-                    {[0, 1].map((i) => (
+                    {/* Ring Pulsing around Logo - Adjusted for new logo shape */}
+                    {[0, 1, 2].map((i) => (
                         <motion.div
                             key={i}
-                            className="absolute rounded-full border border-sky-400/40"
-                            initial={{ width: 80, height: 80, opacity: 0.6 }}
+                            className="absolute rounded-full border border-sky-400/20"
+                            initial={{ width: 80, height: 80, opacity: 0 }}
                             animate={{
-                                width: [80, 200],
-                                height: [80, 200],
-                                opacity: [0.6, 0],
+                                width: [80, 250],
+                                height: [80, 250],
+                                opacity: [0.4, 0],
                             }}
                             transition={{
-                                duration: 2.5,
+                                duration: 3,
                                 repeat: Infinity,
-                                delay: i * 1.25,
+                                delay: i * 1,
                                 ease: "easeOut",
                             }}
                         />
@@ -47,17 +47,33 @@ export const LoadingSprite: React.FC<LoadingSpriteProps> = ({
 
                     <motion.div
                         animate={{
-                            scale: [1, 1.05, 1],
-                            boxShadow: [
-                                "0 0 20px rgba(10, 132, 255, 0.2)",
-                                "0 0 40px rgba(10, 132, 255, 0.4)",
-                                "0 0 20px rgba(10, 132, 255, 0.2)",
-                            ]
+                            y: [0, -10, 0], // Floating effect
                         }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                        className="relative z-10 flex h-24 w-24 items-center justify-center rounded-[28px] bg-gradient-to-br from-[#1C1C1E] to-[#0A0A0B] ring-1 ring-white/10 shadow-2xl"
+                        transition={{
+                            duration: 4,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                        }}
+                        className="relative z-10"
                     >
-                        <Target className="h-10 w-10 text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]" />
+                        <motion.div
+                            animate={{
+                                scale: [1, 1.1, 1], // Breathing effect
+                                filter: [
+                                    "drop-shadow(0 0 15px rgba(56,189,248,0.3))",
+                                    "drop-shadow(0 0 30px rgba(56,189,248,0.6))",
+                                    "drop-shadow(0 0 15px rgba(56,189,248,0.3))"
+                                ]
+                            }}
+                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                            className="relative flex h-32 w-32 items-center justify-center rounded-[32px] bg-gradient-to-br from-[#1C1C1E] to-[#000000] ring-1 ring-white/10 shadow-2xl backdrop-blur-xl"
+                        >
+                            <img
+                                src="/images/logo-icon.png"
+                                alt="FinHub"
+                                className="h-20 w-20 object-contain drop-shadow-lg"
+                            />
+                        </motion.div>
                     </motion.div>
                 </div>
 
