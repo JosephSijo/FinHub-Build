@@ -55,7 +55,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
 
   const [isMigrating, setIsMigrating] = useState(false);
-  const { logout, scheduleAccountDeletion, migrateSubscriptions, cleanupDuplicates } = useFinance(); // Destructure migrateSubscriptions
+  const { logout, scheduleAccountDeletion, migrateSubscriptions, cleanupDuplicates, clearAllData } = useFinance(); // Destructure migrateSubscriptions
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleMigrate = async () => {
@@ -847,6 +847,30 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
             <p className="text-[10px] text-slate-500 font-bold text-center leading-relaxed">
               {settings.unlockedAchievements.length > 0 ? 'Select a sigil to view the record of your triumph.' : 'Initiate financial protocols to manifest higher ranks.'}
             </p>
+          </div>
+
+          <div className="h-px bg-white/5" />
+
+          {/* Danger Zone: Full Wipe for Testing */}
+          <div className="space-y-4">
+            <div className="p-4 bg-rose-500/5 border border-rose-500/10 rounded-2xl flex items-center justify-between">
+              <div>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400">Factory Reset</h4>
+                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wide mt-1">
+                  WIPE ALL TRANSACTIONS & RECURRING (KEEP ACCOUNT)
+                </p>
+              </div>
+              <Button
+                onClick={async () => {
+                  if (confirm("Are you sure? This deletes ALL transaction data.")) {
+                    await clearAllData();
+                  }
+                }}
+                className="bg-slate-950 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/20 font-black uppercase tracking-widest text-[9px] h-9 px-4 rounded-xl transition-colors"
+              >
+                Wipe Data
+              </Button>
+            </div>
           </div>
 
           <Separator className="bg-white/5" />

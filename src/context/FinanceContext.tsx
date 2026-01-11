@@ -146,6 +146,7 @@ interface FinanceContextType {
     }) => Promise<void>;
     deductFromAccount: (accountId: string, amount: number) => Promise<void>;
     transferFunds: (sourceId: string, destinationId: string, amount: number) => Promise<void>;
+    clearAllData: () => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -2125,6 +2126,32 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
     };
 
+    const clearAllData = async () => {
+        try {
+            // Delete all recurring
+            for (const r of recurringTransactions) await api.deleteRecurring(userId, r.id);
+            // Delete all expenses
+            for (const e of expenses) await api.deleteExpense(userId, e.id);
+            // Delete all incomes
+            for (const i of incomes) await api.deleteIncome(userId, i.id);
+            // Delete all debts
+            for (const d of debts) await api.deleteDebt(userId, d.id);
+            // Delete all goals
+            for (const g of goals) await api.deleteGoal(userId, g.id);
+            // Delete all investments
+            for (const i of investments) await api.deleteInvestment(userId, i.id);
+            // Delete liabilities
+            for (const l of liabilities) await api.deleteLiability(userId, l.id);
+
+            // Refetch to clear state
+            await fetchFromApi();
+            toast.success("All data purged. Clean slate initialized.");
+        } catch (e) {
+            console.error(e);
+            toast.error("Partial purge only. Some data remains.");
+        }
+    };
+
     return (
         <FinanceContext.Provider
             value={{
@@ -2211,6 +2238,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 performFundAllocation,
                 deductFromAccount,
                 transferFunds,
+                clearAllData,
             }}
         >
             {children}
