@@ -147,6 +147,11 @@ interface FinanceContextType {
     deductFromAccount: (accountId: string, amount: number) => Promise<void>;
     transferFunds: (sourceId: string, destinationId: string, amount: number) => Promise<void>;
     clearAllData: () => Promise<void>;
+
+    // Backfill Logic
+    backfillRequest: { count: number; dates: Date[]; recurring: any } | null;
+    setBackfillRequest: React.Dispatch<React.SetStateAction<{ count: number; dates: Date[]; recurring: any } | null>>;
+    executeBackfill: () => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -201,6 +206,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [deletionDate, setDeletionDate] = useState<string | null>(null);
     const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
     const [authMessage, setAuthMessage] = useState<{ message: string, subMessage?: string } | undefined>();
+    const [backfillRequest, setBackfillRequest] = useState<{ count: number; dates: Date[]; recurring: any } | null>(null);
 
     // Pre-defined users for Beta/Demo
     const DEMO_USERS = [
@@ -969,6 +975,287 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
     };
 
+    // --- Recurring ---
+    const updateRecurringTransaction = async (id: string, data: any) => {
+        try {
+            const response = await api.updateRecurring(userId, id, data);
+            if (response.success) {
+                const updatedRec = response.recurring as RecurringTransaction;
+                setRecurringTransactions(prev => prev.map(r => r.id === id ? updatedRec : r));
+                toast.success('Recurring transaction updated');
+
+                // Auto-Backfill Logic (Standardized Refactor)
+                if (updatedRec.startDate) {
+                    console.log("[Backfill Debug Update] Analysis starting for:", updatedRec.description || updatedRec.source);
+                    toast.info("Analyzing transaction history...");
+
+                    const localNow = new Date();
+                    const nowStr = `${localNow.getFullYear()}-${String(localNow.getMonth() + 1).padStart(2, '0')}-${String(localNow.getDate()).padStart(2, '0')}`;
+                    const startStr = updatedRec.startDate.split('T')[0];
+
+                    console.log("[Backfill Debug Update] nowStr:", nowStr, "startStr:", startStr);
+
+                    if (startStr <= nowStr && updatedRec.type) {
+                        const [sY, sM, sD] = startStr.split('-').map(Number);
+                        let current = new Date(sY, sM - 1, sD, 12, 0, 0);
+                        const dueDates: Date[] = [];
+                        let safety = 0;
+
+                        while (safety < 1200) {
+                            const cY = current.getFullYear();
+                            const cM = current.getMonth();
+                            const cD = current.getDate();
+                            const currentStr = `${cY}-${String(cM + 1).padStart(2, '0')}-${String(cD).padStart(2, '0')}`;
+                            if (currentStr > nowStr) break;
+                            dueDates.push(new Date(current));
+
+                            switch (updatedRec.frequency) {
+                                case 'daily': current.setDate(current.getDate() + 1); break;
+                                case 'weekly': current.setDate(current.getDate() + 7); break;
+                                case 'monthly':
+                                    const origDay = sD;
+                                    current.setMonth(current.getMonth() + 1);
+                                    if (current.getDate() < origDay && current.getMonth() === (cM + 2) % 12) {
+                                        current.setDate(0);
+                                    }
+                                    break;
+                                case 'yearly': current.setFullYear(current.getFullYear() + 1); break;
+                                case 'custom':
+                                    current.setDate(current.getDate() + (updatedRec.customIntervalDays || 30));
+                                    break;
+                                default: current.setMonth(current.getMonth() + 1);
+                            }
+                            safety++;
+                        }
+
+                        console.log("[Backfill Debug Update] Generated", dueDates.length, "due dates");
+
+                        const recAmount = Number(updatedRec.amount);
+                        const missingDates = dueDates.filter(due => {
+                            const dStr = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
+                            const exists = [...expenses, ...incomes].some(tx => {
+                                const txDate = (tx.date || '').split('T')[0];
+                                const txAmount = Number(tx.amount);
+                                const amountMatch = Math.abs(txAmount - recAmount) < 0.01;
+                                const dateMatch = txDate === dStr;
+                                return dateMatch && amountMatch;
+                            });
+                            return !exists;
+                        });
+
+                        console.log(`[Backfill Debug Update] Total Expected: ${dueDates.length}, Missing: ${missingDates.length}`);
+
+                        if (missingDates.length > 0) {
+                            console.log("[Backfill Debug Update] Triggering popup request for", missingDates.length, "dates");
+                            setBackfillRequest({
+                                count: missingDates.length,
+                                dates: missingDates,
+                                recurring: updatedRec
+                            });
+                        } else {
+                            console.log("[Backfill Debug Update] All expected entries already exist in history.");
+                            toast.success("Transaction history is already up to date.");
+                        }
+                    } else {
+                        console.log("[Backfill Debug Update] Skip: start date is in the future or invalid type.");
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error updating recurring transaction:', error);
+            setRecurringTransactions(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
+            toast.warning('Updated locally');
+        }
+    };
+
+    const createRecurringTransaction = async (data: any) => {
+        try {
+            console.log("[Backfill Debug] createRecurringTransaction called with:", data);
+            const response = await api.createRecurring(userId, data);
+            if (response.success) {
+                const newRec = response.recurring;
+                setRecurringTransactions(prev => [...prev, newRec]);
+                toast.success('Recurring transaction created');
+
+                // Auto-Backfill Logic (Timezone-Safe Refactor)
+                if (newRec.startDate) {
+                    console.log("[Backfill Debug] Analysis starting for:", newRec.description || newRec.source);
+                    toast.info("Analyzing transaction history...");
+
+                    const localNow = new Date();
+                    const nowStr = `${localNow.getFullYear()}-${String(localNow.getMonth() + 1).padStart(2, '0')}-${String(localNow.getDate()).padStart(2, '0')}`;
+                    const startStr = newRec.startDate.split('T')[0];
+
+                    console.log("[Backfill Debug] nowStr:", nowStr, "startStr:", startStr);
+
+                    if (startStr <= nowStr && newRec.type) {
+                        const [sY, sM, sD] = startStr.split('-').map(Number);
+                        let current = new Date(sY, sM - 1, sD, 12, 0, 0);
+                        const dueDates: Date[] = [];
+                        let safety = 0;
+
+                        while (safety < 1200) {
+                            const cY = current.getFullYear();
+                            const cM = current.getMonth();
+                            const cD = current.getDate();
+                            const currentStr = `${cY}-${String(cM + 1).padStart(2, '0')}-${String(cD).padStart(2, '0')}`;
+                            if (currentStr > nowStr) break;
+                            dueDates.push(new Date(current));
+
+                            switch (newRec.frequency) {
+                                case 'daily': current.setDate(current.getDate() + 1); break;
+                                case 'weekly': current.setDate(current.getDate() + 7); break;
+                                case 'monthly':
+                                    const origDay = sD;
+                                    current.setMonth(current.getMonth() + 1);
+                                    if (current.getDate() < origDay && current.getMonth() === (cM + 2) % 12) {
+                                        current.setDate(0);
+                                    }
+                                    break;
+                                case 'yearly': current.setFullYear(current.getFullYear() + 1); break;
+                                case 'custom':
+                                    current.setDate(current.getDate() + (newRec.customIntervalDays || 30));
+                                    break;
+                                default: current.setMonth(current.getMonth() + 1);
+                            }
+                            safety++;
+                        }
+
+                        console.log("[Backfill Debug] Generated", dueDates.length, "due dates");
+
+                        const recAmount = Number(newRec.amount);
+                        const missingDates = dueDates.filter(due => {
+                            const dStr = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
+                            const exists = [...expenses, ...incomes].some(tx => {
+                                const txDate = (tx.date || '').split('T')[0];
+                                const txAmount = Number(tx.amount);
+                                const amountMatch = Math.abs(txAmount - recAmount) < 0.01;
+                                const dateMatch = txDate === dStr;
+                                return dateMatch && amountMatch;
+                            });
+                            return !exists;
+                        });
+
+                        console.log(`[Backfill Debug] Total Expected: ${dueDates.length}, Missing: ${missingDates.length}`);
+
+                        if (missingDates.length > 0) {
+                            console.log("[Backfill Debug] Triggering popup request for", missingDates.length, "dates");
+                            setBackfillRequest({
+                                count: missingDates.length,
+                                dates: missingDates,
+                                recurring: newRec
+                            });
+                        } else {
+                            console.log("[Backfill Debug] All expected entries already exist in history.");
+                            toast.success("Transaction history is already up to date.");
+                        }
+                    } else {
+                        console.log("[Backfill Debug] Skip: start date is in the future or invalid type.");
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error creating recurring transaction:', error);
+            const temp = { id: `temp_${Date.now()}`, ...data, createdAt: new Date().toISOString() };
+            setRecurringTransactions(prev => [...prev, temp]);
+            toast.warning('Offline: Created locally');
+        }
+    };
+
+    const executeBackfill = async () => {
+        if (!backfillRequest) return;
+        const { count, dates, recurring: newRec } = backfillRequest;
+        const toastId = toast.loading(`Generating ${count} entries...`);
+        const createdIncomes: any[] = [];
+        const createdExpenses: any[] = [];
+        let balanceChange = 0;
+        const targetAccount = accounts.find(a => a.id === newRec.accountId);
+
+        for (const due of dates) {
+            const dateStr = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
+            const txData = {
+                description: newRec.description,
+                source: newRec.source,
+                amount: newRec.amount,
+                category: newRec.category,
+                date: dateStr,
+                tags: [...(newRec.tags || []), 'auto-backfill'],
+                accountId: newRec.accountId,
+                isRecurring: true,
+                recurringId: newRec.id
+            };
+
+            try {
+                if (newRec.type === 'expense') {
+                    const res = await api.createExpense(userId, txData);
+                    if (res.success) {
+                        createdExpenses.push(res.expense);
+                        if (targetAccount) {
+                            if (targetAccount.type === 'credit_card') balanceChange += res.expense.amount;
+                            else balanceChange -= res.expense.amount;
+                        }
+                    }
+                } else {
+                    const res = await api.createIncome(userId, txData);
+                    if (res.success) {
+                        createdIncomes.push(res.income);
+                        if (targetAccount) {
+                            if (targetAccount.type === 'credit_card') balanceChange -= res.income.amount;
+                            else balanceChange += res.income.amount;
+                        }
+                    }
+                }
+                await new Promise(r => setTimeout(r, 50));
+            } catch (loopErr) {
+                console.error(`Failed to create backfill for ${dateStr}`, loopErr);
+            }
+        }
+
+        if (createdIncomes.length > 0) setIncomes(prev => [...prev, ...createdIncomes]);
+        if (createdExpenses.length > 0) setExpenses(prev => [...prev, ...createdExpenses]);
+
+        if (targetAccount && balanceChange !== 0) {
+            const newBalance = targetAccount.balance + balanceChange;
+            try {
+                await api.updateAccount(userId, targetAccount.id, { balance: newBalance });
+                setAccounts(prev => prev.map(a => a.id === targetAccount.id ? { ...a, balance: newBalance } : a));
+            } catch (accErr) {
+                console.error("Failed to update account balance after backfill", accErr);
+            }
+        }
+
+        toast.dismiss(toastId);
+        toast.success(`Success: ${count} entries generated`);
+        setBackfillRequest(null);
+    };
+
+    const deleteRecurringTransaction = async (id: string) => {
+        try {
+            const response = await api.deleteRecurring(userId, id);
+            if (response.success) {
+                setRecurringTransactions(prev => prev.filter(r => r.id !== id));
+                toast.success('Recurring transaction deleted');
+            }
+        } catch (error) {
+            console.error('Error deleting recurring transaction:', error);
+            setRecurringTransactions(prev => prev.filter(r => r.id !== id));
+            toast.warning('Deleted locally');
+        }
+    };
+
+    const processRecurringTransactions = async () => {
+        try {
+            const response = await api.processRecurring(userId);
+            if (response.success) {
+                toast.success(`Processed ${response.count} transactions`);
+                await fetchFromApi();
+            }
+        } catch (error) {
+            console.error('Error processing recurring transactions:', error);
+            toast.error('Failed to process recurring transactions');
+        }
+    };
+
     // --- Expenses ---
     const createExpense = async (data: any) => {
         try {
@@ -1167,18 +1454,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 }
 
                 if (data.isRecurring) {
-                    // Start Date Logic:
-                    // If creating a manual entry NOW, we want the *automation* to pick up from the NEXT cycle.
-                    // Otherwise, we get a duplicate (Manual Entry + Automated Entry on same day).
-                    const entryDate = new Date(data.date);
-                    let nextStartDate = new Date(entryDate);
-
-                    if (data.frequency === 'daily') nextStartDate.setDate(entryDate.getDate() + 1);
-                    else if (data.frequency === 'weekly') nextStartDate.setDate(entryDate.getDate() + 7);
-                    else if (data.frequency === 'monthly') nextStartDate.setMonth(entryDate.getMonth() + 1);
-                    else if (data.frequency === 'yearly') nextStartDate.setFullYear(entryDate.getFullYear() + 1);
-                    else if (data.frequency === 'custom') nextStartDate.setDate(entryDate.getDate() + (data.customIntervalDays || 28));
-
                     const recurringData = {
                         type: 'expense',
                         description: data.description,
@@ -1187,12 +1462,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                         accountId: data.accountId,
                         frequency: data.frequency || 'monthly',
                         customIntervalDays: data.customIntervalDays,
-                        startDate: nextStartDate.toISOString(), // Start from NEXT cycle
+                        startDate: data.date, // Use the SAME date to trigger backfill analysis for historical gap
                         endDate: data.endDate,
                         tags: data.tags
                     };
-                    await api.createRecurring(userId, recurringData);
-                    toast.success("Recurring expense created!");
+                    await createRecurringTransaction(recurringData);
                 } else {
                     toast.success("Expense added!");
 
@@ -1202,20 +1476,23 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                             id: `verify_sub_${response.expense.id}`,
                             type: 'insight',
                             priority: 'medium',
-                            category: 'insights',
-                            title: 'Subscription Detected?',
-                            message: `Is '${data.description}' a monthly subscription? Verify to automate tracking.`,
+                            category: 'transactions',
+                            title: 'Automate Payment?',
+                            message: `Detected '${data.description}' as a subscription. Add to cyclical routine?`,
                             timestamp: new Date(),
                             read: false,
                             action: {
                                 type: 'verify_subscription',
+                                label: 'Automate',
+                                status: 'pending',
                                 payload: {
+                                    id: response.expense.id,
                                     description: data.description,
                                     amount: data.amount,
-                                    category: 'Subscription', // Force category correction
-                                    accountId: data.accountId
-                                },
-                                status: 'pending'
+                                    category: data.category,
+                                    accountId: data.accountId,
+                                    date: data.date
+                                }
                             }
                         };
                         addNotifications(verifyNotif);
@@ -1262,7 +1539,36 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                             : newAccount.balance - amount;
                         await updateAccount(newAccount.id, { balance: newBalance });
                     }
+                    if (data.isRecurring) {
+                        if (oldExpense.recurringId) {
+                            await updateRecurringTransaction(oldExpense.recurringId, {
+                                amount: data.amount,
+                                description: data.description,
+                                category: data.category,
+                                tags: data.tags,
+                                frequency: data.frequency,
+                                customIntervalDays: data.customIntervalDays,
+                                endDate: data.endDate
+                            });
+                        } else {
+                            await createRecurringTransaction({
+                                type: 'expense',
+                                description: data.description,
+                                amount: data.amount,
+                                category: data.category,
+                                accountId: data.accountId,
+                                frequency: data.frequency || 'monthly',
+                                customIntervalDays: data.customIntervalDays,
+                                startDate: oldExpense.date, // Use original transaction date for historical analysis
+                                endDate: data.endDate,
+                                tags: data.tags
+                            });
+                        }
+                    } else if (oldExpense.recurringId) {
+                        await deleteRecurringTransaction(oldExpense.recurringId);
+                    }
                 }
+
                 setExpenses(prev => prev.map(e => e.id === id ? response.expense : e));
                 toast.success("Expense updated");
             }
@@ -1320,16 +1626,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 }
 
                 if (data.isRecurring) {
-                    // Start Date Logic: Defer to next cycle to avoid duplicates (Manual + Auto)
-                    const entryDate = new Date(data.date);
-                    let nextStartDate = new Date(entryDate);
-
-                    if (data.frequency === 'daily') nextStartDate.setDate(entryDate.getDate() + 1);
-                    else if (data.frequency === 'weekly') nextStartDate.setDate(entryDate.getDate() + 7);
-                    else if (data.frequency === 'monthly') nextStartDate.setMonth(entryDate.getMonth() + 1);
-                    else if (data.frequency === 'yearly') nextStartDate.setFullYear(entryDate.getFullYear() + 1);
-                    else if (data.frequency === 'custom') nextStartDate.setDate(entryDate.getDate() + (data.customIntervalDays || 28));
-
                     const recurringData = {
                         type: 'income',
                         source: data.source,
@@ -1337,12 +1633,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                         accountId: data.accountId,
                         frequency: data.frequency || 'monthly',
                         customIntervalDays: data.customIntervalDays,
-                        startDate: nextStartDate.toISOString(),
+                        startDate: data.date, // Use the SAME date to trigger backfill analysis for historical gap
                         endDate: data.endDate,
                         tags: data.tags
                     };
-                    await api.createRecurring(userId, recurringData);
-                    toast.success("Recurring income created!");
+                    await createRecurringTransaction(recurringData);
                 } else {
                     toast.success("Income added!");
                 }
@@ -1381,6 +1676,38 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                             ? newAccount.balance - newIncome.amount
                             : newAccount.balance + newIncome.amount;
                         await updateAccount(newAccount.id, { balance: newBalance });
+                    }
+
+                    if (data.isRecurring) {
+                        if (oldIncome.recurringId) {
+                            await updateRecurringTransaction(oldIncome.recurringId, {
+                                amount: data.amount,
+                                source: data.source,
+                                description: data.source,
+                                category: data.category,
+                                tags: data.tags,
+                                frequency: data.frequency,
+                                customIntervalDays: data.customIntervalDays,
+                                endDate: data.endDate
+                            });
+                        } else {
+                            await createRecurringTransaction({
+                                type: 'income',
+                                description: data.source,
+                                source: data.source,
+                                amount: data.amount,
+                                category: data.category,
+                                accountId: data.accountId,
+                                frequency: data.frequency || 'monthly',
+                                customIntervalDays: data.customIntervalDays,
+                                startDate: oldIncome.date,
+                                endDate: data.endDate,
+                                tags: data.tags
+                            });
+                        }
+                    } else if (oldIncome.recurringId) {
+                        // If it was recurring but now it's not, delete the recurring transaction
+                        await deleteRecurringTransaction(oldIncome.recurringId);
                     }
                 }
                 setIncomes(prev => prev.map(i => i.id === id ? response.income : i));
@@ -1440,6 +1767,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     });
                 }
 
+                if (data.isRecurring) {
+                    await createRecurringTransaction({
+                        type: 'expense', // Debts are currently tracked as simple ledger entries, using 'expense' type for recurring
+                        description: `Debt: ${data.personName} (${data.type})`,
+                        amount: data.amount,
+                        category: 'Debt',
+                        accountId: data.accountId,
+                        frequency: data.frequency || 'monthly',
+                        startDate: data.date,
+                        tags: [...(data.tags || []), 'debt']
+                    });
+                }
+
                 toast.success("Debt created");
             }
         } catch (e) {
@@ -1480,7 +1820,30 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                             : newAccount.balance + balanceChange;
                         await updateAccount(newAccount.id, { balance: newBalance });
                     }
+                    if (data.isRecurring) {
+                        // Logic to handle update or creation of recurring from updateDebt
+                        // For now, if it was already recurring, updateRecurringTransaction should be called.
+                        // If toggled ON, create new.
+                        if (oldDebt.recurringId) {
+                            await updateRecurringTransaction(oldDebt.recurringId, {
+                                amount: data.amount,
+                                description: `Debt: ${data.personName} (${data.type})`
+                            });
+                        } else {
+                            await createRecurringTransaction({
+                                type: 'expense',
+                                description: `Debt: ${data.personName} (${data.type})`,
+                                amount: data.amount,
+                                category: 'Debt',
+                                accountId: data.accountId,
+                                frequency: data.frequency || 'monthly',
+                                startDate: data.date,
+                                tags: [...(data.tags || []), 'debt']
+                            });
+                        }
+                    }
                 }
+
                 setDebts(prev => prev.map(d => d.id === id ? response.debt : d));
                 toast.success("Debt updated");
             }
@@ -2011,140 +2374,38 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
 
-    // --- Recurring ---
-    const updateRecurringTransaction = async (id: string, data: any) => {
-        try {
-            const response = await api.updateRecurring(userId, id, data);
-            if (response.success) {
-                const updatedRec = response.recurring as RecurringTransaction;
-                setRecurringTransactions(prev => prev.map(r => r.id === id ? updatedRec : r));
-                toast.success('Recurring transaction updated');
-
-                // Auto-Backfill Logic
-                if (updatedRec.startDate) {
-                    const start = new Date(updatedRec.startDate);
-                    const now = new Date();
-                    now.setHours(0, 0, 0, 0);
-                    start.setHours(0, 0, 0, 0);
-
-                    if (start <= now) {
-                        let current = new Date(start);
-                        const dueDates: Date[] = [];
-                        let safety = 0;
-
-                        while (current <= now && safety < 1000) {
-                            dueDates.push(new Date(current));
-                            if (updatedRec.frequency === 'daily') current.setDate(current.getDate() + 1);
-                            else if (updatedRec.frequency === 'weekly') current.setDate(current.getDate() + 7);
-                            else if (updatedRec.frequency === 'monthly') current.setMonth(current.getMonth() + 1);
-                            else if (updatedRec.frequency === 'yearly') current.setFullYear(current.getFullYear() + 1);
-                            else if (updatedRec.frequency === 'custom' && updatedRec.customIntervalDays) current.setDate(current.getDate() + updatedRec.customIntervalDays);
-                            else current.setMonth(current.getMonth() + 1);
-                            safety++;
-                        }
-
-                        let createdCount = 0;
-                        for (const due of dueDates) {
-                            const dateStr = due.toISOString().split('T')[0];
-                            let exists = false;
-
-                            // Check for existence (Simple Exact Match on Date provided by user)
-                            if (updatedRec.type === 'expense') {
-                                exists = expenses.some(e => e.description === updatedRec.description && e.amount === updatedRec.amount && e.date === dateStr);
-                            } else {
-                                exists = incomes.some(i => i.source === updatedRec.source && i.amount === updatedRec.amount && i.date === dateStr);
-                            }
-
-                            if (!exists) {
-                                const txData = {
-                                    description: updatedRec.description,
-                                    source: updatedRec.source,
-                                    amount: updatedRec.amount,
-                                    category: updatedRec.category,
-                                    date: dateStr,
-                                    tags: [...(updatedRec.tags || []), 'auto-backfill'],
-                                    accountId: updatedRec.accountId,
-                                    isRecurring: true
-                                };
-                                if (updatedRec.type === 'expense') await createExpense(txData);
-                                else await createIncome(txData);
-                                createdCount++;
-                            }
-                        }
-                        if (createdCount > 0) toast.success(`Backfilled ${createdCount} missing entries`);
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Error updating recurring transaction:', error);
-            setRecurringTransactions(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
-            toast.warning('Updated locally');
-        }
-    };
-
-    const createRecurringTransaction = async (data: any) => {
-        try {
-            const response = await api.createRecurring(userId, data);
-            if (response.success) {
-                setRecurringTransactions(prev => [...prev, response.recurring]);
-                toast.success('Recurring transaction created');
-            }
-        } catch (error) {
-            console.error('Error creating recurring transaction:', error);
-            // Local fallback
-            const temp = { id: `temp_${Date.now()}`, ...data, createdAt: new Date().toISOString() };
-            setRecurringTransactions(prev => [...prev, temp]);
-            toast.warning('Created locally');
-        }
-    };
-
-    const deleteRecurringTransaction = async (id: string) => {
-        try {
-            const response = await api.deleteRecurring(userId, id);
-            if (response.success) {
-                setRecurringTransactions(prev => prev.filter(r => r.id !== id));
-                toast.success('Recurring transaction deleted');
-            }
-        } catch (error) {
-            console.error('Error deleting recurring transaction:', error);
-            setRecurringTransactions(prev => prev.filter(r => r.id !== id));
-            toast.warning('Deleted locally');
-        }
-    };
-
-    const processRecurringTransactions = async () => {
-        try {
-            const response = await api.processRecurring(userId);
-            if (response.success) {
-                toast.success(`Processed ${response.count} transactions`);
-                // Refresh data to see new transactions
-                await fetchFromApi();
-            }
-        } catch (error) {
-            console.error('Error processing recurring transactions:', error);
-            toast.error('Failed to process recurring transactions');
-        }
-    };
 
     const clearAllData = async () => {
         try {
-            // Delete all recurring
-            for (const r of recurringTransactions) await api.deleteRecurring(userId, r.id);
-            // Delete all expenses
-            for (const e of expenses) await api.deleteExpense(userId, e.id);
-            // Delete all incomes
-            for (const i of incomes) await api.deleteIncome(userId, i.id);
-            // Delete all debts
-            for (const d of debts) await api.deleteDebt(userId, d.id);
-            // Delete all goals
-            for (const g of goals) await api.deleteGoal(userId, g.id);
-            // Delete all investments
-            for (const i of investments) await api.deleteInvestment(userId, i.id);
-            // Delete liabilities
-            for (const l of liabilities) await api.deleteLiability(userId, l.id);
+            const toastId = toast.loading('Initiating factory reset...');
+
+            // Helper to run deletions in parallel and ignore errors
+            const deleteGroup = async (items: any[], deleteFn: (uid: string, id: string) => Promise<any>) => {
+                const promises = items.map(item =>
+                    deleteFn(userId, item.id).catch(e => console.warn(`Failed to delete ${item.id}`, e))
+                );
+                await Promise.all(promises);
+            };
+
+            await Promise.all([
+                deleteGroup(recurringTransactions, api.deleteRecurring),
+                deleteGroup(expenses, api.deleteExpense),
+                deleteGroup(incomes, api.deleteIncome),
+                deleteGroup(debts, api.deleteDebt),
+                deleteGroup(goals, api.deleteGoal),
+                deleteGroup(investments, api.deleteInvestment),
+                deleteGroup(liabilities, api.deleteLiability)
+            ]);
+
+            // Reset All Accounts to Zero (Fix for "Ghost Balance" after wipe)
+            const accountResets = accounts.map(a =>
+                api.updateAccount(userId, a.id, { balance: 0 }).catch(e => console.warn(`Failed to reset ${a.name}`, e))
+            );
+            await Promise.all(accountResets);
 
             // Refetch to clear state
             await fetchFromApi();
+            toast.dismiss(toastId);
             toast.success("All data purged. Clean slate initialized.");
         } catch (e) {
             console.error(e);
@@ -2226,6 +2487,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 deleteInvestment,
                 createRecurringTransaction,
                 createRecurring: createRecurringTransaction, // Alias
+                updateRecurringTransaction,
                 deleteRecurringTransaction,
                 processRecurringTransactions,
                 setEmergencyFundAmount,
@@ -2239,6 +2501,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 deductFromAccount,
                 transferFunds,
                 clearAllData,
+
+                // Backfill Logic
+                backfillRequest,
+                setBackfillRequest,
+                executeBackfill
             }}
         >
             {children}

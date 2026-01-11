@@ -23,6 +23,7 @@ export interface Expense {
   tags: string[];
   accountId: string;
   isRecurring?: boolean;
+  recurringId?: string;
   endDate?: string;
   createdAt: string;
   // Credit Card Justification
@@ -40,6 +41,7 @@ export interface Income {
   tags: string[];
   accountId: string;
   isRecurring?: boolean;
+  recurringId?: string;
   endDate?: string;
   createdAt: string;
   isInternalTransfer?: boolean;
@@ -56,6 +58,7 @@ export interface Debt {
   accountId: string;
   dueDate?: string;
   interestRate?: number; // Added for Tier 0 Wealth Leaks
+  recurringId?: string;
   createdAt: string;
 }
 
@@ -265,11 +268,14 @@ export interface Notification {
   achievementId?: string;
   action?: {
     type: 'verify_subscription';
+    label?: string;
     payload: {
+      id?: string;
       description: string;
       amount: number;
       category: string;
       accountId: string;
+      date?: string;
     };
     status: 'pending' | 'completed' | 'dismissed';
   };

@@ -545,7 +545,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                   {infAmount && (
                     <div className="space-y-4">
                       <div className="h-32 w-full bg-black/20 rounded-2xl p-2 border border-white/5 overflow-hidden">
-                        <ResponsiveContainer width="99.9%" height="100%" minHeight={128} debounce={100}>
+                        <ResponsiveContainer width="100%" height="100%" minHeight={128} minWidth={100}>
                           <AreaChart data={projectionData}>
                             <defs>
                               <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">

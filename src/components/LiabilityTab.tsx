@@ -498,6 +498,8 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
                   placeholder="0.00"
                   required
                   autoComplete="off"
+                  allowDecimals={true}
+                  maxDecimals={2}
                 />
               </div>
               <div>

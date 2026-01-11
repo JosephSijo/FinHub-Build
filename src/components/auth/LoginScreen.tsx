@@ -64,7 +64,12 @@ export const LoginScreen = () => {
     }, [pin, phase]);
 
     useEffect(() => {
-        inputRef.current?.focus();
+        if (inputRef.current) {
+            inputRef.current.focus();
+            if (inputRef.current.type !== "hidden") {
+                inputRef.current.select();
+            }
+        }
     }, [phase]);
 
     const handleMobileSubmit = async () => {
@@ -198,7 +203,7 @@ export const LoginScreen = () => {
     };
 
     return (
-        <div className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden font-sans auth-mesh-gradient">
+        <div className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden font-sans auth-mesh-gradient z-[9999999]">
             <div className="absolute inset-0 z-0 bg-[url('/mesh-grid.svg')] opacity-20" />
 
             <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="absolute top-12 z-10 flex flex-col items-center gap-2">

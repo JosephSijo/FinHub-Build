@@ -266,8 +266,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const foundationMetrics = calculateFoundationMetrics(architectureContext);
-
   const safeDailyLimit = foundationMetrics.foundationLimit;
+
+  // 1.6 Missing Essentials Nudge Logic
+  const hasExpensesInLast3Days = reconciledExpenses.some(e => {
+    const diffTime = Math.abs(today.getTime() - new Date(e.date).getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 3;
+  });
+
+  const missingEssentials = !hasExpensesInLast3Days;
 
 
 
@@ -300,6 +308,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </motion.div>
         </div>
+      )}
+
+      {/* Missing Essentials Nudge */}
+      {missingEssentials && !isSampleMode && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="col-span-full mx-4 mb-4 p-5 bg-yellow-500/10 border border-yellow-500/20 rounded-3xl flex items-center gap-4 relative overflow-hidden"
+        >
+          <div className="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <Activity className="w-6 h-6 text-yellow-500 animate-pulse" />
+          </div>
+          <div>
+            <h4 className="text-xs font-black uppercase tracking-widest text-yellow-500 mb-1">Reality Check</h4>
+            <p className="text-sm text-slate-300 font-medium leading-tight">
+              Zero expenses recorded in 3+ days. Did you forget <span className="text-white font-bold">Groceries</span>, <span className="text-white font-bold">Transport</span>, or <span className="text-white font-bold">Dining</span>?
+            </p>
+          </div>
+        </motion.div>
       )}
 
       {/* AI Truth Banner */}

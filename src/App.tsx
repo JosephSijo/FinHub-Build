@@ -43,6 +43,16 @@ import { LoadingSprite } from "./components/ui/LoadingSprite";
 import { motion, AnimatePresence } from "framer-motion";
 import { AboutUsPopup } from "./components/overlays/AboutUsPopup";
 import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Lazy Load Heavy Components
 const Dashboard = lazy(() => import("./components/Dashboard").then(module => ({ default: module.Dashboard })));
@@ -99,10 +109,22 @@ export default function App() {
     authStatus,
     isOffline,
     authMessage,
+    // Backfill
+    backfillRequest,
+    setBackfillRequest,
+    executeBackfill,
     createRecurring
   } = useFinance();
 
   const [view, setView] = useState<View>("dashboard");
+
+  useEffect(() => {
+    if (backfillRequest) {
+      console.log("[App Debug] backfillRequest changed:", backfillRequest);
+    } else {
+      console.log("[App Debug] backfillRequest is null");
+    }
+  }, [backfillRequest]);
 
   const [isTransactionFormOpen, setIsTransactionFormOpen] = useState(false);
   const [transactionFormType, setTransactionFormType] = useState<TransactionType>("expense");
@@ -661,7 +683,7 @@ export default function App() {
 
                   // Handle Subscription Verification Action
                   if (notification.action && notification.action.type === 'verify_subscription' && notification.action.status === 'completed') {
-                    const { description, amount, category, accountId } = notification.action.payload;
+                    const { description, amount, category, accountId, date } = notification.action.payload;
                     try {
                       await createRecurring({
                         type: 'expense',
@@ -670,7 +692,7 @@ export default function App() {
                         category,
                         accountId,
                         frequency: 'monthly',
-                        startDate: new Date().toISOString().split('T')[0],
+                        startDate: date || new Date().toISOString().split('T')[0],
                         tags: ['auto-verified', 'subscription']
                       });
                       toast.success(`Verified: ${description} is now a recurring subscription.`);
@@ -742,25 +764,62 @@ export default function App() {
                 isOpen={isAboutUsOpen}
                 onClose={() => setIsAboutUsOpen(false)}
               />
-
-              <Toaster
-                position="bottom-center"
-                richColors
-                theme="dark"
-                toastOptions={{
-                  style: {
-                    background: '#1C1C1E',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    color: '#FFFFFF',
-                    borderRadius: '20px',
-                    backdropFilter: 'none',
-                  },
-                }}
-              />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Backfill Confirmation Dialog - Root Level */}
+      {backfillRequest && (
+        <AlertDialog open={true} onOpenChange={() => setBackfillRequest(null)}>
+          <AlertDialogContent className="bg-slate-900/95 border-white/10 text-slate-100 z-[99999999] backdrop-blur-xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-white text-xl font-bold font-sans">Backfill Configuration Required</AlertDialogTitle>
+              <AlertDialogDescription className="text-slate-400 text-base">
+                System detected <span className="text-emerald-400 font-bold">{backfillRequest.count} missing entries</span> in the transaction history
+                from <span className="text-white font-medium">{backfillRequest.dates[0]?.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                to <span className="text-white font-medium">{backfillRequest.dates[backfillRequest.dates.length - 1]?.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>.
+                <br /><br />
+                Would you like to auto-populate the ledger for this period?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-4">
+              <AlertDialogCancel onClick={() => setBackfillRequest(null)} className="bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl h-12 uppercase tracking-wider text-xs font-bold">Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => { executeBackfill(); setBackfillRequest(null); }} className="bg-indigo-600 hover:bg-indigo-500 text-white border-0 font-bold rounded-xl h-12 px-8 shadow-lg shadow-indigo-600/20">
+                Generate Ledger
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      <Toaster
+        position="bottom-center"
+        richColors
+        theme="dark"
+        toastOptions={{
+          style: {
+            background: '#1C1C1E',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            color: '#FFFFFF',
+            borderRadius: '20px',
+            backdropFilter: 'none',
+            zIndex: 999999,
+          },
+        }}
+        className="!z-[999999]"
+      />
+
+      {/* Visual Debug Overlay for Backfill */}
+      <div className="fixed top-2 right-2 z-[999999999] bg-black/80 text-white p-2 rounded text-[10px] border border-white/20 pointer-events-none">
+        <div className="font-bold opacity-50 mb-1">[APP DEBUG]</div>
+        <div>Backfill: {backfillRequest ? `FOUND(${backfillRequest.count})` : 'null'}</div>
+        {backfillRequest && (
+          <div className="text-[8px] text-green-400 mt-1">
+            {backfillRequest.recurring.description || backfillRequest.recurring.source}
+          </div>
+        )}
+      </div>
     </>
   );
 }

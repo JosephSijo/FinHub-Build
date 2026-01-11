@@ -85,7 +85,7 @@ export function NotificationsPanel({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col h-dvh max-h-dvh bg-black border-white/5 text-slate-100 overflow-hidden">
+      <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col h-dvh max-h-dvh bg-black border-white/5 text-slate-100 overflow-hidden z-[99999]">
         <SheetTitle className="sr-only">Notifications</SheetTitle>
         <SheetDescription className="sr-only">Protocol Intelligence Pulse</SheetDescription>
         {/* Modernized Panel Header */}
