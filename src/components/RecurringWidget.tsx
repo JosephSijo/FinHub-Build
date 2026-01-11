@@ -35,13 +35,14 @@ export function RecurringWidget({ userId, liabilities = [], currency, onNavigate
     }
   };
 
-  const getMonthlyAmount = (amount: number, frequency: string) => {
-    switch (frequency) {
-      case 'daily': return amount * 30;
-      case 'weekly': return amount * 4;
-      case 'monthly': return amount;
-      case 'yearly': return amount / 12;
-      default: return amount;
+  const getMonthlyAmount = (t: RecurringTransaction) => {
+    switch (t.frequency) {
+      case 'daily': return t.amount * 30;
+      case 'weekly': return t.amount * 4;
+      case 'monthly': return t.amount;
+      case 'yearly': return t.amount / 12;
+      case 'custom': return t.amount * (30 / (t.customIntervalDays || 28));
+      default: return t.amount;
     }
   };
 
@@ -49,11 +50,11 @@ export function RecurringWidget({ userId, liabilities = [], currency, onNavigate
 
   const totalMonthlyExpenses = recurring
     .filter(r => r.type === 'expense')
-    .reduce((sum, r) => sum + getMonthlyAmount(r.amount, r.frequency), 0) + totalLiabilityEMI;
+    .reduce((sum, r) => sum + getMonthlyAmount(r), 0) + totalLiabilityEMI;
 
   const totalMonthlyIncome = recurring
     .filter(r => r.type === 'income')
-    .reduce((sum, r) => sum + getMonthlyAmount(r.amount, r.frequency), 0);
+    .reduce((sum, r) => sum + getMonthlyAmount(r), 0);
 
   const subscriptions = recurring.filter(r =>
     r.type === 'expense' &&

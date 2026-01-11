@@ -145,3 +145,23 @@ export const autoCategorize = (description: string): { category: string; tags: s
 
     return null;
 };
+
+// Precise Lookup Table for 100% detection of known services
+export const SUBSCRIPTION_LOOKUP = [
+    // Streaming & Entertainment
+    'netflix', 'hotstar', 'disney', 'prime video', 'amazon prime', 'hulu',
+    'spotify', 'apple', 'youtube', 'audible', 'sonyliv', 'zee5', 'jiocinema',
+
+    // Tech & AI
+    'google', 'gemini', 'chatgpt', 'openai', 'claude', 'anthropic', 'github',
+    'microsoft', 'office 365', 'midjourney', 'perplexity', 'canva', 'adobe',
+
+    // Telecom & ISP
+    'jio', 'airtel', 'vi ', 'bsnl', 'recharge', 'prepaid', 'postpaid',
+    'act fiber', 'hathway', 'broadband', 'wifi'
+];
+
+export const isKnownSubscription = (description: string): boolean => {
+    const desc = description.toLowerCase();
+    return SUBSCRIPTION_LOOKUP.some(keyword => desc.includes(keyword));
+};

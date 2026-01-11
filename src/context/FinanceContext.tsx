@@ -368,14 +368,36 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                         const daysUntilDue = (start.getDay() - today.getDay() + 7) % 7;
                         nextDue = new Date(today.getTime() + daysUntilDue * 24 * 60 * 60 * 1000);
                         if (nextDue < today) nextDue.setDate(nextDue.getDate() + 7);
+                    } else if (r.frequency === 'custom') {
+                        // Custom Cycle Logic (e.g. 28 days)
+                        const interval = r.customIntervalDays || 28; // Default to 28 if not set
+                        const timeDiff = today.getTime() - start.getTime();
+                        const daysSinceStart = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+                        // Calculate how many cycles have passed
+                        // const cyclesPassed = Math.floor(daysSinceStart / interval);
+                        const daysIntoCurrentCycle = daysSinceStart % interval;
+
+                        // Next due is end of current cycle
+                        const daysRemaining = interval - daysIntoCurrentCycle;
+                        nextDue = new Date(today.getTime() + (daysRemaining * 24 * 60 * 60 * 1000));
+
+                        // Special case: If due today or passed but assumed future for strict calculation
+                        if (daysRemaining <= 0) {
+                            nextDue = new Date(today.getTime() + (interval * 24 * 60 * 60 * 1000));
+                        }
                     } else {
                         // Simplification for daily/yearly
                         return;
                     }
 
                     const diffDays = Math.ceil((nextDue.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                    if (diffDays <= 7) {
-                        upcomingDues.push({ name: r.description || 'Subscription', amount: r.amount, dueDate: nextDue, type: 'Bill' });
+
+                    // Logic: Show regular bills 7 days prior, but Custom/Recharges specifically 2 days prior as requested
+                    const alertWindow = r.frequency === 'custom' ? 2 : 7;
+
+                    if (diffDays <= alertWindow && diffDays >= 0) {
+                        upcomingDues.push({ name: r.description || 'Subscription', amount: r.amount, dueDate: nextDue, type: r.frequency === 'custom' ? 'Recharge' : 'Bill' });
                     }
                 }
             });

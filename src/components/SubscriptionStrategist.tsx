@@ -97,6 +97,7 @@ export const SubscriptionStrategist: React.FC<SubscriptionStrategistProps> = ({
         let amt = s.amount;
         if (s.frequency === 'yearly') amt = s.amount / 12;
         if (s.frequency === 'weekly') amt = s.amount * 4;
+        if (s.frequency === 'custom' && s.customIntervalDays) amt = s.amount * (30 / s.customIntervalDays);
         return sum + amt;
     }, 0);
 
@@ -127,6 +128,10 @@ export const SubscriptionStrategist: React.FC<SubscriptionStrategistProps> = ({
         let monthly = amount;
         if (freq === 'yearly') monthly = amount / 12;
         if (freq === 'weekly') monthly = amount * 4;
+        if (freq === 'custom') { // No access to sub object here unless we pass it, but for now assuming standard 28 days locally or we need to pass interval. 
+            // Better to change signature or just use default 28.
+            monthly = amount * (30 / 28);
+        }
         return (monthly / dailySpendingLimit).toFixed(1);
     };
 

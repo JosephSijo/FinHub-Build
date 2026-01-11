@@ -206,7 +206,8 @@ export interface RecurringTransaction {
   amount: number;
   category?: string;
   accountId: string;
-  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+  customIntervalDays?: number; // For cycles like 28 days
   startDate: string;
   endDate?: string;
   tags: string[];
