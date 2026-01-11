@@ -143,13 +143,13 @@ export const SubscriptionStrategist: React.FC<SubscriptionStrategistProps> = ({
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                         <Clock className="w-24 h-24" />
                     </div>
-                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">Active Stack Impact</h3>
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">Total Freedom Tax</h3>
                     <div className="flex items-end gap-2 mb-2">
-                        <span className="text-4xl font-black text-white">{totalFreedomDays.toFixed(1)}</span>
+                        <span className="text-4xl font-black text-rose-400">{totalFreedomDays.toFixed(1)}</span>
                         <span className="text-lg font-bold text-slate-500 mb-1">Days/Month</span>
                     </div>
                     <p className="text-xs text-slate-400">
-                        You work <span className="text-white font-bold">{totalFreedomDays.toFixed(1)} days</span> just to pay for these subscriptions.
+                        The "Freedom Tax" you pay with your life time.
                     </p>
                 </Card>
 
@@ -180,13 +180,15 @@ export const SubscriptionStrategist: React.FC<SubscriptionStrategistProps> = ({
                         const freedomCost = getFreedomCost(sub.amount, sub.frequency);
                         const isGhost = sub.strategyCategory === 'Ghost';
                         const isVital = sub.strategyCategory === 'Vital';
+                        const isAsset = sub.strategyCategory === 'Asset';
 
                         return (
                             <Card
                                 key={sub.id}
-                                className={`p-4 border flex items-center justify-between group transition-all ${isGhost ? 'bg-rose-950/20 border-rose-500/20 hover:bg-rose-900/20' :
-                                    isVital ? 'bg-emerald-950/20 border-emerald-500/20' :
-                                        'bg-slate-900/40 border-white/5'
+                                className={`p-4 border flex items-center justify-between group transition-all overflow-hidden relative ${isGhost ? 'mesh-purple border-purple-500/20 hover:border-purple-500/40' :
+                                    isVital ? 'mesh-teal border-teal-500/20' :
+                                        isAsset ? 'mesh-teal border-teal-500/20' :
+                                            'mesh-purple border-purple-500/20' // Defaults to Lifestyle/Purple
                                     }`}
                             >
                                 <div className="flex items-center gap-4">
@@ -208,7 +210,7 @@ export const SubscriptionStrategist: React.FC<SubscriptionStrategistProps> = ({
                                                 {sub.strategyCategory}
                                             </span>
                                             <span className="text-[10px] text-slate-500 font-medium">
-                                                Costs {freedomCost} freedom days/mo
+                                                Freedom Tax: {freedomCost} days
                                             </span>
                                         </div>
                                     </div>
