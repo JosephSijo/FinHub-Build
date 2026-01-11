@@ -75,6 +75,8 @@ export interface Goal {
   status?: 'active' | 'completed' | 'leaking'; // Defaults to 'active'
   monthly_contribution?: number;
   is_discretionary?: boolean;
+  startDate?: string;
+  accountId?: string;
   createdAt: string;
 }
 
@@ -214,6 +216,9 @@ export interface RecurringTransaction {
   startDate: string;
   endDate?: string;
   tags: string[];
+  goalId?: string;
+  investmentId?: string;
+  liabilityId?: string;
   createdAt: string;
 }
 

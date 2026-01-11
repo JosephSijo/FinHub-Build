@@ -1171,6 +1171,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         let balanceChange = 0;
         const targetAccount = accounts.find(a => a.id === newRec.accountId);
 
+        const goalChanges: Record<string, number> = {};
+
         for (const due of dates) {
             const dateStr = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
             const txData = {
@@ -1194,6 +1196,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                             if (targetAccount.type === 'credit_card') balanceChange += res.expense.amount;
                             else balanceChange -= res.expense.amount;
                         }
+
+                        // Track Goal changes for batch update
+                        if (newRec.goalId) {
+                            goalChanges[newRec.goalId] = (goalChanges[newRec.goalId] || 0) + res.expense.amount;
+                        }
                     }
                 } else {
                     const res = await api.createIncome(userId, txData);
@@ -1213,6 +1220,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         if (createdIncomes.length > 0) setIncomes(prev => [...prev, ...createdIncomes]);
         if (createdExpenses.length > 0) setExpenses(prev => [...prev, ...createdExpenses]);
+
+        // Batch update Goals
+        for (const [gid, change] of Object.entries(goalChanges)) {
+            const goal = goals.find(g => g.id === gid);
+            if (goal) {
+                const newAmount = goal.currentAmount + change;
+                try {
+                    await api.updateGoal(userId, gid, { currentAmount: newAmount });
+                    setGoals(prev => prev.map(g => g.id === gid ? { ...g, currentAmount: newAmount } : g));
+                } catch (gErr) {
+                    console.error("Failed to update goal after backfill", gErr);
+                }
+            }
+        }
 
         if (targetAccount && balanceChange !== 0) {
             const newBalance = targetAccount.balance + balanceChange;
@@ -2051,6 +2072,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             const response = await api.createGoal(userId, data);
             if (response.success) {
                 setGoals(prev => [...prev, response.goal]);
+
+                if (data.monthly_contribution > 0) {
+                    await createRecurringTransaction({
+                        type: 'expense',
+                        description: `Goal Contribution: ${response.goal.name}`,
+                        amount: data.monthly_contribution,
+                        category: 'Transfer',
+                        accountId: data.accountId || 'none',
+                        frequency: 'monthly',
+                        startDate: data.startDate || response.goal.createdAt.split('T')[0],
+                        tags: ['goal', 'contribution', response.goal.name.toLowerCase()],
+                        goalId: response.goal.id
+                    });
+                }
+
                 toast.success("Goal created");
             }
         } catch (e) {
@@ -2064,6 +2100,34 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
             const response = await api.updateGoal(userId, id, data);
             if (response.success) {
+                const oldGoal = goals.find(g => g.id === id);
+                if (oldGoal) {
+                    if (response.goal.monthly_contribution > 0) {
+                        const existingRec = recurringTransactions.find(rt => rt.goalId === id);
+                        if (existingRec) {
+                            await updateRecurringTransaction(existingRec.id, {
+                                amount: response.goal.monthly_contribution,
+                                description: `Goal Contribution: ${response.goal.name}`
+                            });
+                        } else {
+                            await createRecurringTransaction({
+                                type: 'expense',
+                                description: `Goal Contribution: ${response.goal.name}`,
+                                amount: response.goal.monthly_contribution,
+                                category: 'Transfer',
+                                accountId: response.goal.accountId || 'none',
+                                frequency: 'monthly',
+                                startDate: response.goal.startDate || oldGoal.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+                                tags: ['goal', 'contribution', response.goal.name.toLowerCase()],
+                                goalId: response.goal.id
+                            });
+                        }
+                    } else if (oldGoal.monthly_contribution > 0) {
+                        const existingRec = recurringTransactions.find(rt => rt.goalId === id);
+                        if (existingRec) await deleteRecurringTransaction(existingRec.id);
+                    }
+                }
+
                 setGoals(prev => prev.map(g => g.id === id ? response.goal : g));
                 if (response.goal.currentAmount >= response.goal.targetAmount) {
                     toast.success(`🎉 Goal "${response.goal.name}" completed!`);
@@ -2139,6 +2203,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (response.success) {
                 setLiabilities(prev => [...prev, response.liability]);
                 toast.success("Liability created");
+
+                if (response.liability.emiAmount > 0) {
+                    await createRecurringTransaction({
+                        type: 'expense',
+                        description: `EMI: ${response.liability.name}`,
+                        amount: response.liability.emiAmount,
+                        category: 'EMI',
+                        accountId: response.liability.accountId || 'none',
+                        frequency: 'monthly',
+                        startDate: response.liability.startDate,
+                        tags: ['emi', 'liability', response.liability.name.toLowerCase()],
+                        liabilityId: response.liability.id
+                    });
+                }
             }
         } catch (e) {
             const temp = {
@@ -2160,6 +2238,33 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
             const response = await api.updateLiability(userId, id, data);
             if (response.success) {
+                const oldLiability = liabilities.find(l => l.id === id);
+                if (oldLiability) {
+                    if (response.liability.emiAmount > 0) {
+                        const existingRec = recurringTransactions.find(rt => rt.liabilityId === id);
+                        if (existingRec) {
+                            await updateRecurringTransaction(existingRec.id, {
+                                amount: response.liability.emiAmount,
+                                description: `EMI: ${response.liability.name}`
+                            });
+                        } else {
+                            await createRecurringTransaction({
+                                type: 'expense',
+                                description: `EMI: ${response.liability.name}`,
+                                amount: response.liability.emiAmount,
+                                category: 'EMI',
+                                accountId: response.liability.accountId || 'none',
+                                frequency: 'monthly',
+                                startDate: response.liability.startDate,
+                                tags: ['emi', 'liability', response.liability.name.toLowerCase()],
+                                liabilityId: response.liability.id
+                            });
+                        }
+                    } else if (oldLiability.emiAmount > 0) {
+                        const existingRec = recurringTransactions.find(rt => rt.liabilityId === id);
+                        if (existingRec) await deleteRecurringTransaction(existingRec.id);
+                    }
+                }
                 setLiabilities(prev => prev.map(l => l.id === id ? response.liability : l));
                 toast.success("Liability updated");
             }
@@ -2214,6 +2319,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                         }
                     }
                 }
+
+                // SIP Recurring Support
+                if (response.investment.type === 'sip') {
+                    await createRecurringTransaction({
+                        type: 'expense',
+                        description: `SIP: ${response.investment.symbol} (${response.investment.name})`,
+                        amount: response.investment.buyPrice * response.investment.quantity,
+                        category: 'Investment',
+                        accountId: sourceAccountId || 'none',
+                        frequency: 'monthly',
+                        startDate: response.investment.purchaseDate,
+                        tags: ['sip', 'investment', response.investment.symbol.toLowerCase()],
+                        investmentId: response.investment.id
+                    });
+                }
+
                 toast.success("Investment created");
             }
         } catch (e) {
@@ -2227,7 +2348,34 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
             const response = await api.updateInvestment(userId, id, data);
             if (response.success) {
-                setInvestments(prev => prev.map(i => i.id === id ? response.investment : i));
+                const oldInv = investments.find(inv => inv.id === id);
+                if (oldInv) {
+                    if (response.investment.type === 'sip') {
+                        const existingRec = recurringTransactions.find(rt => rt.investmentId === id);
+                        if (existingRec) {
+                            await updateRecurringTransaction(existingRec.id, {
+                                amount: response.investment.buyPrice * response.investment.quantity,
+                                description: `SIP: ${response.investment.symbol} (${response.investment.name})`
+                            });
+                        } else {
+                            await createRecurringTransaction({
+                                type: 'expense',
+                                description: `SIP: ${response.investment.symbol} (${response.investment.name})`,
+                                amount: response.investment.buyPrice * response.investment.quantity,
+                                category: 'Investment',
+                                accountId: response.investment.accountId || 'none',
+                                frequency: 'monthly',
+                                startDate: response.investment.purchaseDate,
+                                tags: ['sip', 'investment', response.investment.symbol.toLowerCase()],
+                                investmentId: response.investment.id
+                            });
+                        }
+                    } else if (oldInv.type === 'sip') {
+                        const existingRec = recurringTransactions.find(rt => rt.investmentId === id);
+                        if (existingRec) await deleteRecurringTransaction(existingRec.id);
+                    }
+                }
+                setInvestments(prev => prev.map(inv => inv.id === id ? response.investment : inv));
                 toast.success("Investment updated");
             }
         } catch (e) {

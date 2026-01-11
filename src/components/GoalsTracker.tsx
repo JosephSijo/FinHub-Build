@@ -46,7 +46,10 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
     targetAmount: 0,
     currentAmount: 0,
     targetDate: '',
-    emoji: '🎯'
+    emoji: '🎯',
+    monthlyContribution: 0,
+    startDate: new Date().toISOString().split('T')[0],
+    accountId: accounts.length > 0 ? accounts[0].id : ''
   });
   const [fundsData, setFundsData] = useState({
     amount: '',
@@ -64,7 +67,10 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
         targetAmount: goal.targetAmount,
         currentAmount: goal.currentAmount,
         targetDate: goal.targetDate || '',
-        emoji: goal.emoji || '🎯'
+        emoji: goal.emoji || '🎯',
+        monthlyContribution: goal.monthly_contribution || 0,
+        startDate: goal.startDate || (goal.createdAt ? goal.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]),
+        accountId: accounts.length > 0 ? accounts[0].id : ''
       });
     } else {
       setEditingGoal(null);
@@ -73,7 +79,10 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
         targetAmount: 0,
         currentAmount: 0,
         targetDate: '',
-        emoji: '🎯'
+        emoji: '🎯',
+        monthlyContribution: 0,
+        startDate: new Date().toISOString().split('T')[0],
+        accountId: accounts.length > 0 ? accounts[0].id : ''
       });
     }
     setIsDialogOpen(true);
@@ -87,7 +96,10 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
       targetAmount: formData.targetAmount,
       currentAmount: formData.currentAmount,
       targetDate: formData.targetDate,
-      emoji: formData.emoji
+      emoji: formData.emoji,
+      monthly_contribution: formData.monthlyContribution,
+      startDate: formData.startDate,
+      accountId: formData.accountId
     };
 
     if (editingGoal) {
@@ -342,6 +354,59 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
                 className="bg-black border-white/5 sq-md h-14 text-white"
                 required
               />
+            </div>
+
+            <div className="pt-4 border-t border-white/5">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#34D399] mb-4">Automation Node (Optional)</h4>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="monthlyContribution" className="text-label text-[10px] mb-3 block">Monthly Contribution</Label>
+                  <NumberInput
+                    id="monthlyContribution"
+                    name="monthlyContribution"
+                    step="0.01"
+                    value={formData.monthlyContribution}
+                    onChange={(val: string) => setFormData({ ...formData, monthlyContribution: parseFloat(val) || 0 })}
+                    className="bg-black border-white/5 sq-md h-14 text-white"
+                    placeholder="0.00"
+                    autoComplete="off"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="startDate" className="text-label text-[10px] mb-3 block">Contribution Start Date</Label>
+                  <Input
+                    id="startDate"
+                    name="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    className="bg-black border-white/5 sq-md h-14 text-white"
+                  />
+                </div>
+              </div>
+
+              {accounts.length > 0 && (
+                <div className="mt-4">
+                  <Label htmlFor="goal-account" className="text-label text-[10px] mb-3 block">Source Liquidity Node</Label>
+                  <Select
+                    value={formData.accountId}
+                    onValueChange={(value: string) => setFormData({ ...formData, accountId: value })}
+                  >
+                    <SelectTrigger id="goal-account" className="bg-black border-white/5 sq-md h-14 text-white">
+                      <SelectValue placeholder="Choose account" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black border-white/5 text-white">
+                      {accounts.map(account => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.icon} {account.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 pt-6">
