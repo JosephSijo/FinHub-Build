@@ -693,7 +693,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             </div>
 
             {formData.isRecurring && (
-              <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div className="space-y-2">
                   <Label htmlFor="transaction-frequency" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Period</Label>
                   <Select value={formData.frequency} onValueChange={(value: any) => setFormData({ ...formData, frequency: value })}>

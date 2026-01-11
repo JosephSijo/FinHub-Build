@@ -382,7 +382,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="stack-body relative z-10">
           <div className="dotted-divider opacity-50 mb-6" />
 
-          <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <div className="flex items-center gap-1.5 mb-1.5 opacity-60">
                 <p className="text-label text-[10px] font-black uppercase">Daily Spend</p>
@@ -653,7 +653,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 isOpen={activeCard === 'flow-speed'}
                 onToggle={() => toggleCard('flow-speed')}
               >
-                <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-slate-900/50 p-4 sq-md border border-white/5">
                     <span className="text-[8px] text-slate-500 uppercase block mb-1">Gross Income (Est)</span>
                     <div className="text-emerald-400 font-bold tabular-nums font-mono">
@@ -687,7 +687,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 isOpen={activeCard === 'spending-flow'}
                 onToggle={() => toggleCard('spending-flow')}
               >
-                <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 bg-slate-800/50 rounded-xl border border-white/5">
                     <span className="text-[8px] text-slate-500 uppercase block mb-1">Daily Spend Avg</span>
                     <span className="text-sm font-bold tabular-nums">{formatCurrency(Math.floor(grossBurn / 30), currency)}</span>

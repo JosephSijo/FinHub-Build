@@ -422,7 +422,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Compare Options</span>
                             </div>
 
-                            <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="group p-4 bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-help">
                                     <p className="text-[9px] text-slate-500 font-black uppercase mb-2">Option A: Acceleration</p>
                                     <p className="text-sm font-bold text-white">Save {analysis.tradeOff.timeSavedMonths} Months</p>
@@ -628,7 +628,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                             </motion.div>
                         )}
 
-                        <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
                             {/* 1. Health Score (Radar) - SAFE ZONE */}
                             <div className="segmented-stack bg-slate-900 border border-white/5 relative overflow-hidden">
@@ -644,7 +644,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                     </div>
                                 </div>
                                 <div className="stack-body px-0 pt-8 pb-4 h-[250px] w-full relative">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <RadarChart cx="50%" cy="50%" outerRadius="70%" data={healthData}>
                                             <PolarGrid stroke="rgba(255,255,255,0.1)" />
                                             <PolarAngleAxis dataKey="subject" tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 900 }} />
@@ -674,7 +674,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                     <CircleDot className="text-teal-500/50 w-4 h-4" />
                                 </div>
                                 <div className="stack-body px-0 h-[240px] w-full relative">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <PieChart>
                                             <Pie
                                                 data={spendingData}
@@ -721,7 +721,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                     <h3 className="text-slate-400 text-[9px] font-bold uppercase tracking-[0.2em]">Action Zone: Burn Trend</h3>
                                 </div>
                                 <div className="stack-body px-0 pb-0 h-[200px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <AreaChart data={trendData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                                             <defs>
                                                 <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
@@ -775,7 +775,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                     </div>
                                 </div>
                                 <div className="stack-body px-0 pb-0 h-[200px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <BarChart data={flowData} barGap={8} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
                                             <XAxis
                                                 dataKey="month"
@@ -884,7 +884,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                         <div className="stack-body py-10">
                                             <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-8 items-center">
                                                 <div className="space-y-6">
-                                                    <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-4">
+                                                    <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-4">
                                                         <div className="p-4 bg-slate-900 border border-white/5 rounded-xl">
                                                             <span className="text-[8px] text-slate-500 uppercase font-black block mb-1">Monthly Inflow</span>
                                                             <span className="text-sm font-bold text-emerald-400 font-numeric">{formatFinancialValue(totalIncome, currency)}</span>

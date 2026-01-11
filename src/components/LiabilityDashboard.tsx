@@ -289,7 +289,7 @@ export const LiabilityDashboard = React.memo(({ liabilities, currency, totalMont
                     </div>
 
                     <TabsContent value="overview" className="space-y-4 mt-0">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                         <div className="bg-slate-800/40 border border-white/5 p-3 rounded-2xl">
                           <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total Outstanding</p>
                           <p className="text-sm font-bold text-rose-400 mt-0.5 tabular-nums line-clamp-1">
@@ -577,7 +577,7 @@ export const LiabilityDashboard = React.memo(({ liabilities, currency, totalMont
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
                               <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Current EMI (Selection)</p>
                               <p className="text-xl font-bold text-slate-300">{formatCurrency(currentSelectedEMI, currency)}</p>

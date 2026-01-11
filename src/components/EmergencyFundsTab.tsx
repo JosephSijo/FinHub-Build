@@ -530,7 +530,7 @@ export function EmergencyFundsTab({ currency, expenses = [], accounts = [], onEm
                       </Button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <p className="text-[9px] font-black uppercase tracking-widest text-slate-600 mb-1">Max Coverage</p>
                       <p className="text-base font-black text-emerald-400 tabular-nums">
@@ -635,7 +635,7 @@ export function EmergencyFundsTab({ currency, expenses = [], accounts = [], onEm
                       </Button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <p className="text-[9px] font-black uppercase tracking-widest text-slate-600 mb-1">Face Value</p>
                       <p className="text-base font-black text-purple-400 tabular-nums">

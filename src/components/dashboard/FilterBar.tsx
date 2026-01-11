@@ -14,7 +14,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     const filters = ['This Month', 'Last Month', 'All Time'];
 
     return (
-        <div className="col-span-full flex gap-3 overflow-x-auto pb-4 no-scrollbar">
+        <div className="col-span-full flex flex-wrap gap-3 pb-4 no-scrollbar">
             {filters.map((filter) => (
                 <button
                     key={filter}

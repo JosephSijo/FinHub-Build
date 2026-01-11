@@ -44,7 +44,7 @@ export function PortfolioAllocationChart({ investments, currency }: PortfolioAll
             <div className="relative z-10">
                 <h3 className="text-white font-black text-xs uppercase tracking-[0.2em] mb-6 px-2">Allocation Matrix</h3>
                 <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                         <PieChart>
                             <Pie
                                 data={allocationData}

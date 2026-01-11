@@ -118,13 +118,7 @@ export default function App() {
 
   const [view, setView] = useState<View>("dashboard");
 
-  useEffect(() => {
-    if (backfillRequest) {
-      console.log("[App Debug] backfillRequest changed:", backfillRequest);
-    } else {
-      console.log("[App Debug] backfillRequest is null");
-    }
-  }, [backfillRequest]);
+
 
   const [isTransactionFormOpen, setIsTransactionFormOpen] = useState(false);
   const [transactionFormType, setTransactionFormType] = useState<TransactionType>("expense");
@@ -810,16 +804,7 @@ export default function App() {
         className="!z-[999999]"
       />
 
-      {/* Visual Debug Overlay for Backfill */}
-      <div className="fixed top-2 right-2 z-[999999999] bg-black/80 text-white p-2 rounded text-[10px] border border-white/20 pointer-events-none">
-        <div className="font-bold opacity-50 mb-1">[APP DEBUG]</div>
-        <div>Backfill: {backfillRequest ? `FOUND(${backfillRequest.count})` : 'null'}</div>
-        {backfillRequest && (
-          <div className="text-[8px] text-green-400 mt-1">
-            {backfillRequest.recurring.description || backfillRequest.recurring.source}
-          </div>
-        )}
-      </div>
+
     </>
   );
 }

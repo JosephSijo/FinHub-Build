@@ -469,7 +469,7 @@ export function InvestmentsTab() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-white/5 mb-6">
               <div className="bg-white/5 p-3 sq-md border border-white/5">
                 <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-1.5 opacity-60">Locked Capital</p>
                 <div className="text-sm font-black text-slate-200 font-mono tabular-nums">

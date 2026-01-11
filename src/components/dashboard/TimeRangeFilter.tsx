@@ -21,7 +21,7 @@ export const TimeRangeFilter: React.FC<TimeRangeFilterProps> = ({
     ];
 
     return (
-        <div className="flex items-center space-x-1 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+        <div className="flex flex-wrap items-center gap-1 pb-2 mb-4 scrollbar-hide">
             {ranges.map((range) => {
                 const isSelected = selectedRange === range.id;
                 return (

@@ -303,7 +303,7 @@ export function AccountsManager({
                 )}
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div
                   className={`p-4 squircle-12 border-2 cursor-pointer transition-all ${formData.type === 'bank' ? 'border-emerald-500 bg-emerald-500/10' : 'border-white/5 bg-white/5 hover:border-white/10'}`}
                   onClick={() => setFormData({ ...formData, type: 'bank' })}
@@ -351,7 +351,7 @@ export function AccountsManager({
 
               {formData.type === 'credit_card' && (
                 <div className="space-y-6 animate-in slide-in-from-top-4 duration-500">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="creditLimit" className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Total Credit Limit</Label>
                       <NumberInput
@@ -377,7 +377,7 @@ export function AccountsManager({
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="serviceCharge" className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Svc Charge (%)</Label>
                       <NumberInput

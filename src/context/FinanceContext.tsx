@@ -2102,18 +2102,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (response.success) {
                 const oldGoal = goals.find(g => g.id === id);
                 if (oldGoal) {
-                    if (response.goal.monthly_contribution > 0) {
+                    if ((response.goal.monthly_contribution || 0) > 0) {
                         const existingRec = recurringTransactions.find(rt => rt.goalId === id);
                         if (existingRec) {
                             await updateRecurringTransaction(existingRec.id, {
-                                amount: response.goal.monthly_contribution,
+                                amount: response.goal.monthly_contribution || 0,
                                 description: `Goal Contribution: ${response.goal.name}`
                             });
                         } else {
                             await createRecurringTransaction({
                                 type: 'expense',
                                 description: `Goal Contribution: ${response.goal.name}`,
-                                amount: response.goal.monthly_contribution,
+                                amount: response.goal.monthly_contribution || 0,
                                 category: 'Transfer',
                                 accountId: response.goal.accountId || 'none',
                                 frequency: 'monthly',
@@ -2122,7 +2122,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                 goalId: response.goal.id
                             });
                         }
-                    } else if (oldGoal.monthly_contribution > 0) {
+                    } else if (oldGoal.monthly_contribution && oldGoal.monthly_contribution > 0) {
                         const existingRec = recurringTransactions.find(rt => rt.goalId === id);
                         if (existingRec) await deleteRecurringTransaction(existingRec.id);
                     }
