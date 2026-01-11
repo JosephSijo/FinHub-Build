@@ -122,6 +122,7 @@ interface FinanceContextType {
 
     // Recurring
     createRecurringTransaction: (data: any) => Promise<void>;
+    updateRecurringTransaction: (id: string, data: any) => Promise<void>;
     createRecurring: (data: any) => Promise<void>;
     deleteRecurringTransaction: (id: string) => Promise<void>;
     processRecurringTransactions: () => Promise<void>;
@@ -2010,6 +2011,76 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
 
     // --- Recurring ---
+    const updateRecurringTransaction = async (id: string, data: any) => {
+        try {
+            const response = await api.updateRecurring(userId, id, data);
+            if (response.success) {
+                const updatedRec = response.recurring as RecurringTransaction;
+                setRecurringTransactions(prev => prev.map(r => r.id === id ? updatedRec : r));
+                toast.success('Recurring transaction updated');
+
+                // Auto-Backfill Logic
+                if (updatedRec.startDate) {
+                    const start = new Date(updatedRec.startDate);
+                    const now = new Date();
+                    now.setHours(0, 0, 0, 0);
+                    start.setHours(0, 0, 0, 0);
+
+                    if (start <= now) {
+                        let current = new Date(start);
+                        const dueDates: Date[] = [];
+                        let safety = 0;
+
+                        while (current <= now && safety < 1000) {
+                            dueDates.push(new Date(current));
+                            if (updatedRec.frequency === 'daily') current.setDate(current.getDate() + 1);
+                            else if (updatedRec.frequency === 'weekly') current.setDate(current.getDate() + 7);
+                            else if (updatedRec.frequency === 'monthly') current.setMonth(current.getMonth() + 1);
+                            else if (updatedRec.frequency === 'yearly') current.setFullYear(current.getFullYear() + 1);
+                            else if (updatedRec.frequency === 'custom' && updatedRec.customIntervalDays) current.setDate(current.getDate() + updatedRec.customIntervalDays);
+                            else current.setMonth(current.getMonth() + 1);
+                            safety++;
+                        }
+
+                        let createdCount = 0;
+                        for (const due of dueDates) {
+                            const dateStr = due.toISOString().split('T')[0];
+                            let exists = false;
+
+                            // Check for existence (Simple Exact Match on Date provided by user)
+                            if (updatedRec.type === 'expense') {
+                                exists = expenses.some(e => e.description === updatedRec.description && e.amount === updatedRec.amount && e.date === dateStr);
+                            } else {
+                                exists = incomes.some(i => i.source === updatedRec.source && i.amount === updatedRec.amount && i.date === dateStr);
+                            }
+
+                            if (!exists) {
+                                const txData = {
+                                    description: updatedRec.description,
+                                    source: updatedRec.source,
+                                    amount: updatedRec.amount,
+                                    category: updatedRec.category,
+                                    date: dateStr,
+                                    tags: [...(updatedRec.tags || []), 'auto-backfill'],
+                                    accountId: updatedRec.accountId,
+                                    isRecurring: true
+                                };
+                                if (updatedRec.type === 'expense') await createExpense(txData);
+                                else await createIncome(txData);
+                                createdCount++;
+                            }
+                        }
+                        if (createdCount > 0) toast.success(`Backfilled ${createdCount} missing entries`);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error updating recurring transaction:', error);
+            setRecurringTransactions(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
+            toast.warning('Updated locally');
+        }
+    };
+
     const createRecurringTransaction = async (data: any) => {
         try {
             const response = await api.createRecurring(userId, data);

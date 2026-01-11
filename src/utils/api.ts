@@ -226,6 +226,15 @@ export const api = {
     return response.json();
   },
 
+  async updateRecurring(userId: string, recurringId: string, data: any) {
+    const response = await fetch(`${API_BASE}/user/${userId}/recurring/${recurringId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(data)
+    });
+    return response.json();
+  },
+
   async deleteRecurring(userId: string, recurringId: string) {
     const response = await fetch(`${API_BASE}/user/${userId}/recurring/${recurringId}`, {
       method: 'DELETE',

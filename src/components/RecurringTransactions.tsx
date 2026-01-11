@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Plus, Trash2, RefreshCw, Calendar, Sparkles, ArrowUpRight, Wallet, History, Target } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Calendar, Sparkles, ArrowUpRight, Wallet, History, Target, Edit2 } from 'lucide-react';
 import { MONEY_OUT_CATEGORIES, RecurringTransaction } from '../types';
 import { useFinance } from '../context/FinanceContext';
 import { formatCurrency } from '../utils/numberFormat';
@@ -18,6 +18,7 @@ export function RecurringTransactions() {
     currency,
     recurringTransactions: recurring,
     createRecurringTransaction,
+    updateRecurringTransaction,
     deleteRecurringTransaction,
     processRecurringTransactions
   } = useFinance();
@@ -67,14 +68,25 @@ export function RecurringTransactions() {
               </p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => deleteRecurringTransaction(rec.id)}
-            className="w-10 h-10 p-0 rounded-xl hover:bg-rose-500/10 hover:text-rose-400 text-slate-700 opacity-0 group-hover:opacity-100 transition-all"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          <div className="flex bg-slate-900/80 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleEdit(rec)}
+              className="w-10 h-10 p-0 rounded-l-xl hover:bg-slate-800 text-slate-500 hover:text-indigo-400"
+            >
+              <Edit2 className="w-4 h-4" />
+            </Button>
+            <div className="w-px bg-white/10 my-2" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => deleteRecurringTransaction(rec.id)}
+              className="w-10 h-10 p-0 rounded-r-xl hover:bg-rose-500/10 hover:text-rose-400 text-slate-500 hover:text-rose-400"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-6 relative z-10">
@@ -123,6 +135,7 @@ export function RecurringTransactions() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     type: 'expense' as 'expense' | 'income',
@@ -155,9 +168,30 @@ export function RecurringTransactions() {
       data.source = formData.source;
     }
 
-    await createRecurringTransaction(data);
+    if (editingId) {
+      await updateRecurringTransaction(editingId, data);
+    } else {
+      await createRecurringTransaction(data);
+    }
     setIsAddDialogOpen(false);
     resetForm();
+  };
+
+  const handleEdit = (rec: RecurringTransaction) => {
+    setFormData({
+      type: rec.type,
+      description: rec.description || '',
+      source: rec.source || '',
+      amount: rec.amount.toString(),
+      category: rec.category || '',
+      accountId: rec.accountId,
+      frequency: rec.frequency,
+      startDate: rec.startDate.split('T')[0],
+      endDate: rec.endDate ? rec.endDate.split('T')[0] : '',
+      tags: rec.tags || []
+    });
+    setEditingId(rec.id);
+    setIsAddDialogOpen(true);
   };
 
   const handleProcess = async () => {
@@ -179,6 +213,7 @@ export function RecurringTransactions() {
       endDate: '',
       tags: []
     });
+    setEditingId(null);
   };
 
 
@@ -495,9 +530,11 @@ export function RecurringTransactions() {
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogContent className="max-w-md bg-slate-950 border-white/10 text-white rounded-[32px]">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-black tracking-tight text-white">Create New Commitment</DialogTitle>
+                <DialogTitle className="text-2xl font-black tracking-tight text-white">
+                  {editingId ? 'Edit Commitment' : 'Create New Commitment'}
+                </DialogTitle>
                 <DialogDescription className="text-slate-400 font-bold">
-                  Automate your financial shadow-wallets.
+                  {editingId ? 'Modify existing flow parameters.' : 'Automate your financial shadow-wallets.'}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-6 mt-4">
@@ -643,7 +680,7 @@ export function RecurringTransactions() {
                       (formData.type === 'expense' && !formData.category)
                     }
                   >
-                    Activate Flow
+                    {editingId ? 'Update Flow' : 'Activate Flow'}
                   </Button>
                 </div>
               </div>
