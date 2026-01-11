@@ -128,9 +128,79 @@ const KEYWORD_MAP: Record<string, string> = {
     'monthly bill': 'Subscription'
 };
 
-export const autoCategorize = (description: string): { category: string; tags: string[] } | null => {
+export interface SubscriptionService {
+    keywords: string[];
+    displayName: string;
+    defaultAmount: number;
+    category: string;
+}
+
+export const SUBSCRIPTION_DB: SubscriptionService[] = [
+    // Streaming (Video)
+    { keywords: ['netflix'], displayName: 'Netflix Premium', defaultAmount: 649, category: 'Subscription' },
+    { keywords: ['hotstar', 'disney'], displayName: 'Disney+ Hotstar', defaultAmount: 299, category: 'Subscription' }, // Monthly Super
+    { keywords: ['prime video', 'amazon prime'], displayName: 'Amazon Prime', defaultAmount: 299, category: 'Subscription' }, // Monthly
+    { keywords: ['hulu'], displayName: 'Hulu', defaultAmount: 650, category: 'Subscription' }, // Approx convert or standard
+    { keywords: ['youtube', 'yt premium'], displayName: 'YouTube Premium', defaultAmount: 129, category: 'Subscription' },
+    { keywords: ['sonyliv'], displayName: 'SonyLIV', defaultAmount: 299, category: 'Subscription' },
+    { keywords: ['zee5'], displayName: 'Zee5', defaultAmount: 100, category: 'Subscription' }, // various plans
+    { keywords: ['jiocinema'], displayName: 'JioCinema Premium', defaultAmount: 99, category: 'Subscription' }, // Monthly
+    { keywords: ['apple tv'], displayName: 'Apple TV+', defaultAmount: 99, category: 'Subscription' },
+
+    // Streaming (Audio)
+    { keywords: ['spotify'], displayName: 'Spotify Premium', defaultAmount: 119, category: 'Subscription' },
+    { keywords: ['apple music'], displayName: 'Apple Music', defaultAmount: 99, category: 'Subscription' }, // Voice/Student/Indiv mix
+    { keywords: ['audible'], displayName: 'Audible', defaultAmount: 199, category: 'Subscription' },
+    { keywords: ['wynk'], displayName: 'Wynk Music', defaultAmount: 49, category: 'Subscription' },
+    { keywords: ['gaana'], displayName: 'Gaana Plus', defaultAmount: 99, category: 'Subscription' },
+    { keywords: ['jiosaavn'], displayName: 'JioSaavn Pro', defaultAmount: 99, category: 'Subscription' },
+
+    // Tech & AI
+    { keywords: ['google one', 'google storage'], displayName: 'Google One', defaultAmount: 130, category: 'Subscription' }, // 100GB
+    { keywords: ['chatgpt', 'openai'], displayName: 'ChatGPT Plus', defaultAmount: 1999, category: 'Subscription' }, // $20 approx
+    { keywords: ['claude', 'anthropic'], displayName: 'Claude Pro', defaultAmount: 1999, category: 'Subscription' },
+    { keywords: ['github'], displayName: 'GitHub Copilot', defaultAmount: 830, category: 'Subscription' }, // $10 approx
+    { keywords: ['midjourney'], displayName: 'Midjourney', defaultAmount: 830, category: 'Subscription' }, // Basic
+    { keywords: ['canva'], displayName: 'Canva Pro', defaultAmount: 499, category: 'Subscription' },
+    { keywords: ['adobe', 'creative cloud'], displayName: 'Adobe CC', defaultAmount: 2300, category: 'Subscription' }, // Photography plan ish
+
+    // Telecom & ISP (Estimates)
+    { keywords: ['jio', 'myjio'], displayName: 'Jio Mobile', defaultAmount: 299, category: 'Subscription' }, // Common 28d
+    { keywords: ['airtel'], displayName: 'Airtel Mobile', defaultAmount: 299, category: 'Subscription' },
+    { keywords: ['vi ', 'vodafone'], displayName: 'Vi Mobile', defaultAmount: 299, category: 'Subscription' },
+    { keywords: ['act fiber', 'act net'], displayName: 'ACT Fibernet', defaultAmount: 820, category: 'Bills & Utilities' }, // Basic + Tax
+    { keywords: ['hathway'], displayName: 'Hathway Broadband', defaultAmount: 600, category: 'Bills & Utilities' },
+];
+
+export const isKnownSubscription = (description: string): boolean => {
+    const desc = description.toLowerCase();
+    return SUBSCRIPTION_DB.some(service =>
+        service.keywords.some(k => desc.includes(k))
+    );
+};
+
+export const autoCategorize = (description: string): {
+    category: string;
+    tags: string[];
+    suggestedAmount?: number;
+    suggestedDescription?: string;
+} | null => {
     const normalizedDesc = description.toLowerCase();
 
+    // 1. Check Precise Subscription DB first (Highest Priority)
+    for (const service of SUBSCRIPTION_DB) {
+        if (service.keywords.some(k => normalizedDesc.includes(k))) {
+            const tags = ['subscription', 'online'];
+            return {
+                category: service.category,
+                tags,
+                suggestedAmount: service.defaultAmount,
+                suggestedDescription: service.displayName
+            };
+        }
+    }
+
+    // 2. Fallback to General Keyword Map
     // Find category based on keywords
     for (const [keyword, category] of Object.entries(KEYWORD_MAP)) {
         if (normalizedDesc.includes(keyword)) {
@@ -144,24 +214,4 @@ export const autoCategorize = (description: string): { category: string; tags: s
     }
 
     return null;
-};
-
-// Precise Lookup Table for 100% detection of known services
-export const SUBSCRIPTION_LOOKUP = [
-    // Streaming & Entertainment
-    'netflix', 'hotstar', 'disney', 'prime video', 'amazon prime', 'hulu',
-    'spotify', 'apple', 'youtube', 'audible', 'sonyliv', 'zee5', 'jiocinema',
-
-    // Tech & AI
-    'google', 'gemini', 'chatgpt', 'openai', 'claude', 'anthropic', 'github',
-    'microsoft', 'office 365', 'midjourney', 'perplexity', 'canva', 'adobe',
-
-    // Telecom & ISP
-    'jio', 'airtel', 'vi ', 'bsnl', 'recharge', 'prepaid', 'postpaid',
-    'act fiber', 'hathway', 'broadband', 'wifi'
-];
-
-export const isKnownSubscription = (description: string): boolean => {
-    const desc = description.toLowerCase();
-    return SUBSCRIPTION_LOOKUP.some(keyword => desc.includes(keyword));
 };

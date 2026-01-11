@@ -48,6 +48,21 @@ export const LoginScreen = () => {
         }, 1500);
     };
 
+
+
+    // Auto-proceed logic
+    useEffect(() => {
+        if (phase === "identity" && mobile.length === 10) {
+            handleMobileSubmit();
+        }
+    }, [mobile, phase]);
+
+    useEffect(() => {
+        if (phase === "verify" && pin.length === 4) {
+            handlePinSubmit();
+        }
+    }, [pin, phase]);
+
     useEffect(() => {
         inputRef.current?.focus();
     }, [phase]);

@@ -111,6 +111,10 @@ interface FinanceContextType {
     updateLiability: (id: string, data: Partial<Liability>) => Promise<void>;
     deleteLiability: (id: string) => Promise<void>;
 
+    // Migration
+    migrateSubscriptions: () => Promise<{ count: number }>;
+    cleanupDuplicates: () => Promise<{ count: number }>;
+
     // Investments
     createInvestment: (data: any, sourceAccountId?: string) => Promise<void>;
     updateInvestment: (id: string, data: any) => Promise<void>;
@@ -1161,6 +1165,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 }
 
                 if (data.isRecurring) {
+                    // Start Date Logic:
+                    // If creating a manual entry NOW, we want the *automation* to pick up from the NEXT cycle.
+                    // Otherwise, we get a duplicate (Manual Entry + Automated Entry on same day).
+                    const entryDate = new Date(data.date);
+                    let nextStartDate = new Date(entryDate);
+
+                    if (data.frequency === 'daily') nextStartDate.setDate(entryDate.getDate() + 1);
+                    else if (data.frequency === 'weekly') nextStartDate.setDate(entryDate.getDate() + 7);
+                    else if (data.frequency === 'monthly') nextStartDate.setMonth(entryDate.getMonth() + 1);
+                    else if (data.frequency === 'yearly') nextStartDate.setFullYear(entryDate.getFullYear() + 1);
+                    else if (data.frequency === 'custom') nextStartDate.setDate(entryDate.getDate() + (data.customIntervalDays || 28));
+
                     const recurringData = {
                         type: 'expense',
                         description: data.description,
@@ -1168,7 +1184,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                         category: data.category,
                         accountId: data.accountId,
                         frequency: data.frequency || 'monthly',
-                        startDate: data.startDate || data.date,
+                        customIntervalDays: data.customIntervalDays,
+                        startDate: nextStartDate.toISOString(), // Start from NEXT cycle
                         endDate: data.endDate,
                         tags: data.tags
                     };
@@ -1301,13 +1318,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 }
 
                 if (data.isRecurring) {
+                    // Start Date Logic: Defer to next cycle to avoid duplicates (Manual + Auto)
+                    const entryDate = new Date(data.date);
+                    let nextStartDate = new Date(entryDate);
+
+                    if (data.frequency === 'daily') nextStartDate.setDate(entryDate.getDate() + 1);
+                    else if (data.frequency === 'weekly') nextStartDate.setDate(entryDate.getDate() + 7);
+                    else if (data.frequency === 'monthly') nextStartDate.setMonth(entryDate.getMonth() + 1);
+                    else if (data.frequency === 'yearly') nextStartDate.setFullYear(entryDate.getFullYear() + 1);
+                    else if (data.frequency === 'custom') nextStartDate.setDate(entryDate.getDate() + (data.customIntervalDays || 28));
+
                     const recurringData = {
                         type: 'income',
                         source: data.source,
                         amount: data.amount,
                         accountId: data.accountId,
                         frequency: data.frequency || 'monthly',
-                        startDate: data.startDate || data.date,
+                        customIntervalDays: data.customIntervalDays,
+                        startDate: nextStartDate.toISOString(),
                         endDate: data.endDate,
                         tags: data.tags
                     };
@@ -1531,6 +1559,85 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setDebts(prev => prev.map(d => d.id === id ? { ...d, status: "settled" as const } : d));
             toast.warning("Marked as settled locally");
         }
+    };
+
+    // --- Migration ---
+    const migrateSubscriptions = async (): Promise<{ count: number }> => {
+        let updateCount = 0;
+        const updates: Promise<any>[] = [];
+
+        // 1. Scan Expenses
+        for (const expense of expenses) {
+            // Only update if not already a Subscription and matches DB
+            if (expense.category !== 'Subscription' && isKnownSubscription(expense.description)) {
+
+                // Get precise details if available
+                const details = autoCategorize(expense.description);
+
+                if (details && details.category === 'Subscription') {
+                    updates.push(updateExpense(expense.id, {
+                        category: 'Subscription',
+                        tags: [...new Set([...expense.tags, 'auto-migrated', 'subscription'])]
+                    }));
+                    updateCount++;
+                }
+            }
+        }
+
+        if (updates.length > 0) {
+            await Promise.all(updates);
+            toast.success(`Migrated ${updateCount} transactions to Subscriptions`);
+        } else {
+            toast.info("No subscription transactions found to migrate");
+        }
+
+        return { count: updateCount };
+    };
+
+    const cleanupDuplicates = async (): Promise<{ count: number }> => {
+        let removedCount = 0;
+        const updates: Promise<any>[] = [];
+        const seen = new Set<string>();
+
+        // 1. Scan Expenses
+        for (const expense of expenses) {
+            const key = `${expense.date}-${expense.description?.toLowerCase().trim()}-${expense.amount}`;
+
+            // Check for blank or duplicates
+            const isBlank = !expense.description || expense.description.trim() === '' || expense.amount === 0;
+            const isDuplicate = seen.has(key);
+
+            if (isBlank || isDuplicate) {
+                updates.push(deleteExpense(expense.id));
+                removedCount++;
+            } else {
+                seen.add(key);
+            }
+        }
+
+        // 2. Scan Incomes
+        const seenIncomes = new Set<string>();
+        for (const income of incomes) {
+            const key = `${income.date}-${income.source?.toLowerCase().trim()}-${income.amount}`;
+            const isBlank = !income.source || income.source.trim() === '' || income.amount === 0;
+            const isDuplicate = seenIncomes.has(key);
+
+            if (isBlank || isDuplicate) {
+                updates.push(deleteIncome(income.id));
+                removedCount++;
+            } else {
+                seenIncomes.add(key);
+            }
+        }
+
+        if (updates.length > 0) {
+            await Promise.all(updates);
+            toast.success(`Cleaned up ${removedCount} duplicate/blank entries`);
+        } else {
+            toast.info("No duplicates or blank entries found");
+        }
+
+        return { count: removedCount };
     };
 
     // --- Goals ---
@@ -1974,10 +2081,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 createLiability,
                 updateLiability,
                 deleteLiability,
+                migrateSubscriptions,
+                cleanupDuplicates,
                 createInvestment,
                 updateInvestment,
                 deleteInvestment,
                 createRecurringTransaction,
+                createRecurring: createRecurringTransaction, // Alias
                 deleteRecurringTransaction,
                 processRecurringTransactions,
                 setEmergencyFundAmount,

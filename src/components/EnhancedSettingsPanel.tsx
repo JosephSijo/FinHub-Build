@@ -51,14 +51,27 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
   const [name, setName] = useState(settings.name || '');
   const [photoURL, setPhotoURL] = useState(settings.photoURL || '');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const { logout, scheduleAccountDeletion } = useFinance();
+  const [convertedAmount, setConvertedAmount] = useState<number | null>(null);
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+
+  const [isMigrating, setIsMigrating] = useState(false);
+  const { logout, scheduleAccountDeletion, migrateSubscriptions, cleanupDuplicates } = useFinance(); // Destructure migrateSubscriptions
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  const handleMigrate = async () => {
+    setIsMigrating(true);
+    try {
+      await migrateSubscriptions();
+    } catch (e) {
+      console.error("Migration failed:", e);
+      toast.error("Migration failed");
+    } finally {
+      setIsMigrating(false);
+    }
+  };
   // Currency Converter State
   const [fromCurrency, setFromCurrency] = useState<string>('USD');
   const [amount, setAmount] = useState<string>('100');
-  const [convertedAmount, setConvertedAmount] = useState<number | null>(null);
-  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
 
   const [infAmount, setInfAmount] = useState<string>('100000');
   const [infYears, setInfYears] = useState<string>('10');
@@ -736,6 +749,65 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
+              </div>
+            </div>
+          </div>
+
+
+          <div className="h-px bg-white/5" />
+
+          {/* Data Management Section */}
+          <div className="space-y-4">
+            <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 flex items-center gap-2">
+              <AlertOctagon className="w-3.5 h-3.5 text-indigo-400" />
+              Data Optimization Node
+            </Label>
+            <div className="p-6 bg-slate-900/40 rounded-[32px] border border-white/5 relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-300">Subscription Protocol Scan</h4>
+                  <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wide mt-1">
+                    DETECT & MIGRATE RECURRING SIGNALS
+                  </p>
+                </div>
+                <Button
+                  onClick={handleMigrate}
+                  disabled={isMigrating}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[9px] h-9 px-4 rounded-xl shadow-lg shadow-indigo-500/20"
+                >
+                  {isMigrating ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Scanning...
+                    </div>
+                  ) : (
+                    'Execute Scan'
+                  )}
+                </Button>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-300">Redundancy Purge</h4>
+                  <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wide mt-1">
+                    REMOVE BLANK & DUPLICATE ENTRIES
+                  </p>
+                </div>
+                <Button
+                  onClick={async () => {
+                    const toastId = toast.loading("Purging duplicates...");
+                    try {
+                      const res = await cleanupDuplicates();
+                      toast.dismiss(toastId);
+                    } catch (e) {
+                      toast.dismiss(toastId);
+                      toast.error("Purge failed");
+                    }
+                  }}
+                  className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 font-black uppercase tracking-widest text-[9px] h-9 px-4 rounded-xl"
+                >
+                  Purge Logs
+                </Button>
               </div>
             </div>
           </div>

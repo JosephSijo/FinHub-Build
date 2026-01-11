@@ -54,6 +54,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const [tagInput, setTagInput] = useState('');
   const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
+  const [suggestedAmount, setSuggestedAmount] = useState<number | undefined>(undefined);
+  const [suggestedDescription, setSuggestedDescription] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -82,6 +84,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     }
   }, [isOpen, initialData, accounts, formData.accountId]);
 
+
+
   useEffect(() => {
     const text = type === 'expense' ? formData.description :
       type === 'income' ? formData.description :
@@ -94,10 +98,14 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       if (suggestion) {
         setSuggestedCategory(suggestion.category);
         setSuggestedTags(suggestion.tags);
+        setSuggestedAmount(suggestion.suggestedAmount);
+        setSuggestedDescription(suggestion.suggestedDescription);
       } else {
         // Clear if no match found
         setSuggestedCategory(null);
         setSuggestedTags([]);
+        setSuggestedAmount(undefined);
+        setSuggestedDescription(undefined);
       }
     }
   }, [formData.description, formData.personName, type, initialData]);
@@ -117,6 +125,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       accountId: formData.accountId || (accounts.length > 0 ? accounts[0].id : ''),
       isRecurring: formData.isRecurring,
       frequency: formData.frequency,
+      customIntervalDays: (formData as any).customIntervalDays, // Pass custom interval
       startDate: formData.date, // For recurring transactions
       endDate: formData.endDate || undefined,
       isIncomeGenerating: formData.isIncomeGenerating,
@@ -180,6 +189,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     setTagInput('');
     setSuggestedCategory(null);
     setSuggestedTags([]);
+    setSuggestedAmount(undefined);
+    setSuggestedDescription(undefined);
     onClose();
   };
 
@@ -217,9 +228,16 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         ...prev,
         category: suggestedCategory,
         tags: [...new Set([...prev.tags, ...suggestedTags])],
+        amount: (suggestedAmount && !prev.amount) ? suggestedAmount.toString() : prev.amount,
+        description: suggestedDescription || prev.description,
+        // Auto-enable recurring for Subscription suggestions
+        isRecurring: (suggestedCategory === 'Subscription') ? true : prev.isRecurring,
+        frequency: (suggestedCategory === 'Subscription') ? 'monthly' : prev.frequency
       }));
       setSuggestedCategory(null);
       setSuggestedTags([]);
+      setSuggestedAmount(undefined);
+      setSuggestedDescription(undefined);
     }
   };
 
@@ -358,14 +376,19 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                     <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300 leading-tight">
                       Intelligence Suggested
                     </p>
-                    <p className="text-xs text-slate-400 mt-1 font-bold">
+                    <div className="text-xs text-slate-400 mt-1 font-bold">
                       {type === 'expense' && (
-                        <>Category: <span className="text-slate-100 uppercase">{suggestedCategory}</span></>
+                        <div className="flex flex-col gap-1">
+                          <div>Category: <span className="text-slate-100 uppercase">{suggestedCategory}</span></div>
+                          {suggestedAmount && (
+                            <div>Detected Amount: <span className="text-emerald-400">{formatCurrency(suggestedAmount, currency)}</span></div>
+                          )}
+                        </div>
                       )}
                       {suggestedTags.length > 0 && (
-                        <> • Tags: <span className="text-slate-100">{suggestedTags.join(', ')}</span></>
+                        <div className="mt-1">Tags: <span className="text-slate-100">{suggestedTags.join(', ')}</span></div>
                       )}
-                    </p>
+                    </div>
                     <Button
                       type="button"
                       size="sm"
@@ -474,7 +497,15 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             {type === 'expense' && (
               <div className="space-y-2">
                 <Label htmlFor="transaction-category" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Spending Domain</Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                <Select value={formData.category} onValueChange={(value) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    category: value,
+                    // Auto-enable recurring for manual Subscription selection
+                    isRecurring: (value === 'Subscription') ? true : prev.isRecurring,
+                    frequency: (value === 'Subscription') ? 'monthly' : prev.frequency
+                  }));
+                }}>
                   <SelectTrigger id="transaction-category" name="category" className="h-12 bg-black border-white/5 sq-md focus:ring-1 focus:ring-white/10 text-slate-200 font-bold">
                     <SelectValue placeholder="Select domain" />
                   </SelectTrigger>
@@ -648,7 +679,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             </div>
 
             {/* Recurring */}
-            <div className="flex items-center gap-3 p-4 bg-black border border-white/5 sq-md group cursor-pointer" onClick={() => setFormData({ ...formData, isRecurring: !formData.isRecurring })}>
+            <div className="flex items-center gap-3 p-4 bg-black border border-white/5 sq-md group">
               <Checkbox
                 id="recurring"
                 name="isRecurring"
@@ -662,7 +693,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             </div>
 
             {formData.isRecurring && (
-              <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
+              <div className="grid grid-cols-2 gap-4 mt-4">
                 <div className="space-y-2">
                   <Label htmlFor="transaction-frequency" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Period</Label>
                   <Select value={formData.frequency} onValueChange={(value: any) => setFormData({ ...formData, frequency: value })}>
@@ -674,20 +705,37 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                       <SelectItem value="weekly">Weekly</SelectItem>
                       <SelectItem value="monthly">Monthly</SelectItem>
                       <SelectItem value="yearly">Yearly</SelectItem>
+                      <SelectItem value="custom">Custom</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="transaction-end-date" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Termination</Label>
-                  <Input
-                    id="transaction-end-date"
-                    name="endDate"
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    className="bg-black border-white/5 h-12 sq-md text-slate-200 font-bold"
-                  />
-                </div>
+
+                {formData.frequency === 'custom' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="transaction-interval" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Days Interval</Label>
+                    <NumberInput
+                      id="transaction-interval"
+                      name="customIntervalDays"
+                      value={(formData as any).customIntervalDays || ''}
+                      onChange={(value) => setFormData({ ...formData, customIntervalDays: parseInt(value) } as any)}
+                      placeholder="e.g. 45"
+                      min="1"
+                      className="bg-black border-white/5 h-12 sq-md text-slate-200 font-bold"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="transaction-end-date" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Termination</Label>
+                    <Input
+                      id="transaction-end-date"
+                      name="endDate"
+                      type="date"
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      className="bg-black border-white/5 h-12 sq-md text-slate-200 font-bold"
+                    />
+                  </div>
+                )}
               </div>
             )}
 
