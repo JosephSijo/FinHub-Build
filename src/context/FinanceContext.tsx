@@ -1599,23 +1599,63 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const updates: Promise<any>[] = [];
         const seen = new Set<string>();
 
-        // 1. Scan Expenses
-        for (const expense of expenses) {
-            const key = `${expense.date}-${expense.description?.toLowerCase().trim()}-${expense.amount}`;
+        // 1. Exact Duplicate & Blank Scan
+        const expensesToDelete = new Set<string>();
 
-            // Check for blank or duplicates
+        // Exact Match Logic
+        expenses.forEach(expense => {
+            const key = `${expense.date}-${expense.description?.toLowerCase().trim()}-${expense.amount}`;
             const isBlank = !expense.description || expense.description.trim() === '' || expense.amount === 0;
             const isDuplicate = seen.has(key);
 
             if (isBlank || isDuplicate) {
-                updates.push(deleteExpense(expense.id));
-                removedCount++;
+                expensesToDelete.add(expense.id);
             } else {
                 seen.add(key);
             }
-        }
+        });
 
-        // 2. Scan Incomes
+        // 2. Subscription Density Scan (Smart Dedupe)
+        // Group by Subscription Name + Month
+        const subGroups = new Map<string, Expense[]>();
+
+        expenses.forEach(e => {
+            // Only check active candidates not already marked for deletion
+            if (expensesToDelete.has(e.id)) return;
+
+            const isSub = e.category === 'Subscription' || e.isRecurring || isKnownSubscription(e.description);
+            if (isSub) {
+                const date = new Date(e.date);
+                const key = `${e.description.toLowerCase().trim()}-${date.getFullYear()}-${date.getMonth()}`;
+
+                if (!subGroups.has(key)) subGroups.set(key, []);
+                subGroups.get(key)!.push(e);
+            }
+        });
+
+        // Enforce 1 per month policy
+        subGroups.forEach((group) => {
+            if (group.length > 1) {
+                // Sort: Prefer entries that are explicitly marked recurring, then by latest date/creation
+                group.sort((a, b) => {
+                    if (a.isRecurring !== b.isRecurring) return a.isRecurring ? -1 : 1; // Keep recurring
+                    return new Date(b.date).getTime() - new Date(a.date).getTime(); // Keep latest
+                });
+
+                // Keep the first one (Index 0), delete the rest
+                for (let i = 1; i < group.length; i++) {
+                    expensesToDelete.add(group[i].id);
+                }
+            }
+        });
+
+        // Execute Expense Deletions
+        expensesToDelete.forEach(id => {
+            updates.push(deleteExpense(id));
+            removedCount++;
+        });
+
+        // 3. Scan Incomes (Exact Only)
         const seenIncomes = new Set<string>();
         for (const income of incomes) {
             const key = `${income.date}-${income.source?.toLowerCase().trim()}-${income.amount}`;
@@ -1632,9 +1672,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         if (updates.length > 0) {
             await Promise.all(updates);
-            toast.success(`Cleaned up ${removedCount} duplicate/blank entries`);
+            toast.success(`Cleaned up ${removedCount} entries (Duplicates & Density Checks)`);
         } else {
-            toast.info("No duplicates or blank entries found");
+            toast.info("Logs are clean. No redundancies found.");
         }
 
         return { count: removedCount };
