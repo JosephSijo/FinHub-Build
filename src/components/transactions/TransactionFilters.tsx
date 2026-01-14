@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '../ui/card';
-import { Button } from '../ui/button';
+import { buttonVariants } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Search, ListFilter, TrendingDown, TrendingUp, Users, Repeat, CreditCard, Shield, Target } from 'lucide-react';
@@ -38,11 +38,17 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
                 </div>
             </Card>
 
-            <div className="flex flex-wrap gap-2.5 pb-4 -mx-1 px-1 scrollbar-hide sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0">
-                <Button
-                    variant="ghost"
+            <div
+                role="tablist"
+                aria-label="Transaction filters"
+                className="flex flex-nowrap overflow-x-auto gap-2.5 pb-2 -mx-4 px-4 no-scrollbar sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0"
+            >
+                <button
+                    role="tab"
+                    {...(filter === "all" ? { "aria-selected": "true" } : { "aria-selected": "false" })}
                     onClick={() => setFilter("all")}
                     className={cn(
+                        buttonVariants({ variant: "ghost" }),
                         "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
                         filter === "all"
                             ? "bg-slate-100 text-slate-900 border-none shadow-[0_0_20px_rgba(255,255,255,0.2)]"
@@ -51,11 +57,13 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
                 >
                     <ListFilter className="w-3.5 h-3.5" />
                     All
-                </Button>
-                <Button
-                    variant="ghost"
+                </button>
+                <button
+                    role="tab"
+                    {...(filter === "expenses" ? { "aria-selected": "true" } : { "aria-selected": "false" })}
                     onClick={() => setFilter("expenses")}
                     className={cn(
+                        buttonVariants({ variant: "ghost" }),
                         "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
                         filter === "expenses"
                             ? "bg-rose-500 text-white border-none shadow-[0_0_20px_rgba(244,63,94,0.3)]"
@@ -64,11 +72,13 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
                 >
                     <TrendingDown className="w-3.5 h-3.5" />
                     Expenses
-                </Button>
-                <Button
-                    variant="ghost"
+                </button>
+                <button
+                    role="tab"
+                    {...(filter === "income" ? { "aria-selected": "true" } : { "aria-selected": "false" })}
                     onClick={() => setFilter("income")}
                     className={cn(
+                        buttonVariants({ variant: "ghost" }),
                         "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
                         filter === "income"
                             ? "bg-emerald-500 text-white border-none shadow-[0_0_20px_rgba(16,185,129,0.3)]"
@@ -77,11 +87,13 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
                 >
                     <TrendingUp className="w-3.5 h-3.5" />
                     Income
-                </Button>
-                <Button
-                    variant="ghost"
+                </button>
+                <button
+                    role="tab"
+                    {...(filter === "debts" ? { "aria-selected": "true" } : { "aria-selected": "false" })}
                     onClick={() => setFilter("debts")}
                     className={cn(
+                        buttonVariants({ variant: "ghost" }),
                         "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
                         filter === "debts"
                             ? "bg-amber-500 text-white border-none shadow-[0_0_20px_rgba(245,158,11,0.3)]"
@@ -90,11 +102,13 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
                 >
                     <Users className="w-3.5 h-3.5" />
                     IOUs
-                </Button>
-                <Button
-                    variant="ghost"
+                </button>
+                <button
+                    role="tab"
+                    {...(filter === "subs" ? { "aria-selected": "true" } : { "aria-selected": "false" })}
                     onClick={() => setFilter("subs")}
                     className={cn(
+                        buttonVariants({ variant: "ghost" }),
                         "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
                         filter === "subs"
                             ? "bg-purple-500 text-white border-none shadow-[0_0_20px_rgba(168,85,247,0.3)]"
@@ -103,11 +117,13 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
                 >
                     <Repeat className="w-3.5 h-3.5" />
                     Subs
-                </Button>
-                <Button
-                    variant="ghost"
+                </button>
+                <button
+                    role="tab"
+                    {...(filter === "emis" ? { "aria-selected": "true" } : { "aria-selected": "false" })}
                     onClick={() => setFilter("emis")}
                     className={cn(
+                        buttonVariants({ variant: "ghost" }),
                         "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
                         filter === "emis"
                             ? "bg-sky-500 text-white border-none shadow-[0_0_20px_rgba(14,165,233,0.3)]"
@@ -116,11 +132,13 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
                 >
                     <CreditCard className="w-3.5 h-3.5" />
                     EMIs
-                </Button>
-                <Button
-                    variant="ghost"
+                </button>
+                <button
+                    role="tab"
+                    {...(filter === "emergency" ? { "aria-selected": "true" } : { "aria-selected": "false" })}
                     onClick={() => setFilter("emergency")}
                     className={cn(
+                        buttonVariants({ variant: "ghost" }),
                         "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
                         filter === "emergency"
                             ? "bg-blue-600 text-white border-none shadow-[0_0_20px_rgba(37,99,235,0.3)]"
@@ -129,11 +147,13 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
                 >
                     <Shield className="w-3.5 h-3.5" />
                     Emergency
-                </Button>
-                <Button
-                    variant="ghost"
+                </button>
+                <button
+                    role="tab"
+                    {...(filter === "goals" ? { "aria-selected": "true" } : { "aria-selected": "false" })}
                     onClick={() => setFilter("goals")}
                     className={cn(
+                        buttonVariants({ variant: "ghost" }),
                         "gap-2 px-5 h-11 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest border border-white/5",
                         filter === "goals"
                             ? "bg-[#BF5AF2] text-white border-none shadow-[0_0_20px_rgba(191,90,242,0.3)]"
@@ -142,7 +162,7 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
                 >
                     <Target className="w-3.5 h-3.5" />
                     Goals
-                </Button>
+                </button>
             </div>
 
             {/* Info Banner for EMI Filter */}

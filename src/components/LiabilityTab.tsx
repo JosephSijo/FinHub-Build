@@ -13,6 +13,7 @@ import { formatCurrency } from '../utils/numberFormat';
 import { motion } from 'framer-motion';
 import { useFinance } from '../context/FinanceContext';
 import { CyberButton } from './ui/CyberButton';
+import { calculateLoanDetails as getLoanDetails } from '../utils/financeCalculations';
 
 
 
@@ -30,19 +31,24 @@ interface LiabilityTabProps {
   currency: string;
   expenses?: any[];
   accounts?: any[];
+  debts?: any[];
+  liabilities?: Liability[];
 }
 
-export function LiabilityTab({ currency, expenses = [], accounts = [] }: LiabilityTabProps) {
+export function LiabilityTab({ currency, expenses = [], accounts = [], debts = [], liabilities: propLiabilities }: LiabilityTabProps) {
   const {
-    liabilities,
+    liabilities: contextLiabilities,
     isLoading: isGlobalLoading,
     createLiability,
     updateLiability,
     deleteLiability
   } = useFinance();
 
+  const liabilities = propLiabilities || contextLiabilities || [];
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingLiability, setEditingLiability] = useState<Liability | null>(null);
+  const [activeCategory, setActiveCategory] = useState<'all' | 'institutional' | 'cards' | 'personal'>('all');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -147,43 +153,16 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
     }
 
     const tMonths = formData.tenureUnit === 'years' ? tenureVal * 12 : tenureVal;
-    const rMonthly = rateVal / 12 / 100;
 
-    let emiResult = 0;
-    if (rMonthly === 0) {
-      emiResult = principalVal / tMonths;
-    } else {
-      emiResult = (principalVal * rMonthly * Math.pow(1 + rMonthly, tMonths)) / (Math.pow(1 + rMonthly, tMonths) - 1);
-    }
-
-    const startObj = new Date(startStr);
-    const nowObj = new Date();
-    let paidCount = 0;
-
-    if (startObj <= nowObj) {
-      const yDiff = nowObj.getFullYear() - startObj.getFullYear();
-      const mDiff = nowObj.getMonth() - startObj.getMonth();
-      const dDiff = nowObj.getDate() - startObj.getDate();
-
-      paidCount = yDiff * 12 + mDiff;
-      if (dDiff < 0) paidCount--;
-      paidCount = Math.max(0, Math.min(paidCount, tMonths));
-    }
-
-    let outResult = 0;
-    if (rMonthly === 0) {
-      outResult = principalVal - (emiResult * paidCount);
-    } else {
-      outResult = principalVal * (Math.pow(1 + rMonthly, tMonths) - Math.pow(1 + rMonthly, paidCount)) / (Math.pow(1 + rMonthly, tMonths) - 1);
-    }
+    const details = getLoanDetails(principalVal, rateVal, tMonths, startStr);
 
     setFormData({
       ...formData,
-      outstanding: Math.max(0, outResult).toFixed(2),
-      emiAmount: emiResult.toFixed(2)
+      outstanding: details.outstanding.toString(),
+      emiAmount: details.emi.toString()
     });
 
-    toast.success(`Calculated (Reducing Balance): EMI ₹${emiResult.toFixed(2)}, Outstanding ₹${outResult.toFixed(2)}`);
+    toast.success(`Calculated (Reducing Balance): EMI ${formatCurrency(details.emi, currency)}, Outstanding ${formatCurrency(details.outstanding, currency)}`);
   };
 
   const calculateMonthsPaid = (liability: Liability) => {
@@ -205,6 +184,48 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
   };
 
   const totalEMI = liabilities.reduce((sum, l) => sum + l.emiAmount, 0);
+
+  // Unify Data
+  const institutionalLoans = liabilities.filter(l => l.type !== 'credit_card');
+  const creditCards = liabilities.filter(l => l.type === 'credit_card');
+  const personalIOUs = debts.filter(d => d.type === 'borrowed' && d.status === 'pending');
+
+  const filteredItems = (() => {
+    switch (activeCategory) {
+      case 'institutional': return institutionalLoans.map(l => ({ ...l, viewType: 'institutional' }));
+      case 'cards': return creditCards.map(l => ({ ...l, viewType: 'institutional' }));
+      case 'personal': return personalIOUs.map(d => ({
+        id: d.id,
+        name: d.personName,
+        outstanding: d.amount,
+        principal: d.amount,
+        interestRate: d.interestRate || 0,
+        emiAmount: 0,
+        tenure: 0,
+        startDate: d.date,
+        type: 'personal_loan',
+        viewType: 'personal',
+        originalDebt: d
+      }));
+      default: return [
+        ...institutionalLoans.map(l => ({ ...l, viewType: 'institutional' })),
+        ...creditCards.map(l => ({ ...l, viewType: 'institutional' })),
+        ...personalIOUs.map(d => ({
+          id: d.id,
+          name: d.personName,
+          outstanding: d.amount,
+          principal: d.amount,
+          interestRate: d.interestRate || 0,
+          emiAmount: 0,
+          tenure: 0,
+          startDate: d.date,
+          type: 'personal_loan',
+          viewType: 'personal',
+          originalDebt: d
+        }))
+      ];
+    }
+  })();
 
   // Get EMI-related transactions from expenses
   const emiTransactions = expenses.filter((e: any) =>
@@ -292,6 +313,27 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
         </CyberButton>
       </div>
 
+      {/* Category Tabs */}
+      <div className="flex gap-2 px-2 overflow-x-auto no-scrollbar py-2">
+        {[
+          { id: 'all', label: 'All Debt' },
+          { id: 'institutional', label: 'Institutional' },
+          { id: 'cards', label: 'Cards' },
+          { id: 'personal', label: 'Personal' }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveCategory(tab.id as any)}
+            className={`px-5 py-2.5 rounded-2xl text-[10px] uppercase font-black tracking-widest transition-all whitespace-nowrap border ${activeCategory === tab.id
+              ? 'bg-rose-500 border-rose-500 text-white shadow-lg shadow-rose-500/20'
+              : 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10'
+              }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Liabilities List */}
       <div>
         <h3 className={`text-label text-[10px] mb-4 ${liabilities.length === 0 ? 'opacity-40' : ''}`}>Institutional Debt Portfolio</h3>
@@ -316,7 +358,7 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
               </div>
             ))}
           </div>
-        ) : liabilities.length === 0 ? (
+        ) : filteredItems.length === 0 ? (
           <div
             onClick={() => setIsAddDialogOpen(true)}
             className="group cursor-pointer p-12 bg-black border-2 border-dashed border-white/5 sq-2xl hover:border-rose-500/30 hover:bg-white/5 transition-all duration-500 flex flex-col items-center justify-center space-y-4"
@@ -325,22 +367,26 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
               <CreditCard className="w-8 h-8" />
             </div>
             <div className="text-center">
-              <h3 className="text-slate-200 font-black text-xs uppercase tracking-[0.2em]">Zero Debt Environment Identified</h3>
+              <h3 className="text-slate-200 font-black text-xs uppercase tracking-[0.2em]">No {activeCategory !== 'all' ? activeCategory : ''} Entries</h3>
               <p className="text-[9px] text-slate-500 uppercase tracking-widest mt-2 font-bold opacity-60">Initialize strategic debt analysis node</p>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
-            {liabilities.map((liability) => {
-              const monthsPaid = calculateMonthsPaid(liability);
-              const progress = liability.principal > 0
-                ? Math.max(0, ((liability.principal - liability.outstanding) / liability.principal) * 100)
+            {filteredItems.map((item: any) => {
+              const monthsPaid = item.viewType === 'institutional' ? calculateMonthsPaid(item) : 0;
+              const progress = item.principal > 0
+                ? Math.max(0, ((item.principal - item.outstanding) / item.principal) * 100)
                 : 0;
-              const typeInfo = LIABILITY_TYPES.find(t => t.value === liability.type);
+              const typeInfo = item.viewType === 'institutional'
+                ? LIABILITY_TYPES.find(t => t.value === item.type)
+                : { label: '👤 Personal IOU', icon: '👤' };
+
+              const isPersonal = item.viewType === 'personal';
 
               return (
                 <div
-                  key={liability.id}
+                  key={item.id}
                   className="bg-black sq-xl border border-white/5 p-6 group relative overflow-hidden transition-all duration-500 hover:border-rose-500/30"
                 >
                   <div className="absolute inset-0 bg-white/[0.01] group-hover:bg-rose-500/[0.04] transition-all duration-500" />
@@ -352,42 +398,50 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
                           <span className="text-2xl">{typeInfo?.icon}</span>
                         </div>
                         <div className="min-w-0">
-                          <h4 className="font-black text-xs uppercase tracking-tight text-white truncate">{liability.name}</h4>
+                          <h4 className="font-black text-xs uppercase tracking-tight text-white truncate">{item.name}</h4>
                           <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
-                            {typeInfo?.label.replace(/^\S+ /, '')} // {liability.interestRate}% RATE
+                            {typeInfo?.label.split(' ')[1] || typeInfo?.label} // {item.interestRate}% RATE
                           </p>
                         </div>
                       </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(liability)} className="w-8 h-8 p-0 text-slate-500 hover:text-white hover:bg-white/10 rounded-lg">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(liability.id)} className="w-8 h-8 p-0 text-rose-500/60 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
+                      {!isPersonal && (
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(item)} className="w-8 h-8 p-0 text-slate-500 hover:text-white hover:bg-white/10 rounded-lg">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id)} className="w-8 h-8 p-0 text-rose-500/60 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
                       <div className="space-y-1.5">
                         <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest opacity-60">Outstanding</p>
                         <p className="text-sm font-black text-rose-500 tabular-nums font-mono">
-                          {formatCurrency(liability.outstanding, currency)}
+                          {formatCurrency(item.outstanding, currency)}
                         </p>
                       </div>
                       <div className="space-y-1.5">
                         <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest opacity-60">Monthly Flow</p>
                         <p className="text-sm font-black text-orange-500 tabular-nums font-mono">
-                          {formatCurrency(liability.emiAmount, currency)}
+                          {formatCurrency(item.emiAmount, currency)}
                         </p>
                       </div>
                       <div className="space-y-1.5">
                         <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest opacity-60">Principal</p>
-                        <p className="text-xs font-bold text-slate-400 tabular-nums font-mono">{formatCurrency(liability.principal, currency)}</p>
+                        <p className="text-xs font-bold text-slate-400 tabular-nums font-mono">{formatCurrency(item.principal, currency)}</p>
                       </div>
                       <div className="space-y-1.5">
-                        <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest opacity-60">Cycle</p>
-                        <p className="text-xs font-bold text-slate-400 tracking-tighter font-mono">{monthsPaid} <span className="text-[10px] opacity-40">/ {liability.tenure}</span></p>
+                        <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest opacity-60">Status</p>
+                        <p className="text-xs font-bold text-slate-400 tracking-tighter font-mono">
+                          {isPersonal ? (
+                            <span className="text-emerald-500">ACTIVE IOU</span>
+                          ) : (
+                            <>{monthsPaid} <span className="text-[10px] opacity-40">/ {item.tenure}</span></>
+                          )}
+                        </p>
                       </div>
                     </div>
 
@@ -518,19 +572,16 @@ export function LiabilityTab({ currency, expenses = [], accounts = [] }: Liabili
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="liability-start-date" className="text-label text-[10px] mb-3 block">Start Date</Label>
-                <Input
-                  id="liability-start-date"
-                  name="startDate"
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
-                  required
-                  autoComplete="off"
-                />
-              </div>
+              <Label htmlFor="liability-start-date" className="text-label text-[10px] mb-3 block">Actual EMI Due Date (Anchor)</Label>
+              <Input
+                id="liability-start-date"
+                name="startDate"
+                type="date"
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
+                required
+              />
               <div>
                 <Label htmlFor="liability-tenure" className="text-label text-[10px] mb-3 block">Tenure</Label>
                 <div className="flex gap-2">

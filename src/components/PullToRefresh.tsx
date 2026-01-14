@@ -16,7 +16,7 @@ export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
   const threshold = 80;
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (containerRef.current && containerRef.current.scrollTop === 0) {
+    if (window.scrollY === 0) {
       startY.current = e.touches[0].clientY;
     }
   };
@@ -28,7 +28,7 @@ export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
       const currentY = e.touches[0].clientY;
       const distance = currentY - startY.current;
 
-      if (distance > 0 && containerRef.current && containerRef.current.scrollTop === 0) {
+      if (distance > 0 && window.scrollY === 0) {
         if (e.cancelable) {
           e.preventDefault();
         }
@@ -69,7 +69,7 @@ export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
   return (
     <div
       ref={containerRef}
-      className="relative overflow-y-auto"
+      className="relative"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >

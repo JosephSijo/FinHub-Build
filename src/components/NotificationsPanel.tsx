@@ -183,6 +183,7 @@ export function NotificationsPanel({
                   <div key={category} className="space-y-4">
                     <button
                       onClick={() => toggleStack(category)}
+                      {...(isExpanded ? { 'aria-expanded': 'true' } : { 'aria-expanded': 'false' })}
                       className="w-full flex items-center justify-between px-2 group"
                     >
                       <div className="flex items-center gap-3">

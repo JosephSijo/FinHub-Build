@@ -31,6 +31,8 @@ export interface Expense {
   justification?: string;
   serviceChargeAmount?: number;
   isInternalTransfer?: boolean;
+  liabilityId?: string;
+  investmentId?: string;
 }
 
 export interface Income {
@@ -45,6 +47,8 @@ export interface Income {
   endDate?: string;
   createdAt: string;
   isInternalTransfer?: boolean;
+  liabilityId?: string;
+  investmentId?: string;
 }
 
 export interface Debt {

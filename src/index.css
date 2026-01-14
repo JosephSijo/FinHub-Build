@@ -5,6 +5,12 @@
 @tailwind utilities;
 
 @layer base {
+  html,
+  :host {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   :root {
     /* --- APPLE INSPIRED VISUAL DNA (LEGACY MAPPING) --- */
     --bg-obsidian: var(--q-obsidian);
@@ -26,12 +32,28 @@
 
     --text-silver: var(--q-silver);
     --text-dim: var(--q-slate);
+
+    /* Safe Area Variables for Capacitor/Mobile */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
   }
 
   body {
-    @apply bg-black text-white antialiased overflow-x-hidden;
+    @apply bg-transparent text-white antialiased overflow-x-hidden;
     font-family: var(--q-font-ui);
     background: var(--q-obsidian);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* Sonner Fix */
+  [data-sonner-toast][data-swiped=true] {
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   button:active,
@@ -53,6 +75,24 @@
 
   .nav-bar-border {
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  }
+
+  /* Safe Area Layout Utilities */
+  .safe-header {
+    padding-top: var(--safe-top);
+    height: calc(4rem + var(--safe-top));
+  }
+
+  .safe-footer {
+    padding-bottom: var(--safe-bottom);
+    height: calc(5rem + var(--safe-bottom));
+  }
+
+  .safe-layout-main {
+    padding-top: calc(5rem + var(--safe-top));
+    padding-bottom: calc(9rem + var(--safe-bottom));
+    padding-left: calc(1rem + var(--safe-left));
+    padding-right: calc(1rem + var(--safe-right));
   }
 
   /* Modern Solid Card Architecture - No Pill Shapes */
@@ -190,7 +230,19 @@
   .text-balance {
     font-weight: 700;
     letter-spacing: -0.022em;
+    /* Basic Fallback */
+    word-break: break-all; 
+    overflow-wrap: anywhere;
   }
+  
+  @supports (text-wrap: balance) {
+    .text-balance {
+      text-wrap: balance;
+    }
+  }
+
+  /* Support older Safari with -webkit prefix for experimental if available, 
+     but mostly we rely on the @supports or basic fallback */
 
   .main-grid {
     display: grid;
@@ -251,6 +303,17 @@
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 10px;
+  }
+
+  /* --- ACCESSIBILITY & COMPATIBILITY HELPERS --- */
+  .backdrop-blur-sm { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+  .backdrop-blur-md { -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+  .backdrop-blur-lg { -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+  .backdrop-blur-xl { -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
+
+  /* Ensure standard Tailwind classes are covered too */
+  [class*="backdrop-blur"] {
+    -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
   }
 
   /* --- SYNCHRONIZED MESH SYSTEM --- */

@@ -6,12 +6,13 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Badge } from './ui/badge';
-import { X, Sparkles, TrendingUp, Users } from 'lucide-react';
-import { EXPENSE_CATEGORIES, Account } from '../types';
+import { X, Sparkles, TrendingUp, Users, Landmark } from 'lucide-react';
+import { EXPENSE_CATEGORIES, Account, Liability } from '../types';
 import { isTransfer } from '../utils/isTransfer';
 import { Checkbox } from './ui/checkbox';
 import { autoCategorize } from '../utils/autoCategorize';
 import { formatCurrency } from '../utils/numberFormat';
+import { calculateLoanDetails, calculateInvestmentDetails } from '../utils/financeCalculations';
 
 interface TransactionFormProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ interface TransactionFormProps {
   onSubmit: (data: any) => void;
   initialData?: any;
   accounts: Account[];
+  liabilities: Liability[];
   currency: string;
   roundUpEnabled?: boolean;
 }
@@ -31,6 +33,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   onSubmit,
   initialData,
   accounts,
+  liabilities,
   currency,
   roundUpEnabled = true // Default to true if not provided
 }) => {
@@ -45,11 +48,20 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     date: new Date().toISOString().split('T')[0],
     tags: [] as string[],
     isRecurring: false,
-    frequency: 'monthly' as 'daily' | 'weekly' | 'monthly' | 'yearly',
+    frequency: 'monthly' as 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom',
     endDate: '',
     isIncomeGenerating: false,
     justification: '',
-    debtDueDate: ''
+    debtDueDate: '',
+    // Loan Simulation Fields
+    principal: '',
+    interestRate: '',
+    tenure: '',
+    tenureUnit: 'months' as 'months' | 'years',
+    liabilityId: '',
+    investmentId: '',
+    registerAsLiability: false,
+    liabilityType: 'personal_loan' as Liability['type'],
   });
   const [tagInput, setTagInput] = useState('');
   const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
@@ -76,7 +88,15 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         endDate: initialData.endDate || '',
         isIncomeGenerating: initialData.isIncomeGenerating || false,
         justification: initialData.justification || '',
-        debtDueDate: initialData.dueDate || ''
+        debtDueDate: initialData.dueDate || '',
+        principal: initialData.principal?.toString() || '',
+        interestRate: initialData.interestRate?.toString() || '',
+        tenure: initialData.tenure?.toString() || '',
+        tenureUnit: initialData.tenureUnit || 'months',
+        liabilityId: initialData.liabilityId || '',
+        investmentId: initialData.investmentId || '',
+        registerAsLiability: initialData.registerAsLiability || false,
+        liabilityType: initialData.type || 'personal_loan',
       });
     } else if (accounts.length > 0 && !formData.accountId) {
       // Auto-select first account for new transactions
@@ -91,24 +111,53 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       type === 'income' ? formData.description :
         formData.personName;
 
-    if (text.length > 2 && !initialData) {
-      // Use local categorization for instant feedback
-      const suggestion = autoCategorize(text);
+    const suggestion = (text.length > 2 && !initialData) ? autoCategorize(text) : null;
 
-      if (suggestion) {
-        setSuggestedCategory(suggestion.category);
-        setSuggestedTags(suggestion.tags);
-        setSuggestedAmount(suggestion.suggestedAmount);
-        setSuggestedDescription(suggestion.suggestedDescription);
-      } else {
-        // Clear if no match found
-        setSuggestedCategory(null);
-        setSuggestedTags([]);
-        setSuggestedAmount(undefined);
-        setSuggestedDescription(undefined);
+    if (text.length > 2 && !initialData) {
+      // 1. Check for Liability Matching (EMI/Loans)
+      const matchedLiability = liabilities.find(l =>
+        l.name.toLowerCase() === text.toLowerCase() ||
+        text.toLowerCase() === `emi: ${l.name.toLowerCase()}` ||
+        text.toLowerCase().includes(l.name.toLowerCase())
+      );
+
+      if (matchedLiability) {
+        try {
+          setSuggestedCategory('EMI');
+          setSuggestedTags(['emi', 'liability', matchedLiability.name.toLowerCase()]);
+          setSuggestedAmount(matchedLiability.emiAmount);
+          setSuggestedDescription(`EMI: ${matchedLiability.name}`);
+
+          const lStart = new Date(matchedLiability.startDate);
+          const currentMonth = new Date();
+          currentMonth.setDate(lStart.getDate());
+          const suggestedDateStr = currentMonth.toISOString().split('T')[0];
+          (formData as any).suggestedDate = suggestedDateStr;
+          if (!formData.liabilityId) {
+            setFormData(prev => ({ ...prev, liabilityId: matchedLiability.id }));
+          }
+        } catch (e) {
+          // Ignore date suggestion error
+        }
       }
     }
-  }, [formData.description, formData.personName, type, initialData]);
+    // Removed the else { setFormData(prev => ({ ...prev, liabilityId: '' })); } 
+    // logic to allow manual selection to persist.
+
+    if (suggestion) {
+      setSuggestedCategory(suggestion.category);
+      setSuggestedTags(suggestion.tags);
+      setSuggestedAmount(suggestion.suggestedAmount);
+      setSuggestedDescription(suggestion.suggestedDescription);
+    } else {
+      // Clear if no match found
+      setSuggestedCategory(null);
+      setSuggestedTags([]);
+      setSuggestedAmount(undefined);
+      setSuggestedDescription(undefined);
+      delete (formData as any).suggestedDate;
+    }
+  }, [formData.description, formData.personName, type, initialData, liabilities]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,7 +178,15 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       startDate: formData.date, // For recurring transactions
       endDate: formData.endDate || undefined,
       isIncomeGenerating: formData.isIncomeGenerating,
-      justification: formData.justification
+      justification: formData.justification,
+      liabilityId: formData.liabilityId === 'new' ? undefined : (formData.liabilityId || undefined),
+      investmentId: formData.investmentId,
+      registerAsLiability: formData.registerAsLiability,
+      principal: formData.principal ? parseFloat(formData.principal) : undefined,
+      interestRate: formData.interestRate ? parseFloat(formData.interestRate) : undefined,
+      tenure: formData.tenure ? parseInt(formData.tenure) : undefined,
+      tenureUnit: formData.tenureUnit,
+      liabilityType: formData.liabilityType
     };
 
     if (type === 'expense') {
@@ -184,7 +241,15 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       endDate: '',
       isIncomeGenerating: false,
       justification: '',
-      debtDueDate: ''
+      debtDueDate: '',
+      principal: '',
+      interestRate: '',
+      tenure: '',
+      tenureUnit: 'months',
+      liabilityId: '',
+      investmentId: '',
+      registerAsLiability: false,
+      liabilityType: 'personal_loan',
     });
     setTagInput('');
     setSuggestedCategory(null);
@@ -521,6 +586,73 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               </div>
             )}
 
+            {/* Liability Linking (for EMIs) */}
+            {type === 'expense' && formData.category === 'EMI' && (
+              <div className="space-y-4 p-4 bg-rose-500/5 border border-rose-500/10 sq-md animate-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-rose-400">Liability Protocol</Label>
+                  <Landmark className="w-4 h-4 text-rose-400" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="transaction-liability" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Target Liability</Label>
+                  <Select
+                    value={formData.liabilityId}
+                    onValueChange={(val) => setFormData(prev => ({
+                      ...prev,
+                      liabilityId: val,
+                      registerAsLiability: val === 'new'
+                    }))}
+                  >
+                    <SelectTrigger id="transaction-liability" name="liabilityId" className="h-10 bg-black border-white/5 sq-md text-slate-200 font-bold text-xs">
+                      <SelectValue placeholder="Select or Create Liability" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black border-white/5">
+                      <SelectItem value="none" className="font-bold">No formal link</SelectItem>
+                      <SelectItem value="new" className="text-emerald-400 font-black italic">+ Register as New Loan</SelectItem>
+                      {liabilities.map(l => (
+                        <SelectItem key={l.id} value={l.id} className="font-bold">
+                          {l.name} (₹{l.outstanding.toLocaleString()})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.liabilityId === 'new' && (
+                  <div className="space-y-4 animate-in zoom-in-95 duration-300">
+                    <div className="space-y-2">
+                      <Label htmlFor="transaction-liability-type" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Loan Category</Label>
+                      <Select
+                        value={formData.liabilityType}
+                        onValueChange={(val: any) => setFormData(prev => ({ ...prev, liabilityType: val }))}
+                      >
+                        <SelectTrigger id="transaction-liability-type" className="h-10 bg-black border-white/5 sq-md text-slate-200 font-bold text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-black border-white/5">
+                          <SelectItem value="home_loan">🏠 Home Loan</SelectItem>
+                          <SelectItem value="car_loan">🚗 Car Loan</SelectItem>
+                          <SelectItem value="personal_loan">💳 Personal Loan</SelectItem>
+                          <SelectItem value="education_loan">🎓 Education Loan</SelectItem>
+                          <SelectItem value="other">📋 Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl space-y-2">
+                      <p className="text-[9px] font-black text-emerald-400 uppercase leading-relaxed">
+                        This will create a new formal liability in your "Bills" tab.
+                      </p>
+                      <p className="text-[8px] font-bold text-slate-500 uppercase leading-relaxed">
+                        Ensure principal and interest are set in the Matrix below.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Credit Card Specific Logic */}
             {(() => {
               const selectedAccount = accounts.find(a => a.id === formData.accountId);
@@ -693,49 +825,176 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             </div>
 
             {formData.isRecurring && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="transaction-frequency" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Period</Label>
-                  <Select value={formData.frequency} onValueChange={(value: any) => setFormData({ ...formData, frequency: value })}>
-                    <SelectTrigger id="transaction-frequency" name="frequency" className="bg-black border-white/5 h-12 sq-md text-slate-200 font-bold">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-black border-white/5">
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="yearly">Yearly</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-6 mt-4 p-4 bg-slate-900/40 border border-white/5 sq-md animate-in fade-in zoom-in-95 duration-500">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Financial Matrix Analysis</Label>
+                  <Sparkles className="w-3 h-3 text-indigo-400" />
                 </div>
 
-                {formData.frequency === 'custom' ? (
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="transaction-interval" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Days Interval</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-600 ml-1">Principal Capital</Label>
                     <NumberInput
-                      id="transaction-interval"
-                      name="customIntervalDays"
-                      value={(formData as any).customIntervalDays || ''}
-                      onChange={(value) => setFormData({ ...formData, customIntervalDays: parseInt(value) } as any)}
-                      placeholder="e.g. 45"
-                      min="1"
-                      className="bg-black border-white/5 h-12 sq-md text-slate-200 font-bold"
+                      value={formData.principal}
+                      onChange={(val) => setFormData({ ...formData, principal: val })}
+                      placeholder="e.g. 100000"
+                      className="bg-black border-white/5 h-11 sq-md text-slate-300 font-bold text-xs"
                     />
                   </div>
-                ) : (
                   <div className="space-y-2">
-                    <Label htmlFor="transaction-end-date" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Termination</Label>
-                    <Input
-                      id="transaction-end-date"
-                      name="endDate"
-                      type="date"
-                      value={formData.endDate}
-                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                      className="bg-black border-white/5 h-12 sq-md text-slate-200 font-bold"
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-600 ml-1">Rate (% p.a)</Label>
+                    <NumberInput
+                      value={formData.interestRate}
+                      onChange={(val) => setFormData({ ...formData, interestRate: val })}
+                      placeholder="e.g. 12"
+                      className="bg-black border-white/5 h-11 sq-md text-slate-300 font-bold text-xs"
                     />
                   </div>
-                )}
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-600 ml-1">Tenure</Label>
+                    <NumberInput
+                      value={formData.tenure}
+                      onChange={(val) => setFormData({ ...formData, tenure: val })}
+                      placeholder="e.g. 12"
+                      className="bg-black border-white/5 h-11 sq-md text-slate-300 font-bold text-xs"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-600 ml-1">Unit</Label>
+                    <Select value={formData.tenureUnit} onValueChange={(val: any) => setFormData({ ...formData, tenureUnit: val })}>
+                      <SelectTrigger className="bg-black border-white/5 h-11 sq-md text-slate-300 font-bold text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-black border-white/5">
+                        <SelectItem value="months">Months</SelectItem>
+                        <SelectItem value="years">Years</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {(() => {
+                  const p = parseFloat(formData.principal);
+                  const r = parseFloat(formData.interestRate);
+                  let t = parseInt(formData.tenure);
+                  if (isNaN(p) || isNaN(r) || isNaN(t) || p <= 0) return null;
+
+                  if (formData.tenureUnit === 'years') t *= 12;
+
+                  if (type === 'expense') {
+                    const details = calculateLoanDetails(p, r, t);
+                    return (
+                      <div className="space-y-3 pt-2 border-t border-white/5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Calculated EMI</span>
+                          <span className="text-sm font-black text-rose-400">{formatCurrency(details.emi, currency)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Extra Interest</span>
+                          <span className="text-xs font-bold text-slate-400">{formatCurrency(details.totalInterest, currency)}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            const startDate = new Date(formData.date);
+                            const tVal = t; // t is already in months from line 791
+                            startDate.setMonth(startDate.getMonth() + tVal);
+                            const calculatedEndDate = startDate.toISOString().split('T')[0];
+
+                            setFormData({
+                              ...formData,
+                              amount: details.emi.toString(),
+                              endDate: calculatedEndDate
+                            });
+                          }}
+                          className="w-full h-9 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 text-[10px] font-black uppercase tracking-widest sq-md"
+                        >
+                          Sync EMI to Transaction
+                        </Button>
+                      </div>
+                    );
+                  } else if (type === 'income') {
+                    const details = calculateInvestmentDetails(p, r, t);
+                    return (
+                      <div className="space-y-3 pt-2 border-t border-white/5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Monthly Yield</span>
+                          <span className="text-sm font-black text-emerald-400">{formatCurrency(details.monthlyYield, currency)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total Capital Gains</span>
+                          <span className="text-xs font-bold text-slate-400">{formatCurrency(details.totalReturns, currency)}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            const startDate = new Date(formData.date);
+                            const tVal = t; // t is already in months from line 791
+                            startDate.setMonth(startDate.getMonth() + tVal);
+                            const calculatedEndDate = startDate.toISOString().split('T')[0];
+
+                            setFormData({
+                              ...formData,
+                              amount: details.monthlyYield.toString(),
+                              endDate: calculatedEndDate
+                            });
+                          }}
+                          className="w-full h-9 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 text-[10px] font-black uppercase tracking-widest sq-md"
+                        >
+                          Sync Yield to Transaction
+                        </Button>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                  <div className="space-y-2">
+                    <Label htmlFor="transaction-frequency" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Period</Label>
+                    <Select value={formData.frequency} onValueChange={(value: any) => setFormData({ ...formData, frequency: value })}>
+                      <SelectTrigger id="transaction-frequency" name="frequency" className="bg-black border-white/5 h-12 sq-md text-slate-200 font-bold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-black border-white/5">
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.frequency === 'custom' ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="transaction-interval" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Days Interval</Label>
+                      <NumberInput
+                        id="transaction-interval"
+                        name="customIntervalDays"
+                        value={(formData as any).customIntervalDays || ''}
+                        onChange={(value) => setFormData({ ...formData, customIntervalDays: parseInt(value) } as any)}
+                        placeholder="e.g. 45"
+                        min="1"
+                        className="bg-black border-white/5 h-12 sq-md text-slate-200 font-bold"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label htmlFor="transaction-end-date" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Termination</Label>
+                      <Input
+                        id="transaction-end-date"
+                        name="endDate"
+                        type="date"
+                        value={formData.endDate}
+                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                        className="bg-black border-white/5 h-12 sq-md text-slate-200 font-bold"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -761,7 +1020,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             </div>
           </form>
         </div>
-      </DialogContent>
+      </DialogContent >
     </Dialog >
   );
 };

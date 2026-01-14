@@ -181,8 +181,9 @@ export const DebtItem: React.FC<DebtItemProps> = ({ debt, currency, onEdit, onDe
                                     onClick={() => onSettle(debt.id)}
                                     className="w-11 h-11 p-0 text-emerald-400 hover:bg-emerald-400/10 border border-emerald-400/20 rounded-xl"
                                     title="Mark as Settled"
+                                    aria-label={`Mark debt with ${debt.personName} as settled`}
                                 >
-                                    <Check className="w-5 h-5" />
+                                    <Check className="w-5 h-5" aria-hidden="true" />
                                 </Button>
                             )}
                             <ChevronRight className="w-4 h-4 text-slate-700 flex-shrink-0 group-hover:text-slate-400 transition-colors" />

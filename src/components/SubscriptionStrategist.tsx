@@ -12,7 +12,7 @@ interface SubscriptionStrategistProps {
     onDelete: (id: string, description: string) => void;
 }
 
-type SubscriptionCategory = 'Vital' | 'Lifestyle' | 'Ghost';
+type SubscriptionCategory = 'Vital' | 'Lifestyle' | 'Ghost' | 'Asset';
 
 export const SubscriptionStrategist: React.FC<SubscriptionStrategistProps> = ({
     recurring,
@@ -31,7 +31,9 @@ export const SubscriptionStrategist: React.FC<SubscriptionStrategistProps> = ({
                 const cat = sub.category?.toLowerCase() || '';
 
                 // Vital keywords
-                if (
+                if (sub.investmentId) {
+                    category = 'Asset';
+                } else if (
                     desc.includes('insurance') ||
                     desc.includes('cloud') ||
                     desc.includes('drive') ||
@@ -194,18 +196,21 @@ export const SubscriptionStrategist: React.FC<SubscriptionStrategistProps> = ({
                                 <div className="flex items-center gap-4">
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${isGhost ? 'bg-rose-500/10 text-rose-400' :
                                         isVital ? 'bg-emerald-500/10 text-emerald-400' :
-                                            'bg-slate-800 text-slate-400'
+                                            isAsset ? 'bg-teal-500/10 text-teal-400' :
+                                                'bg-slate-800 text-slate-400'
                                         }`}>
                                         {isGhost ? <AlertTriangle className="w-5 h-5" /> :
                                             isVital ? <Shield className="w-5 h-5" /> :
-                                                <Zap className="w-5 h-5" />}
+                                                isAsset ? <TrendingUp className="w-5 h-5" /> :
+                                                    <Zap className="w-5 h-5" />}
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-slate-200">{sub.description || sub.source}</h4>
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded ${isGhost ? 'bg-rose-500 text-black' :
                                                 isVital ? 'bg-emerald-500/20 text-emerald-400' :
-                                                    'bg-slate-700 text-slate-400'
+                                                    isAsset ? 'bg-teal-500/20 text-teal-400' :
+                                                        'bg-slate-700 text-slate-400'
                                                 }`}>
                                                 {sub.strategyCategory}
                                             </span>

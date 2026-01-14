@@ -42,6 +42,23 @@
   --q-mesh-opacity-cap: 0.3;
 }
 
+/* Safe Area Utilities */
+.pt-safe {
+  padding-top: var(--safe-top);
+}
+
+.pb-safe {
+  padding-bottom: var(--safe-bottom);
+}
+
+.pl-safe {
+  padding-left: var(--safe-left);
+}
+
+.pr-safe {
+  padding-right: var(--safe-right);
+}
+
 .garnet-alert {
   background-color: rgba(115, 8, 0, 0.15);
   border-color: rgba(115, 8, 0, 0.4);

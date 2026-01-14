@@ -160,7 +160,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       />
 
       {/* Transaction List */}
-      <div className="pb-32">
+      <div className="pb-32" role="region" aria-label="Transaction historical data">
         <div className="frosted-plate rounded-3xl border border-white/5 overflow-hidden">
           {filteredTransactions.length === 0 ? (
             <div className="p-12 text-center bg-white/[0.02]">

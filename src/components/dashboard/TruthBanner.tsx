@@ -15,7 +15,12 @@ export const TruthBanner: React.FC<TruthBannerProps> = ({ message, loading, icon
                 <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center border border-indigo-500/20 min-w-[56px] shadow-inner group-hover:scale-105 transition-transform duration-500">
                     {icon || <Sparkles className="text-indigo-400 w-6 h-6" />}
                 </div>
-                <div id="truth-banner-content" className="text-sm tracking-tight text-slate-300 font-bold italic leading-relaxed">
+                <div
+                    id="truth-banner-content"
+                    role="status"
+                    aria-live="polite"
+                    className="text-sm tracking-tight text-slate-300 font-bold italic leading-relaxed"
+                >
                     {loading ? (
                         <span className="animate-pulse text-indigo-400">Initializing Intelligence Nodes...</span>
                     ) : (

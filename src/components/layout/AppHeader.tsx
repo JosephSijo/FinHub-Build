@@ -16,7 +16,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
     return (
         <header
-            className={`nav-bar fixed top-0 w-full h-16 flex items-center justify-between px-6 border-b border-white/5 transition-transform duration-300 ease-in-out z-[100] ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}
+            className={`nav-bar safe-header fixed top-0 w-full flex items-center justify-between px-6 border-b border-white/5 transition-transform duration-300 ease-in-out z-[100] ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}
         >
             {/* User Settings (Left) */}
             <button

@@ -34,11 +34,11 @@ export const Dashboard = () => {
     const totalLiquidity = accounts.reduce((sum, acc) => sum + (acc.type !== 'credit_card' ? acc.balance : 0), 0);
 
     return (
-        <div className="min-h-screen bg-slate-900 p-4 pt-20">
+        <div className="min-h-screen bg-transparent p-4">
             <header className="mb-6 flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-                    <p className="text-slate-400 text-sm">Welcome back</p>
+                    <h1 className="text-3xl font-black text-white tracking-tight">Dashboard</h1>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.2em] mt-1">Intelligence Node Active</p>
                 </div>
             </header>
 

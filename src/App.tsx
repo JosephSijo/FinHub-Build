@@ -582,6 +582,7 @@ export default function App() {
                           {/* Only show LiabilityDashboard when specifically in liability tab */}
                           <LiabilityDashboard
                             liabilities={liabilities}
+                            debts={debts}
                             currency={settings.currency}
                             totalMonthlyIncome={totalIncome}
                           />
@@ -589,6 +590,8 @@ export default function App() {
                             currency={settings.currency}
                             expenses={expenses}
                             accounts={accounts}
+                            debts={debts}
+                            liabilities={liabilities}
                           />
                         </div>
                       )}
@@ -615,19 +618,22 @@ export default function App() {
               </ScrollAwareLayout>
 
               {/* Modals */}
-              <TransactionForm
-                isOpen={isTransactionFormOpen}
-                onClose={() => {
-                  setIsTransactionFormOpen(false);
-                  setEditingTransaction(null);
-                }}
-                type={transactionFormType}
-                onSubmit={handleTransactionSubmit}
-                initialData={editingTransaction}
-                accounts={accounts}
-                currency={settings.currency}
-                roundUpEnabled={settings.roundUpEnabled}
-              />
+              {isTransactionFormOpen && (
+                <TransactionForm
+                  isOpen={isTransactionFormOpen}
+                  onClose={() => {
+                    setIsTransactionFormOpen(false);
+                    setEditingTransaction(null);
+                  }}
+                  type={transactionFormType}
+                  onSubmit={handleTransactionSubmit}
+                  initialData={editingTransaction}
+                  accounts={accounts}
+                  liabilities={liabilities}
+                  currency={settings.currency}
+                  roundUpEnabled={settings.roundUpEnabled}
+                />
+              )}
 
               {/* Round Up Dialog */}
               {roundUpData && (

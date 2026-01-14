@@ -91,6 +91,17 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
-    allowedHosts: true
+    allowedHosts: true,
+    headers: {
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Security-Policy': "frame-ancestors 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;",
+    }
   },
+  preview: {
+    headers: {
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Security-Policy': "frame-ancestors 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;",
+      'Cache-Control': 'public, max-age=31536000, immutable'
+    }
+  }
 });

@@ -65,7 +65,9 @@ export const ScrollAwareLayout: React.FC<ScrollAwareLayoutProps> = ({
                 onSettingsClick={onSettingsClick}
             />
 
-            <main className="pt-[80px] pb-[140px] px-4 w-full md:max-w-3xl lg:max-w-5xl mx-auto min-h-screen">
+            <main
+                className="safe-layout-main px-4 w-full md:max-w-3xl lg:max-w-5xl mx-auto min-h-screen"
+            >
                 {children}
             </main>
 

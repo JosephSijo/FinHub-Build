@@ -33,11 +33,12 @@ import React from 'react';
 
 interface LiabilityDashboardProps {
   liabilities: any[];
+  debts: any[];
   currency: string;
   totalMonthlyIncome: number;
 }
 
-export const LiabilityDashboard = React.memo(({ liabilities, currency, totalMonthlyIncome }: LiabilityDashboardProps) => {
+export const LiabilityDashboard = React.memo(({ liabilities, debts, currency, totalMonthlyIncome }: LiabilityDashboardProps) => {
   const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
   const [whatIfInterest, setWhatIfInterest] = useState<number | null>(null);
   const [selectedLiabilityIds, setSelectedLiabilityIds] = useState<string[]>([]);
@@ -66,14 +67,33 @@ export const LiabilityDashboard = React.memo(({ liabilities, currency, totalMont
     highestInterestLoan,
     strategies
   } = useMemo(() => {
-    const outstanding = liabilities.reduce((sum, l) => sum + l.outstanding, 0);
-    const principal = liabilities.reduce((sum, l) => sum + l.principal, 0);
-    const emi = liabilities.reduce((sum, l) => sum + l.emiAmount, 0);
-    const weightedInterestSum = liabilities.reduce((sum, l) => sum + (l.interestRate * l.outstanding), 0);
+    const borrowedDebts = debts.filter(d => d.type === 'borrowed' && d.status === 'pending');
+
+    // Unify liabilities and pending borrowed debts
+    const unifiedLiabilities = [
+      ...liabilities.map(l => ({ ...l, unifiedType: 'institutional' })),
+      ...borrowedDebts.map(d => ({
+        id: d.id,
+        name: d.personName,
+        outstanding: d.amount,
+        principal: d.amount, // Assume principal = current amount for IOUs
+        interestRate: d.interestRate || 0,
+        emiAmount: 0, // IOUs usually don't have monthly EMI in our model yet
+        tenure: 0,
+        unifiedType: 'personal'
+      }))
+    ];
+
+    const outstanding = unifiedLiabilities.reduce((sum, l) => sum + l.outstanding, 0);
+    const principal = unifiedLiabilities.reduce((sum, l) => sum + l.principal, 0);
+    const emi = unifiedLiabilities.reduce((sum, l) => sum + l.emiAmount, 0);
+    const weightedInterestSum = unifiedLiabilities.reduce((sum, l) => sum + (l.interestRate * l.outstanding), 0);
     const avgRate = outstanding > 0 ? weightedInterestSum / outstanding : 0;
 
-    // Total Estimated Interest (approximate) - Using Amortization Math
-    const estimatedInterest = liabilities.reduce((sum, l) => {
+    // Total Estimated Interest (approximate) - Using Amortization Math for institutional, 1:1 for personal
+    const estimatedInterest = unifiedLiabilities.reduce((sum, l) => {
+      if (l.unifiedType === 'personal') return sum; // Personal IOUs interest is usually handled differently or zero in this model
+
       const p = l.outstanding;
       const r = l.interestRate / 12 / 100;
       const emiVal = l.emiAmount;
@@ -84,8 +104,11 @@ export const LiabilityDashboard = React.memo(({ liabilities, currency, totalMont
       const totalPayment = emiVal * n;
       return sum + Math.max(0, totalPayment - p);
     }, 0);
+
     // Months to Freedom - Max time among all loans
-    const maxMonths = liabilities.reduce((max, l) => {
+    const maxMonths = unifiedLiabilities.reduce((max, l) => {
+      if (l.unifiedType === 'personal') return max; // IOU maturity isn't modelled in months to freedom usually
+
       const p = l.outstanding;
       const r = l.interestRate / 12 / 100;
       const emiVal = l.emiAmount;
@@ -97,9 +120,9 @@ export const LiabilityDashboard = React.memo(({ liabilities, currency, totalMont
       return Math.max(max, n);
     }, 0);
 
-    const highest = [...liabilities].sort((a, b) => b.interestRate - a.interestRate)[0];
-    const snowballSorted = [...liabilities].sort((a, b) => a.outstanding - b.outstanding);
-    const avalancheSorted = [...liabilities].sort((a, b) => b.interestRate - a.interestRate);
+    const highest = [...unifiedLiabilities].sort((a, b) => b.interestRate - a.interestRate)[0];
+    const snowballSorted = [...unifiedLiabilities].sort((a, b) => a.outstanding - b.outstanding);
+    const avalancheSorted = [...unifiedLiabilities].sort((a, b) => b.interestRate - a.interestRate);
 
     const strategyList = [
       {
@@ -157,7 +180,7 @@ export const LiabilityDashboard = React.memo(({ liabilities, currency, totalMont
       highestInterestLoan: highest,
       strategies: strategyList
     };
-  }, [liabilities]);
+  }, [liabilities, debts]);
 
   const displayInterestRate = whatIfInterest ?? averageInterestRate;
 

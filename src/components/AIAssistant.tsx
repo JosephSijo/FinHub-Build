@@ -142,6 +142,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               variant="ghost"
               size="icon"
               onClick={onClose}
+              aria-label="Close Assistant"
               className="w-10 h-10 rounded-full bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
             >
               <X className="w-5 h-5" />
@@ -150,7 +151,11 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-indigo-500/5 via-transparent to-transparent">
+        <div
+          role="log"
+          aria-live="polite"
+          className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-indigo-500/5 via-transparent to-transparent"
+        >
           {messages.map((message, index) => (
             <div
               key={index}

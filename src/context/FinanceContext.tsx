@@ -1031,14 +1031,40 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                         console.log("[Backfill Debug Update] Generated", dueDates.length, "due dates");
 
                         const recAmount = Number(updatedRec.amount);
+                        const recDesc = (updatedRec.description || updatedRec.source || '').toLowerCase().trim();
+
                         const missingDates = dueDates.filter(due => {
                             const dStr = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
+
                             const exists = [...expenses, ...incomes].some(tx => {
                                 const txDate = (tx.date || '').split('T')[0];
                                 const txAmount = Number(tx.amount);
+                                const txDesc = (('description' in tx ? tx.description : (tx as any).source) || '').toLowerCase().trim();
+
                                 const amountMatch = Math.abs(txAmount - recAmount) < 0.01;
-                                const dateMatch = txDate === dStr;
-                                return dateMatch && amountMatch;
+                                const descMatch = txDesc.includes(recDesc) || recDesc.includes(txDesc);
+
+                                // Frequency-aware date matching
+                                let dateMatch = txDate === dStr;
+                                if (updatedRec.frequency === 'monthly') {
+                                    const tDate = new Date(txDate);
+                                    const diff = Math.abs(tDate.getDate() - due.getDate());
+                                    dateMatch = tDate.getFullYear() === due.getFullYear() &&
+                                        tDate.getMonth() === due.getMonth() &&
+                                        diff <= 7;
+                                } else if (updatedRec.frequency === 'weekly') {
+                                    const tDate = new Date(txDate);
+                                    const diff = Math.abs(tDate.getTime() - due.getTime()) / (1000 * 60 * 60 * 24);
+                                    dateMatch = diff <= 3;
+                                } else if (updatedRec.frequency === 'yearly') {
+                                    const tDate = new Date(txDate);
+                                    dateMatch = tDate.getFullYear() === due.getFullYear();
+                                }
+
+                                // Link matching (if previously recorded)
+                                const linkMatch = tx.recurringId === updatedRec.id;
+
+                                return (descMatch || linkMatch) && dateMatch && amountMatch;
                             });
                             return !exists;
                         });
@@ -1124,14 +1150,40 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                         console.log("[Backfill Debug] Generated", dueDates.length, "due dates");
 
                         const recAmount = Number(newRec.amount);
+                        const recDesc = (newRec.description || newRec.source || '').toLowerCase().trim();
+
                         const missingDates = dueDates.filter(due => {
                             const dStr = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
+
                             const exists = [...expenses, ...incomes].some(tx => {
                                 const txDate = (tx.date || '').split('T')[0];
                                 const txAmount = Number(tx.amount);
+                                const txDesc = (('description' in tx ? tx.description : (tx as any).source) || '').toLowerCase().trim();
+
                                 const amountMatch = Math.abs(txAmount - recAmount) < 0.01;
-                                const dateMatch = txDate === dStr;
-                                return dateMatch && amountMatch;
+                                const descMatch = txDesc.includes(recDesc) || recDesc.includes(txDesc);
+
+                                // Frequency-aware date matching
+                                let dateMatch = txDate === dStr;
+                                if (newRec.frequency === 'monthly') {
+                                    const tDate = new Date(txDate);
+                                    const diff = Math.abs(tDate.getDate() - due.getDate());
+                                    dateMatch = tDate.getFullYear() === due.getFullYear() &&
+                                        tDate.getMonth() === due.getMonth() &&
+                                        diff <= 7;
+                                } else if (newRec.frequency === 'weekly') {
+                                    const tDate = new Date(txDate);
+                                    const diff = Math.abs(tDate.getTime() - due.getTime()) / (1000 * 60 * 60 * 24);
+                                    dateMatch = diff <= 3;
+                                } else if (newRec.frequency === 'yearly') {
+                                    const tDate = new Date(txDate);
+                                    dateMatch = tDate.getFullYear() === due.getFullYear();
+                                }
+
+                                // Link matching
+                                const linkMatch = tx.recurringId === newRec.id;
+
+                                return (descMatch || linkMatch) && dateMatch && amountMatch;
                             });
                             return !exists;
                         });
@@ -1172,6 +1224,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const targetAccount = accounts.find(a => a.id === newRec.accountId);
 
         const goalChanges: Record<string, number> = {};
+        const liabilityChanges: Record<string, number> = {};
 
         for (const due of dates) {
             const dateStr = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
@@ -1184,7 +1237,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 tags: [...(newRec.tags || []), 'auto-backfill'],
                 accountId: newRec.accountId,
                 isRecurring: true,
-                recurringId: newRec.id
+                recurringId: newRec.id,
+                liabilityId: newRec.liabilityId,
+                investmentId: newRec.investmentId
             };
 
             try {
@@ -1200,6 +1255,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                         // Track Goal changes for batch update
                         if (newRec.goalId) {
                             goalChanges[newRec.goalId] = (goalChanges[newRec.goalId] || 0) + res.expense.amount;
+                        }
+
+                        // Track Liability changes
+                        if (newRec.liabilityId) {
+                            liabilityChanges[newRec.liabilityId] = (liabilityChanges[newRec.liabilityId] || 0) + res.expense.amount;
                         }
                     }
                 } else {
@@ -1235,6 +1295,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             }
         }
 
+        // Batch update Liabilities
+        for (const [lid, change] of Object.entries(liabilityChanges)) {
+            const liability = liabilities.find(l => l.id === lid);
+            if (liability) {
+                const newOutstanding = Math.max(0, liability.outstanding - change);
+                try {
+                    await api.updateLiability(userId, lid, { outstanding: newOutstanding });
+                    setLiabilities(prev => prev.map(l => l.id === lid ? { ...l, outstanding: newOutstanding } : l));
+                    console.log(`[Backfill] Corrected Liability ${liability.name} by ₹${change}`);
+                } catch (lErr) {
+                    console.error("Failed to update liability after backfill", lErr);
+                }
+            }
+        }
+
         if (targetAccount && balanceChange !== 0) {
             const newBalance = targetAccount.balance + balanceChange;
             try {
@@ -1244,6 +1319,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 console.error("Failed to update account balance after backfill", accErr);
             }
         }
+
+        // Final automatic dedupe scrub after batch creation
+        await cleanupDuplicates();
 
         toast.dismiss(toastId);
         toast.success(`Success: ${count} entries generated`);
@@ -1455,6 +1533,36 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 }
             }
 
+            // NEW: Formal Liability Registration
+            if (data.registerAsLiability) {
+                try {
+                    const tenureMonths = data.tenureUnit === 'years' ? (data.tenure * 12) : data.tenure;
+                    const libRes = await api.createLiability(userId, {
+                        name: data.description,
+                        type: data.liabilityType || 'other',
+                        principal: data.principal || data.amount,
+                        outstanding: data.principal || data.amount,
+                        interestRate: data.interestRate || 0,
+                        emiAmount: data.amount,
+                        startDate: data.date,
+                        tenure: tenureMonths,
+                        accountId: data.accountId
+                    });
+
+                    if (libRes.success) {
+                        processedData.liabilityId = libRes.liability.id;
+                        setLiabilities(prev => [...prev, libRes.liability]);
+                        toast.success("New loan registered in Bills tab");
+
+                        // Note: createLiability normally creates a recurring transaction automatically.
+                        // To avoid duplicates, we'll mark this request as already having handled recurring.
+                        data.isRecurring = false;
+                    }
+                } catch (libErr) {
+                    console.error("Failed to auto-register liability:", libErr);
+                }
+            }
+
             // 6. Proceed with Expense Creation (Normal Flow)
             const response = await api.createExpense(userId, processedData);
             if (response.success) {
@@ -1472,6 +1580,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     await updateAccount(targetAccount.id, {
                         balance: newBalance
                     });
+                }
+
+                // Update Liability Outstanding (Synchronization logic)
+                if (processedData.liabilityId) {
+                    const targetLiability = liabilities.find(l => l.id === processedData.liabilityId);
+                    if (targetLiability) {
+                        const newOutstanding = Math.max(0, targetLiability.outstanding - data.amount);
+                        await updateLiability(targetLiability.id, {
+                            outstanding: newOutstanding
+                        });
+                        toast.info(`Updated '${targetLiability.name}' balance`, {
+                            description: `New outstanding: ₹${newOutstanding.toLocaleString()}`
+                        });
+                    }
                 }
 
                 if (data.isRecurring) {

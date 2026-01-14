@@ -379,7 +379,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Sub-Component B (The Body) */}
-        <div className="stack-body relative z-10">
+        <div className="stack-body relative z-10 px-8">
           <div className="dotted-divider opacity-50 mb-6" />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -459,7 +459,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Sub-Component C (The Footer) */}
-        <div className="stack-footer relative z-10 space-y-2">
+        <div className="stack-footer relative z-10 space-y-2 px-8 pb-10">
 
 
           <CollapsibleSection
