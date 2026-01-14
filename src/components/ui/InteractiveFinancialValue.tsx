@@ -66,7 +66,7 @@ export const InteractiveFinancialValue: React.FC<InteractiveFinancialValueProps>
             <span
                 className={cn(
                     "cursor-pointer transition-all duration-200 select-none",
-                    "border-b border-dotted border-[#38383A] font-numeric tabular-nums leading-none inline-block",
+                    "border-b border-dotted border-[#38383A] font-mono tabular-nums leading-none inline-block font-extrabold",
                     "reset-text-fill",
                     isPressed && "scale-105",
                     className

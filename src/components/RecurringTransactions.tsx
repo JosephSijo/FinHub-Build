@@ -1,16 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Plus, Trash2, RefreshCw, Calendar, Sparkles, ArrowUpRight, Wallet, History, Target, Edit2 } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Calendar, Sparkles, ArrowUpRight, Wallet, Target, Edit2 } from 'lucide-react';
 import { MONEY_OUT_CATEGORIES, RecurringTransaction } from '../types';
 import { useFinance } from '../context/FinanceContext';
 import { formatCurrency } from '../utils/numberFormat';
 import { MeshBackground } from './ui/MeshBackground';
 import { SubscriptionStrategist } from './SubscriptionStrategist';
+import { toast } from 'sonner';
 
 export function RecurringTransactions() {
   const {
@@ -92,8 +93,8 @@ export function RecurringTransactions() {
         <div className="space-y-6 relative z-10">
           <div className="flex justify-between items-end">
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-widest font-black text-slate-600 mb-1">Commitment</span>
-              <span className={`text-2xl font-black tabular-nums leading-none ${rec.type === 'income' ? 'text-emerald-400' : 'text-slate-100'}`}>
+              <span className="text-[10px] uppercase tracking-widest font-black text-slate-600 mb-1 font-mono">Commitment</span>
+              <span className={`text-2xl font-black tabular-nums leading-none font-mono ${rec.type === 'income' ? 'text-emerald-400' : 'text-slate-100'}`}>
                 {rec.type === 'income' ? '+' : '-'}{formatCurrency(rec.amount, currency)}
               </span>
             </div>
@@ -149,6 +150,37 @@ export function RecurringTransactions() {
     endDate: '',
     tags: [] as string[]
   });
+
+  // Smart Detection Logic
+  useEffect(() => {
+    const name = (formData.type === 'expense' ? formData.description : formData.source).toLowerCase().trim();
+    if (!name || editingId) return;
+
+    const subKeywords = ['netflix', 'spotify', 'prime', 'youtube', 'apple', 'hulu', 'disney', 'google', 'icloud', 'adobe', 'canva', 'figma', 'chatgpt', 'openai', 'claude', 'midjourney', 'github', 'cursor'];
+    const emiKeywords = ['emi', 'loan', 'mortgage', 'bajaj', 'hdfc loan', 'sbi loan', 'icici loan', 'finance'];
+
+    if (subKeywords.some(kw => name.includes(kw))) {
+      if (formData.type !== 'expense' || formData.category !== 'Subscription') {
+        setFormData(prev => ({
+          ...prev,
+          type: 'expense',
+          category: 'Subscription',
+          description: prev.source || prev.description // Sync name if switched
+        }));
+        toast.info(`Smart Detection: Categorized as Subscription`, { icon: '🤖' });
+      }
+    } else if (emiKeywords.some(kw => name.includes(kw))) {
+      if (formData.type !== 'expense' || formData.category !== 'EMI') {
+        setFormData(prev => ({
+          ...prev,
+          type: 'expense',
+          category: 'EMI',
+          description: prev.source || prev.description
+        }));
+        toast.info(`Smart Detection: Categorized as EMI`, { icon: '🤖' });
+      }
+    }
+  }, [formData.description, formData.source, formData.type, editingId]);
 
   const handleCreateRecurring = async () => {
     const data: any = {
@@ -222,12 +254,18 @@ export function RecurringTransactions() {
   const filteredRecurring = recurring.filter(r => r.amount && r.amount > 0);
 
   const getCategorizedData = () => {
-    const loans = filteredRecurring.filter(r => r.category === 'EMI' || r.description?.toLowerCase().includes('loan'));
+    const loans = filteredRecurring.filter(r =>
+      r.category === 'EMI' ||
+      (r.description || '').toLowerCase().includes('loan') ||
+      (r.source || '').toLowerCase().includes('loan')
+    );
     const subscriptions = filteredRecurring.filter(r =>
       r.category === 'Subscription' ||
-      r.description?.toLowerCase().includes('subscription') ||
+      (r.description || '').toLowerCase().includes('subscription') ||
+      (r.source || '').toLowerCase().includes('subscription') ||
       ['netflix', 'spotify', 'prime', 'youtube', 'apple', 'hulu', 'disney', 'google'].some(kw =>
-        r.description?.toLowerCase().includes(kw)
+        (r.description || '').toLowerCase().includes(kw) ||
+        (r.source || '').toLowerCase().includes(kw)
       )
     );
     const incomes = filteredRecurring.filter(r => r.type === 'income');
@@ -312,39 +350,69 @@ export function RecurringTransactions() {
         />
       ) : (
         <>
-          {/* Summary Dashboard Card */}
-          <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700 text-white rounded-[32px] border-white/10 shadow-2xl p-8">
-            <MeshBackground variant="spending" className="opacity-50" />
-            <div className="absolute top-0 right-0 p-8 opacity-10 scale-150 rotate-12">
-              <History className="w-32 h-32" />
-            </div>
+          {/* Summary Dashboard Card - Aligned with History Tab */}
+          <div className="frosted-plate rounded-[32px] border border-white/5 relative overflow-hidden p-8 shadow-2xl">
+            <MeshBackground variant="spending" />
 
-            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
-              <div className="space-y-4 text-center md:text-left">
-                <p className="text-white/70 text-sm font-bold uppercase tracking-widest mb-1">Monthly Leftover Cash</p>
-                <h1 className="text-5xl md:text-6xl font-black tracking-tighter tabular-nums mb-2">
-                  {insights.netMonthly >= 0 ? '+' : ''}{formatCurrency(insights.netMonthly, currency)}
-                  <span className="text-xl text-white/50 ml-2 font-medium italic">/month</span>
-                </h1>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full md:w-auto">
-                <div className="bg-white/10 backdrop-blur-md px-6 py-4 rounded-3xl border border-white/10 text-center">
-                  <p className="text-[10px] uppercase font-bold text-white/60 mb-1">Loan EMIs</p>
-                  <span className="font-bold text-lg text-rose-300">-{formatCurrency(insights.loanTotal, currency)}</span>
+            <div className="relative z-10">
+              {/* Header Section */}
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-cyan-500/10 rounded-xl flex items-center justify-center border border-cyan-500/20">
+                    <RefreshCw className="w-5 h-5 text-cyan-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-slate-100 font-bold text-xs uppercase tracking-widest font-mono">Flow Analysis</h3>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-tighter">
+                      Monthly Leftover Cash
+                    </p>
+                  </div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-md px-6 py-4 rounded-3xl border border-white/10 text-center">
-                  <p className="text-[10px] uppercase font-bold text-white/60 mb-1">Subscriptions</p>
-                  <span className="font-bold text-lg text-indigo-200">-{formatCurrency(insights.subTotal, currency)}</span>
-                </div>
-                <div className="bg-white/10 backdrop-blur-md px-6 py-4 rounded-3xl border border-white/10 text-center">
-                  <p className="text-[10px] uppercase font-bold text-white/60 mb-1">Recur. Income</p>
-                  <span className="font-bold text-lg text-emerald-400">+{formatCurrency(insights.incomeTotal, currency)}</span>
+                <div className="text-right">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-extrabold font-mono">Total Commitments</p>
+                  <p className="text-sm font-black text-white tabular-nums font-mono">
+                    {insights.totalActive} Active
+                  </p>
                 </div>
               </div>
-            </div>
 
-          </Card>
+              <div className="flex flex-col md:flex-row items-center justify-between gap-12">
+                <div className="space-y-2 text-center md:text-left">
+                  <p className="text-slate-400 text-xs font-black uppercase tracking-widest font-mono">Projected Monthly Surplus</p>
+                  <h1 className="text-5xl md:text-6xl font-black tracking-tighter tabular-nums text-white font-mono">
+                    {insights.netMonthly >= 0 ? '+' : ''}{formatCurrency(insights.netMonthly, currency)}
+                  </h1>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full md:w-auto">
+                  {/* Loan EMIs */}
+                  <div className="bg-slate-800/40 backdrop-blur-md px-6 py-4 rounded-3xl border border-white/5 text-center flex flex-col items-center justify-center min-w-[140px]">
+                    <p className="text-[10px] uppercase font-black text-slate-500 mb-1 font-mono tracking-widest">Loan EMIs</p>
+                    <div className="flex flex-col items-center">
+                      <span className="text-2xl font-black leading-none text-rose-400/80 font-mono mb-1">-</span>
+                      <span className="font-black text-lg text-rose-400 font-mono tabular-nums">{formatCurrency(Math.abs(insights.loanTotal), currency)}</span>
+                    </div>
+                  </div>
+                  {/* Subscriptions */}
+                  <div className="bg-slate-800/40 backdrop-blur-md px-6 py-4 rounded-3xl border border-white/5 text-center flex flex-col items-center justify-center min-w-[140px]">
+                    <p className="text-[10px] uppercase font-black text-slate-500 mb-1 font-mono tracking-widest">Subscriptions</p>
+                    <div className="flex flex-col items-center">
+                      <span className="text-2xl font-black leading-none text-indigo-400/80 font-mono mb-1">-</span>
+                      <span className="font-black text-lg text-indigo-400 font-mono tabular-nums">{formatCurrency(Math.abs(insights.subTotal), currency)}</span>
+                    </div>
+                  </div>
+                  {/* Recur. Income */}
+                  <div className="bg-slate-800/40 backdrop-blur-md px-6 py-4 rounded-3xl border border-white/5 text-center flex flex-col items-center justify-center min-w-[140px]">
+                    <p className="text-[10px] uppercase font-black text-slate-500 mb-1 font-mono tracking-widest">Recur. Income</p>
+                    <div className="flex flex-col items-center">
+                      <span className="text-2xl font-black leading-none text-emerald-400/80 font-mono mb-1">+</span>
+                      <span className="font-black text-lg text-emerald-400 font-mono tabular-nums">{formatCurrency(Math.abs(insights.incomeTotal), currency)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Actions Row */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 sticky top-0 z-30 py-2 bg-slate-950/80 backdrop-blur-md rounded-2xl border border-white/5">
@@ -383,8 +451,8 @@ export function RecurringTransactions() {
                     <Sparkles className="w-5 h-5 text-indigo-400" />
                   </div>
                   <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-0.5">Net Monthly Flow</p>
-                    <h4 className={`text-lg font-black tabular-nums leading-none ${insights.netMonthly >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-0.5 font-mono">Net Monthly Flow</p>
+                    <h4 className={`text-lg font-black tabular-nums leading-none font-mono ${insights.netMonthly >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                       {insights.netMonthly >= 0 ? '+' : ''}{formatCurrency(insights.netMonthly, currency)}
                     </h4>
                   </div>
@@ -475,8 +543,8 @@ export function RecurringTransactions() {
                 {categorized.incomes.length > 0 && (
                   <div className="space-y-6">
                     <div className="flex items-center gap-3 border-l-4 border-emerald-500 pl-4 py-1">
-                      <h3 className="text-xl font-black text-slate-100 uppercase tracking-tight">Recurring Income</h3>
-                      <span className="bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-black">{categorized.incomes.length} SOURCE(S)</span>
+                      <h3 className="text-xl font-black text-slate-100 uppercase tracking-tight font-mono">Recurring Income</h3>
+                      <span className="bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-black font-mono">{categorized.incomes.length} SOURCE(S)</span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {categorized.incomes.map((rec, idx) => <RecurringCard key={`${rec.id}-${idx}`} rec={rec} />)}
@@ -488,8 +556,8 @@ export function RecurringTransactions() {
                 {categorized.loans.length > 0 && (
                   <div className="space-y-6">
                     <div className="flex items-center gap-3 border-l-4 border-rose-500 pl-4 py-1">
-                      <h3 className="text-xl font-black text-slate-100 uppercase tracking-tight">Loan EMIs</h3>
-                      <span className="bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded text-[10px] font-black">{categorized.loans.length} COMMITMENT(S)</span>
+                      <h3 className="text-xl font-black text-slate-100 uppercase tracking-tight font-mono">Loan EMIs</h3>
+                      <span className="bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded text-[10px] font-black font-mono">{categorized.loans.length} COMMITMENT(S)</span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {categorized.loans.map((rec, idx) => <RecurringCard key={`${rec.id}-${idx}`} rec={rec} />)}
@@ -501,8 +569,8 @@ export function RecurringTransactions() {
                 {categorized.subscriptions.length > 0 && (
                   <div className="space-y-6">
                     <div className="flex items-center gap-3 border-l-4 border-indigo-500 pl-4 py-1">
-                      <h3 className="text-xl font-black text-slate-100 uppercase tracking-tight">Active Subscriptions</h3>
-                      <span className="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded text-[10px] font-black">{categorized.subscriptions.length} SERVICE(S)</span>
+                      <h3 className="text-xl font-black text-slate-100 uppercase tracking-tight font-mono">Active Subscriptions</h3>
+                      <span className="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded text-[10px] font-black font-mono">{categorized.subscriptions.length} SERVICE(S)</span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {categorized.subscriptions.map((rec, idx) => <RecurringCard key={`${rec.id}-${idx}`} rec={rec} />)}

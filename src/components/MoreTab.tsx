@@ -102,30 +102,6 @@ export function MoreTab({
           </div>
         </Card>
 
-        <Card
-          className="p-8 cursor-pointer bg-black border-white/5 sq-2xl border hover:bg-white/5 transition-all duration-300 group relative overflow-hidden"
-          onClick={() => onNavigate('recurring')}
-        >
-          <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500 blur-3xl opacity-5 -mr-12 -mt-12 transition-opacity group-hover:opacity-20" />
-
-          <div className="relative z-10">
-            <div className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 sq-md flex items-center justify-center text-indigo-400 mb-8 group-hover:scale-110 transition-transform duration-500">
-              <RefreshCw className="w-8 h-8" />
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-xl font-black text-slate-100">Recurring Flow</h3>
-              <p className="text-sm font-bold text-slate-400 uppercase tracking-tight">
-                Subscriptions & EMIs
-              </p>
-            </div>
-
-            <div className="mt-11 flex items-center justify-between text-slate-500">
-              <span className="text-[10px] font-black uppercase tracking-widest">Active Commitments</span>
-              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-        </Card>
       </div>
 
       {/* Settings & Support Grid */}

@@ -1217,32 +1217,40 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const executeBackfill = async () => {
         if (!backfillRequest) return;
         const { count, dates, recurring: newRec } = backfillRequest;
+
+        // Clear request immediately to prevent duplicate triggers from UI
+        setBackfillRequest(null);
+
         const toastId = toast.loading(`Generating ${count} entries...`);
         const createdIncomes: any[] = [];
         const createdExpenses: any[] = [];
         let balanceChange = 0;
         const targetAccount = accounts.find(a => a.id === newRec.accountId);
 
+        console.log(`[Backfill Execution] Starting batch for: ${newRec.description || newRec.source}`);
+
         const goalChanges: Record<string, number> = {};
         const liabilityChanges: Record<string, number> = {};
 
-        for (const due of dates) {
-            const dateStr = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
-            const txData = {
-                description: newRec.description,
-                source: newRec.source,
-                amount: newRec.amount,
-                category: newRec.category,
-                date: dateStr,
-                tags: [...(newRec.tags || []), 'auto-backfill'],
-                accountId: newRec.accountId,
-                isRecurring: true,
-                recurringId: newRec.id,
-                liabilityId: newRec.liabilityId,
-                investmentId: newRec.investmentId
-            };
+        try {
+            for (const due of dates) {
+                const dateStr = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
+                const txData = {
+                    description: newRec.description,
+                    source: newRec.source,
+                    amount: newRec.amount,
+                    category: newRec.category,
+                    date: dateStr,
+                    tags: [...(newRec.tags || []), 'auto-backfill'],
+                    accountId: newRec.accountId,
+                    isRecurring: true,
+                    recurringId: newRec.id,
+                    liabilityId: newRec.liabilityId,
+                    investmentId: newRec.investmentId
+                };
 
-            try {
+                console.log(`[Backfill Execution] Creating entry for ${dateStr}...`);
+
                 if (newRec.type === 'expense') {
                     const res = await api.createExpense(userId, txData);
                     if (res.success) {
@@ -1252,12 +1260,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                             else balanceChange -= res.expense.amount;
                         }
 
-                        // Track Goal changes for batch update
                         if (newRec.goalId) {
                             goalChanges[newRec.goalId] = (goalChanges[newRec.goalId] || 0) + res.expense.amount;
                         }
 
-                        // Track Liability changes
                         if (newRec.liabilityId) {
                             liabilityChanges[newRec.liabilityId] = (liabilityChanges[newRec.liabilityId] || 0) + res.expense.amount;
                         }
@@ -1272,60 +1278,51 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                         }
                     }
                 }
-                await new Promise(r => setTimeout(r, 50));
-            } catch (loopErr) {
-                console.error(`Failed to create backfill for ${dateStr}`, loopErr);
+                // Small delay to prevent rate limiting or UI freezing
+                await new Promise(r => setTimeout(r, 30));
             }
-        }
 
-        if (createdIncomes.length > 0) setIncomes(prev => [...prev, ...createdIncomes]);
-        if (createdExpenses.length > 0) setExpenses(prev => [...prev, ...createdExpenses]);
+            // State Updates and Sync
+            if (createdIncomes.length > 0) setIncomes(prev => [...prev, ...createdIncomes]);
+            if (createdExpenses.length > 0) setExpenses(prev => [...prev, ...createdExpenses]);
 
-        // Batch update Goals
-        for (const [gid, change] of Object.entries(goalChanges)) {
-            const goal = goals.find(g => g.id === gid);
-            if (goal) {
-                const newAmount = goal.currentAmount + change;
-                try {
+            // Batch update Goals
+            for (const [gid, change] of Object.entries(goalChanges)) {
+                const goal = goals.find(g => g.id === gid);
+                if (goal) {
+                    const newAmount = goal.currentAmount + change;
                     await api.updateGoal(userId, gid, { currentAmount: newAmount });
                     setGoals(prev => prev.map(g => g.id === gid ? { ...g, currentAmount: newAmount } : g));
-                } catch (gErr) {
-                    console.error("Failed to update goal after backfill", gErr);
                 }
             }
-        }
 
-        // Batch update Liabilities
-        for (const [lid, change] of Object.entries(liabilityChanges)) {
-            const liability = liabilities.find(l => l.id === lid);
-            if (liability) {
-                const newOutstanding = Math.max(0, liability.outstanding - change);
-                try {
+            // Batch update Liabilities
+            for (const [lid, change] of Object.entries(liabilityChanges)) {
+                const liability = liabilities.find(l => l.id === lid);
+                if (liability) {
+                    const newOutstanding = Math.max(0, liability.outstanding - change);
                     await api.updateLiability(userId, lid, { outstanding: newOutstanding });
                     setLiabilities(prev => prev.map(l => l.id === lid ? { ...l, outstanding: newOutstanding } : l));
                     console.log(`[Backfill] Corrected Liability ${liability.name} by ₹${change}`);
-                } catch (lErr) {
-                    console.error("Failed to update liability after backfill", lErr);
                 }
             }
-        }
 
-        if (targetAccount && balanceChange !== 0) {
-            const newBalance = targetAccount.balance + balanceChange;
-            try {
+            if (targetAccount && balanceChange !== 0) {
+                const newBalance = targetAccount.balance + balanceChange;
                 await api.updateAccount(userId, targetAccount.id, { balance: newBalance });
                 setAccounts(prev => prev.map(a => a.id === targetAccount.id ? { ...a, balance: newBalance } : a));
-            } catch (accErr) {
-                console.error("Failed to update account balance after backfill", accErr);
             }
+
+            // Automatic dedupe scrub
+            await cleanupDuplicates();
+
+            toast.dismiss(toastId);
+            toast.success(`Success: ${count} entries generated`);
+        } catch (error) {
+            console.error('[Backfill Execution] Fatal error during batch:', error);
+            toast.dismiss(toastId);
+            toast.error('Backfill failed. Ledger might be partially updated.');
         }
-
-        // Final automatic dedupe scrub after batch creation
-        await cleanupDuplicates();
-
-        toast.dismiss(toastId);
-        toast.success(`Success: ${count} entries generated`);
-        setBackfillRequest(null);
     };
 
     const deleteRecurringTransaction = async (id: string) => {

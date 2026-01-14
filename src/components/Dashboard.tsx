@@ -369,7 +369,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             <motion.div
               layoutId="balance-mount"
-              className="text-[min(12vw,4.5rem)] leading-none tabular-nums text-white font-black tracking-tight"
+              className="text-[min(12vw,4.5rem)] leading-none tabular-nums font-mono text-white font-extrabold tracking-tight"
             >
               <InteractiveFinancialValue value={m1Assets} currency={currency} />
             </motion.div>

@@ -4,6 +4,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Define a font face that only covers digits using JetBrains Mono */
+@font-face {
+  font-family: 'JetBrains Mono Digits';
+  src: url('https://fonts.gstatic.com/s/jetbrainsmono/v18/t64vA4q6z7_696H966mP1O6OC6Of.woff2') format('woff2');
+  unicode-range: U+0030-0039;
+}
+
 @layer base {
   html,
   :host {
@@ -42,12 +49,13 @@
 
   body {
     @apply bg-transparent text-white antialiased overflow-x-hidden;
-    font-family: var(--q-font-ui);
+    font-family: 'JetBrains Mono Digits', var(--q-font-ui);
     background: var(--q-obsidian);
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     -webkit-user-select: text;
     user-select: text;
+    font-variant-numeric: tabular-nums;
   }
 
   /* Sonner Fix */
@@ -190,7 +198,12 @@
   }
 
   .font-numeric {
-    font-family: var(--q-font-data), monospace !important;
+    font-family: 'JetBrains Mono', var(--q-font-data), monospace !important;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums !important;
+    font-family: 'JetBrains Mono', var(--q-font-data), monospace !important;
   }
 
   .reset-text-fill {

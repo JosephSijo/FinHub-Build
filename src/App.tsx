@@ -777,8 +777,12 @@ export default function App() {
               <AlertDialogTitle className="text-white text-xl font-bold font-sans">Backfill Configuration Required</AlertDialogTitle>
               <AlertDialogDescription className="text-slate-400 text-base">
                 System detected <span className="text-emerald-400 font-bold">{backfillRequest.count} missing entries</span> in the transaction history
-                from <span className="text-white font-medium">{backfillRequest.dates[0]?.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                to <span className="text-white font-medium">{backfillRequest.dates[backfillRequest.dates.length - 1]?.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>.
+                {backfillRequest.dates?.length > 0 && (
+                  <>
+                    {' '}from <span className="text-white font-medium">{backfillRequest.dates[0]?.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    {' '}to <span className="text-white font-medium">{backfillRequest.dates[backfillRequest.dates.length - 1]?.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                  </>
+                )}.
                 <br /><br />
                 Would you like to auto-populate the ledger for this period?
               </AlertDialogDescription>
