@@ -13,6 +13,8 @@ import { Checkbox } from './ui/checkbox';
 import { autoCategorize } from '../utils/autoCategorize';
 import { formatCurrency } from '../utils/numberFormat';
 import { calculateLoanDetails, calculateInvestmentDetails } from '../utils/financeCalculations';
+import { Contacts } from '@capacitor-community/contacts';
+import { Capacitor } from '@capacitor/core';
 
 interface TransactionFormProps {
   isOpen: boolean;
@@ -307,7 +309,30 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   };
 
   const handlePickContact = async () => {
-    if ('contacts' in navigator && 'ContactsManager' in window) {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const permission = await Contacts.requestPermissions();
+        if (permission.contacts !== 'granted') {
+          alert('Contacts permission is required to select a contact.');
+          return;
+        }
+
+        const result = await Contacts.pickContact();
+        if (result && result.contact) {
+          const contact = result.contact;
+          const contactName = contact.name?.display ||
+            (contact.name?.given ? `${contact.name.given} ${contact.name.family || ''}` : '') ||
+            contact.phones?.[0]?.number ||
+            'Unknown Contact';
+
+          setFormData(prev => ({ ...prev, personName: contactName.trim() }));
+          if (window.navigator.vibrate) window.navigator.vibrate(20);
+        }
+      } catch (err) {
+        console.error('Capacitor contact picker error:', err);
+        alert('Failed to pick contact. Please try again or type manually.');
+      }
+    } else if ('contacts' in navigator && 'ContactsManager' in window) {
       try {
         const props = ['name'];
         const opts = { multiple: false };
@@ -319,11 +344,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           if (window.navigator.vibrate) window.navigator.vibrate(20);
         }
       } catch (err) {
-        console.error('Contact picker error:', err);
-        // Fallback or silent fail
+        console.error('Web contact picker error:', err);
       }
     } else {
-      alert('Contact Selection is only available on supported mobile browsers.');
+      alert('Contact Selection is only available on supported mobile browsers or the native app.');
     }
   };
 

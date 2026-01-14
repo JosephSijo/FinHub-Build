@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion, Variants } from 'framer-motion';
 import { CardPattern } from './CardPattern';
 
@@ -7,7 +8,7 @@ interface MeshBackgroundProps {
     animate?: boolean;
 }
 
-export const MeshBackground = ({ variant, className = '', animate = false }: MeshBackgroundProps) => {
+export const MeshBackground = React.memo(({ variant, className = '', animate = false }: MeshBackgroundProps) => {
     const variantClass = variant === 'ghost' ? 'mesh-ghost-blue' : variant ? `mesh-${variant}` : '';
 
     const blobVariants: Variants = {
@@ -71,4 +72,4 @@ export const MeshBackground = ({ variant, className = '', animate = false }: Mes
             />
         </div>
     );
-};
+});

@@ -1,6 +1,6 @@
+import React from 'react';
 
-
-export const CardPattern = () => {
+export const CardPattern = React.memo(() => {
     return (
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none overflow-hidden">
             <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -14,4 +14,4 @@ export const CardPattern = () => {
             </svg>
         </div>
     );
-};
+});

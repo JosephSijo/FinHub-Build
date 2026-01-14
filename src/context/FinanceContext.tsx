@@ -19,6 +19,9 @@ import {
 import { checkAchievements, getAchievement } from '../utils/achievements';
 import { generateGurujiInsights, createInsightNotification } from '../utils/insights';
 import { autoCategorize, isKnownSubscription } from '../utils/autoCategorize';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 
 // Constants for LocalStorage keys
 const STORAGE_KEYS = {
@@ -247,10 +250,41 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
             return combined.slice(0, 100);
         });
+
+        // Schedule Native Local Notification if on Native Platform
+        if (Capacitor.isNativePlatform()) {
+            toAdd.forEach(notif => {
+                // Only send native notifications for higher priority items or specific types
+                if (notif.priority === 'high' || notif.type === 'reminder' || notif.type === 'alert' || notif.type === 'achievement') {
+                    LocalNotifications.schedule({
+                        notifications: [{
+                            id: Math.floor(Math.random() * 1000000), // Random ID for native notification
+                            title: notif.title,
+                            body: notif.message,
+                            largeIcon: 'res://drawable/splash',
+                            smallIcon: 'res://drawable/splash',
+                            schedule: { at: new Date(Date.now() + 1000) }, // Schedule almost immediately
+                            extra: {
+                                notificationId: notif.id,
+                                achievementId: notif.achievementId,
+                                type: notif.type,
+                                category: notif.category,
+                                view: notif.type === 'achievement' ? undefined : (
+                                    notif.category === 'reminders' ? 'liability' :
+                                        notif.category === 'transactions' ? 'transactions' : 'dashboard'
+                                )
+                            }
+                        }]
+                    }).catch(err => console.error('Failed to schedule local notification:', err));
+                }
+            });
+        }
     };
 
     // Check for new achievements
     useEffect(() => {
+        if (authStatus !== 'authenticated') return;
+
         const checkForAchievements = () => {
             const totalTransactions = expenses.length + incomes.length + debts.length;
             const settledDebts = debts.filter((d: Debt) => d.status === "settled").length;
@@ -454,6 +488,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         checkForAchievements();
     }, [
+        authStatus,
         expenses.length,
         incomes.length,
         debts.length,
@@ -481,6 +516,54 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     useEffect(() => localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications)), [notifications]);
     useEffect(() => localStorage.setItem(STORAGE_KEYS.EMERGENCY_FUND, JSON.stringify(emergencyFundAmount)), [emergencyFundAmount]);
 
+
+    // ------------------------------------------------------------------
+    // Security & Inactivity
+    // ------------------------------------------------------------------
+    useEffect(() => {
+        if (authStatus !== 'authenticated') return;
+
+        let timeoutId: any;
+        const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutes for beta/safety
+
+        const resetTimer = () => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                logout();
+                toast.info("Session locked", { description: "You were logged out due to inactivity." });
+            }, INACTIVITY_LIMIT);
+        };
+
+        const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+        activityEvents.forEach(event => window.addEventListener(event, resetTimer));
+
+        // Background handling
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden' && authStatus === 'authenticated') {
+                logout();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        // Capacitor App State handling
+        let appStateListener: any;
+        if (Capacitor.isNativePlatform()) {
+            App.addListener('appStateChange', ({ isActive }) => {
+                if (!isActive && authStatus === 'authenticated') {
+                    logout();
+                }
+            }).then(l => appStateListener = l);
+        }
+
+        resetTimer();
+
+        return () => {
+            clearTimeout(timeoutId);
+            activityEvents.forEach(event => window.removeEventListener(event, resetTimer));
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            if (appStateListener) appStateListener.remove();
+        };
+    }, [authStatus]);
 
     const loadInitialData = async () => {
         setIsLoading(true);

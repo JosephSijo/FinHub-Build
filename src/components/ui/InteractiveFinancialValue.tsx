@@ -9,7 +9,7 @@ interface InteractiveFinancialValueProps {
     className?: string;
 }
 
-export const InteractiveFinancialValue: React.FC<InteractiveFinancialValueProps> = ({
+export const InteractiveFinancialValue: React.FC<InteractiveFinancialValueProps> = React.memo(({
     value,
     currency,
     className
@@ -91,4 +91,4 @@ export const InteractiveFinancialValue: React.FC<InteractiveFinancialValueProps>
             )}
         </span>
     );
-};
+});

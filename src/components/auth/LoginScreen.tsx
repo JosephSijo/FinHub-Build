@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Shield, Target, CheckCircle2, MessageSquare, KeyRound } from "lucide-react";
 import { useFinance } from "../../context/FinanceContext";
+import { NativeBiometric } from "@capgo/capacitor-native-biometric";
+import { Capacitor } from "@capacitor/core";
 
 type AuthPhase = "identity" | "verify" | "otp_verify" | "create_name" | "create_pin" | "otp_reset" | "reset_pin";
 
@@ -33,19 +35,37 @@ export const LoginScreen = () => {
     }, [isRememberedUser, rememberedMobile, pendingMobile]);
 
     const triggerBiometrics = async () => {
-        setIsBiometricActive(true);
-        setTimeout(async () => {
-            const success = Math.random() > 0.2;
-            if (success) {
+        if (!Capacitor.isNativePlatform()) return;
+
+        try {
+            const result = await NativeBiometric.isAvailable();
+            if (!result.isAvailable) return;
+
+            setIsBiometricActive(true);
+
+            const verifyResult = await NativeBiometric.verifyIdentity({
+                reason: "Authenticate to access your private node",
+                title: "Login to FinHub",
+                subtitle: "Use biometrics to login",
+                description: "Touch the sensor to verify identity",
+                negativeButtonText: "Cancel",
+            });
+
+            if (verifyResult) {
+                // If remembered user, use the demo PIN for now since we don't store actual secrets yet
+                // In a real app, we'd use getCredentials
                 const loginSuccess = await login("2255", true);
                 if (!loginSuccess) {
                     setIsBiometricActive(false);
                 }
             } else {
                 setIsBiometricActive(false);
-                if (navigator.vibrate) navigator.vibrate([50, 50]);
             }
-        }, 1500);
+        } catch (err) {
+            console.error('Biometric error:', err);
+            setIsBiometricActive(false);
+            if (navigator.vibrate) navigator.vibrate([50, 50]);
+        }
     };
 
 

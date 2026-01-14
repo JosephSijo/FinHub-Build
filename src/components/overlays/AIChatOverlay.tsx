@@ -12,7 +12,7 @@ interface AIChatOverlayProps {
     isOffline?: boolean;
 }
 
-export const AIChatOverlay: React.FC<AIChatOverlayProps> = ({ isOpen, onClose, context, settings, isOffline = false }) => {
+export const AIChatOverlay: React.FC<AIChatOverlayProps> = React.memo(({ isOpen, onClose, context, settings, isOffline = false }) => {
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState<{ text: string, type: 'ai' | 'user' }[]>([
         { text: "Hello! I've analyzed your cash flow. How can I assist with your goals?", type: 'ai' }
@@ -153,4 +153,4 @@ export const AIChatOverlay: React.FC<AIChatOverlayProps> = ({ isOpen, onClose, c
             </p>
         </div>
     );
-};
+});

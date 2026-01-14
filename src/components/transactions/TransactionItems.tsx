@@ -21,7 +21,7 @@ interface ExpenseItemProps {
     isPendingDelete?: boolean;
 }
 
-export const ExpenseItem: React.FC<ExpenseItemProps> = ({ expense, currency, onEdit, onDelete, isPendingDelete }) => {
+export const ExpenseItem: React.FC<ExpenseItemProps> = React.memo(({ expense, currency, onEdit, onDelete, isPendingDelete }) => {
     // Check if transaction is goal-related
     const isGoalRelated = (expense.tags && Array.isArray(expense.tags) && expense.tags.some((tag: string) => tag?.toLowerCase().includes('goal'))) ||
         (expense.description && expense.description.toLowerCase().includes('goal')) ||
@@ -71,7 +71,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ expense, currency, onE
             </Card>
         </SwipeableItem>
     );
-};
+});
 
 interface IncomeItemProps {
     income: Income;
@@ -81,7 +81,7 @@ interface IncomeItemProps {
     isPendingDelete?: boolean;
 }
 
-export const IncomeItem: React.FC<IncomeItemProps> = ({ income, currency, onEdit, onDelete, isPendingDelete }) => {
+export const IncomeItem: React.FC<IncomeItemProps> = React.memo(({ income, currency, onEdit, onDelete, isPendingDelete }) => {
     // Check if transaction is goal-related
     const isGoalRelated = (income.tags && Array.isArray(income.tags) && income.tags.some((tag: string) => tag?.toLowerCase().includes('goal'))) ||
         (income.source && income.source.toLowerCase().includes('goal')) ||
@@ -125,7 +125,7 @@ export const IncomeItem: React.FC<IncomeItemProps> = ({ income, currency, onEdit
             </Card>
         </SwipeableItem>
     );
-};
+});
 
 interface DebtItemProps {
     debt: Debt;
@@ -136,7 +136,7 @@ interface DebtItemProps {
     isPendingDelete?: boolean;
 }
 
-export const DebtItem: React.FC<DebtItemProps> = ({ debt, currency, onEdit, onDelete, onSettle, isPendingDelete }) => {
+export const DebtItem: React.FC<DebtItemProps> = React.memo(({ debt, currency, onEdit, onDelete, onSettle, isPendingDelete }) => {
     return (
         <SwipeableItem
             onDelete={() => onDelete(debt.id)}
@@ -193,4 +193,4 @@ export const DebtItem: React.FC<DebtItemProps> = ({ debt, currency, onEdit, onDe
             </Card>
         </SwipeableItem>
     );
-};
+});

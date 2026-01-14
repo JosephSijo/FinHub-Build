@@ -6,7 +6,7 @@ interface CategoryBackdropProps {
     className?: string;
 }
 
-export const CategoryBackdrop: React.FC<CategoryBackdropProps> = ({ variant, className = '' }) => {
+export const CategoryBackdrop: React.FC<CategoryBackdropProps> = React.memo(({ variant, className = '' }) => {
     const renderIcon = () => {
         switch (variant) {
             case 'safe':
@@ -49,4 +49,4 @@ export const CategoryBackdrop: React.FC<CategoryBackdropProps> = ({ variant, cla
             {renderIcon()}
         </motion.div>
     );
-};
+});

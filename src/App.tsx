@@ -1,4 +1,7 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
+import { SplashScreen } from '@capacitor/splash-screen';
 import { RecurringTransactions } from "./components/RecurringTransactions";
 
 // Icons moved to AppHeader
@@ -150,6 +153,44 @@ export default function App() {
     return cleanup;
   }, []);
 
+  // Handle Native Local Notifications Click/Navigation
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      const checkPermissions = async () => {
+        try {
+          const status = await LocalNotifications.checkPermissions();
+          if (status.display !== 'granted') {
+            await LocalNotifications.requestPermissions();
+          }
+        } catch (e) {
+          console.error('Error checking notification permissions:', e);
+        }
+      };
+
+      checkPermissions();
+
+      const actionListener = LocalNotifications.addListener('localNotificationActionPerformed', (notificationAction) => {
+        const { notification } = notificationAction;
+        const extra = notification.extra;
+
+        console.log('Native notification clicked:', notification);
+
+        if (extra) {
+          if (extra.achievementId) {
+            setSelectedAchievementId(extra.achievementId);
+            setIsAchievementDialogOpen(true);
+          } else if (extra.view) {
+            setView(extra.view as View);
+          }
+        }
+      });
+
+      return () => {
+        actionListener.remove();
+      };
+    }
+  }, []);
+
   // Theme support
   useEffect(() => {
     if (settings.theme === 'dark') {
@@ -280,6 +321,11 @@ export default function App() {
   // Show branded loader while initial data is being fetched
   if (isLoading) {
     return <LoadingSprite />;
+  }
+
+  // Hide splash screen once loading is done
+  if (Capacitor.isNativePlatform()) {
+    SplashScreen.hide().catch(err => console.error('Splash hide error:', err));
   }
 
   // Handle pull to refresh
@@ -713,6 +759,11 @@ export default function App() {
 
                   // Only close if it wasn't an action interaction (actions stopPropagation, but just in case)
                   if (!notification.action) {
+                    if (notification.category === 'reminders') {
+                      setView('liability');
+                    } else if (notification.category === 'transactions') {
+                      setView('transactions');
+                    }
                     setIsNotificationsOpen(false);
                   }
                 }}
