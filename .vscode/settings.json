@@ -11,5 +11,6 @@
         "javascript": "javascript",
         "typescript": "typescript",
         "typescriptreact": "typescriptreact"
-    }
+    },
+    "java.configuration.updateBuildConfiguration": "automatic"
 }
