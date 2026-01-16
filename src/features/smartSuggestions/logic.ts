@@ -51,7 +51,7 @@ export const suggestionRules = {
                     severity: 'low',
                     action: {
                         type: 'CREATE_SUBSCRIPTION',
-                        payload: { name, amount: last.amount, currency_code: last.currency_code }
+                        payload: { name, amount: last.amount, currency: last.currency || 'INR' }
                     }
                 });
             }
