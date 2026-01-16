@@ -15,7 +15,7 @@ interface CollapsibleSectionProps {
     variant?: 'safe' | 'growth' | 'action';
 }
 
-export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
+export const CollapsibleSection: React.FC<CollapsibleSectionProps> = React.memo(({
     title,
     subtitle,
     icon,
@@ -98,4 +98,4 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
             </AnimatePresence>
         </div>
     );
-};
+});

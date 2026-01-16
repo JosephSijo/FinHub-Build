@@ -12,7 +12,6 @@ export const CyberButton: React.FC<CyberButtonProps> = ({
     children,
     icon: Icon,
     variant = 'blue',
-    glow = true,
     className,
     ...props
 }) => {

@@ -33,12 +33,6 @@ export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
           e.preventDefault();
         }
         const newDistance = Math.min(distance, threshold * 1.5);
-
-        // Haptic feedback when crossing threshold
-        if (newDistance >= threshold && pullDistance < threshold) {
-          if (window.navigator.vibrate) window.navigator.vibrate(10);
-        }
-
         setPullDistance(newDistance);
       }
     };
@@ -54,6 +48,12 @@ export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (pullDistance >= threshold && !isRefreshing) {
+      if (window.navigator.vibrate) window.navigator.vibrate(10);
+    }
+  }, [pullDistance, isRefreshing]);
 
   const handleTouchEnd = async () => {
     if (pullDistance >= threshold && !isRefreshing) {

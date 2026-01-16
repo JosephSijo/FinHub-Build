@@ -1,4 +1,4 @@
-/* eslint-disable react/forbid-component-props, react/forbid-dom-props */
+
 import React from 'react';
 import { Card } from './ui/card';
 import { Label } from './ui/label';
@@ -28,7 +28,7 @@ export const AchievementsPanel: React.FC<AchievementsPanelProps> = ({
         <div className="flex-1">
           <h3 className="text-xl font-black text-slate-100 tracking-tight">Achievements</h3>
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">
-            Protocol Milestone Progress
+            Achievement Progress
           </p>
         </div>
         <div className="text-3xl font-black text-slate-100 tabular-nums">
@@ -61,7 +61,7 @@ export const AchievementsPanel: React.FC<AchievementsPanelProps> = ({
                 ? 'border-yellow-500/30 bg-yellow-500/5 shadow-[0_10px_30px_rgba(234,179,8,0.1)] hover:border-yellow-500/50'
                 : 'border-white/5 bg-white/2'
                 }`}
-              title={isUnlocked ? `${achievement.name}: ${achievement.description}` : 'Protocol Locked'}
+              title={isUnlocked ? `${achievement.name}: ${achievement.description}` : 'Locked'}
             >
               {isUnlocked ? (
                 <div className="text-3xl transform group-hover/item:scale-125 transition-transform duration-500">{achievement.icon}</div>

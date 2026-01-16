@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Expense, Income, Debt, Account } from '../types';
 import { TransactionOverview } from './transactions/TransactionOverview';
 import { TransactionFilters } from './transactions/TransactionFilters';
@@ -20,7 +20,7 @@ interface TransactionListProps {
   onSettleDebt: (id: string) => void;
 }
 
-export const TransactionList: React.FC<TransactionListProps> = ({
+const TransactionListComponent: React.FC<TransactionListProps> = ({
   expenses,
   incomes,
   debts,
@@ -37,12 +37,12 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'expenses' | 'income' | 'debts' | 'subs' | 'emis' | 'emergency' | 'goals'>('all');
 
-  // Combine all transactions using 'kind' to differentiate
-  const allTransactions = [
+  // Combine and sort ALL transactions - memoized
+  const allTransactions = useMemo(() => [
     ...expenses.map(e => ({ ...e, kind: 'expense' as const })),
     ...incomes.map(i => ({ ...i, kind: 'income' as const })),
     ...debts.map(d => ({ ...d, kind: 'debt' as const }))
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [expenses, incomes, debts]);
 
   const { handleDelete: handleXDelete, isPending } = useDeleteWithUndo((id) => {
     const t = allTransactions.find(x => x.id === id);
@@ -52,30 +52,37 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     else if (t.kind === 'debt') onDeleteDebt(id);
   });
 
-  // Calculate transaction summary
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
+  // Calculate transaction summary and liquidity - memoized
+  const stats = useMemo(() => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
 
-  const currentMonthTransactions = {
-    expenses: expenses.filter(e => {
+    const monthExpenses = expenses.filter(e => {
       const date = new Date(e.date);
       return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    }),
-    incomes: incomes.filter(i => {
+    });
+
+    const monthIncomes = incomes.filter(i => {
       const date = new Date(i.date);
       return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    })
-  };
+    });
 
-  // Get recent transactions (last 5)
-  const recentTransactions = allTransactions.slice(0, 5);
+    const totalLiquidity = accounts
+      .filter(acc => acc.type === 'bank' || acc.type === 'cash')
+      .reduce((sum, acc) => sum + acc.balance, 0);
 
-  // Calculate total liquidity (Bank + Cash)
-  const totalLiquidity = accounts
-    .filter(acc => acc.type === 'bank' || acc.type === 'cash')
-    .reduce((sum, acc) => sum + acc.balance, 0);
+    return {
+      monthExpenses,
+      monthIncomes,
+      totalLiquidity,
+      recentTransactions: allTransactions.slice(0, 5)
+    };
+  }, [expenses, incomes, accounts, allTransactions]);
 
-  const filteredTransactions = allTransactions.filter((t) => {
+  const { monthExpenses, monthIncomes, totalLiquidity, recentTransactions } = stats;
+
+  const filteredTransactions = useMemo(() => allTransactions.filter((t) => {
     const matchesSearch =
       ('description' in t && t.description?.toLowerCase().includes(searchTerm.toLowerCase())) ||
       ('source' in t && t.source?.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -133,12 +140,12 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         ));
     }
     return true;
-  });
+  }), [allTransactions, searchTerm, filter]);
 
   return (
     <div className="space-y-6">
       <TransactionOverview
-        currentMonthTransactions={currentMonthTransactions}
+        currentMonthTransactions={{ expenses: monthExpenses, incomes: monthIncomes }}
         recentTransactions={recentTransactions}
         totalLiquidity={totalLiquidity}
         currency={currency}
@@ -221,3 +228,5 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     </div>
   );
 };
+
+export const TransactionList = React.memo(TransactionListComponent);

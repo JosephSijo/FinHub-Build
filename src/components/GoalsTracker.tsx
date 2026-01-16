@@ -1,5 +1,5 @@
-/* eslint-disable react/forbid-component-props, react/forbid-dom-props */
-import React, { useState } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { NumberInput } from './ui/number-input';
@@ -26,7 +26,7 @@ interface GoalsTrackerProps {
   onDeductFromAccount?: (accountId: string, amount: number) => void;
 }
 
-export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
+export const GoalsTracker: React.FC<GoalsTrackerProps> = React.memo(({
   goals,
   currency,
   accounts = [],
@@ -155,12 +155,11 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
     setIsFundsDialogOpen(false);
   };
 
-  // Calculate goal allocations
-  const totalGoalAllocated = goals.reduce((sum, g) => sum + (g?.currentAmount || 0), 0);
-  // - [x] **Goals**: Implement "Emerald Victory" theme.
+  // Calculate goal allocations - memoized
+  const totalGoalAllocated = useMemo(() => goals.reduce((sum, g) => sum + (g?.currentAmount || 0), 0), [goals]);
 
-  // Get goal-related transactions
-  const goalTransactions = [
+  // Get goal-related transactions - memoized
+  const goalTransactions = useMemo(() => [
     ...expenses.filter(e =>
       (e.tags && Array.isArray(e.tags) && e.tags.some((tag: string) => tag?.toLowerCase().includes('goal'))) ||
       (e.description && e.description.toLowerCase().includes('goal'))
@@ -169,7 +168,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
       (i.tags && Array.isArray(i.tags) && i.tags.some((tag: string) => tag?.toLowerCase().includes('goal'))) ||
       (i.source && i.source.toLowerCase().includes('goal'))
     )
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5), [expenses, incomes]);
 
   return (
     <div className="space-y-6 pb-20">
@@ -223,7 +222,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
             {goalTransactions.length > 0 ? (
               <div className="space-y-2">
                 <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3 opacity-50">Victory Log</p>
-                {goalTransactions.map((transaction: any, idx) => {
+                {goalTransactions.map((transaction: any, idx: number) => {
                   const isExpense = 'description' in transaction;
                   return (
                     <div key={`${transaction.id || idx}-${idx}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 hover:bg-emerald-500/5 transition-colors px-2 -mx-2 rounded-lg group/item">
@@ -629,4 +628,4 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = ({
       </Dialog>
     </div>
   );
-};
+});

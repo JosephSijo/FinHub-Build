@@ -1,6 +1,7 @@
+import React from 'react';
 import { useFinance } from "../../context/FinanceContext";
 import { TransactionOverview } from "../transactions/TransactionOverview";
-import { formatCurrency } from "../../utils/numberFormat";
+import { isFeatureEnabled, getFeatureComponent } from "../../features/registry";
 
 export const Dashboard = () => {
     const {
@@ -43,11 +44,11 @@ export const Dashboard = () => {
             </header>
 
             <div className="space-y-6">
-                {/* Placeholder for Balance Board if it were available */}
-                <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 text-white shadow-lg">
-                    <p className="text-sm opacity-80 uppercase tracking-wider">Total Net Worth</p>
-                    <p className="text-4xl font-black mt-2">{formatCurrency(totalLiquidity, currency)}</p>
-                </div>
+                {isFeatureEnabled('BALANCE_BOARD') && (
+                    <div className="h-full">
+                        {React.createElement(getFeatureComponent('BALANCE_BOARD'))}
+                    </div>
+                )}
 
                 <TransactionOverview
                     currentMonthTransactions={currentMonthTransactions}

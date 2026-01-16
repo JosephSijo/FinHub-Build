@@ -15,6 +15,7 @@ import { formatCurrency } from '../utils/numberFormat';
 import { calculateLoanDetails, calculateInvestmentDetails } from '../utils/financeCalculations';
 import { Contacts } from '@capacitor-community/contacts';
 import { Capacitor } from '@capacitor/core';
+import { COPY } from '../content';
 
 interface TransactionFormProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ interface TransactionFormProps {
   liabilities: Liability[];
   currency: string;
   roundUpEnabled?: boolean;
+  defaultAccountId?: string;
 }
 
 export const TransactionForm: React.FC<TransactionFormProps> = ({
@@ -37,7 +39,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   accounts,
   liabilities,
   currency,
-  roundUpEnabled = true // Default to true if not provided
+  roundUpEnabled = true,
+  defaultAccountId
 }) => {
   const [formData, setFormData] = useState({
     description: '',
@@ -55,7 +58,6 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     isIncomeGenerating: false,
     justification: '',
     debtDueDate: '',
-    // Loan Simulation Fields
     principal: '',
     interestRate: '',
     tenure: '',
@@ -65,6 +67,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     registerAsLiability: false,
     liabilityType: 'personal_loan' as Liability['type'],
   });
+
   const [tagInput, setTagInput] = useState('');
   const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
@@ -75,38 +78,42 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     if (!isOpen) return;
 
     if (initialData) {
-      setFormData({
-        description: initialData.description || '',
-        amount: initialData.amount?.toString() || '',
-        category: initialData.category || '',
-        source: initialData.source || '',
-        personName: initialData.personName || '',
-        debtType: initialData.type || 'borrowed',
-        accountId: initialData.accountId || '',
-        date: initialData.date || new Date().toISOString().split('T')[0],
-        tags: initialData.tags || [],
-        isRecurring: initialData.isRecurring || false,
-        frequency: initialData.frequency || 'monthly',
-        endDate: initialData.endDate || '',
-        isIncomeGenerating: initialData.isIncomeGenerating || false,
-        justification: initialData.justification || '',
-        debtDueDate: initialData.dueDate || '',
-        principal: initialData.principal?.toString() || '',
-        interestRate: initialData.interestRate?.toString() || '',
-        tenure: initialData.tenure?.toString() || '',
-        tenureUnit: initialData.tenureUnit || 'months',
-        liabilityId: initialData.liabilityId || '',
-        investmentId: initialData.investmentId || '',
-        registerAsLiability: initialData.registerAsLiability || false,
-        liabilityType: initialData.type || 'personal_loan',
+      queueMicrotask(() => {
+        setFormData({
+          description: initialData.description || '',
+          amount: initialData.amount?.toString() || '',
+          category: initialData.category || '',
+          source: initialData.source || '',
+          personName: initialData.personName || '',
+          debtType: initialData.type || 'borrowed',
+          accountId: initialData.accountId || '',
+          date: initialData.date || new Date().toISOString().split('T')[0],
+          tags: initialData.tags || [],
+          isRecurring: initialData.isRecurring || false,
+          frequency: initialData.frequency || 'monthly',
+          endDate: initialData.endDate || '',
+          isIncomeGenerating: initialData.isIncomeGenerating || false,
+          justification: initialData.justification || '',
+          debtDueDate: initialData.dueDate || '',
+          principal: initialData.principal?.toString() || '',
+          interestRate: initialData.interestRate?.toString() || '',
+          tenure: initialData.tenure?.toString() || '',
+          tenureUnit: initialData.tenureUnit || 'months',
+          liabilityId: initialData.liabilityId || '',
+          investmentId: initialData.investmentId || '',
+          registerAsLiability: initialData.registerAsLiability || false,
+          liabilityType: initialData.type || 'personal_loan',
+        });
       });
     } else if (accounts.length > 0 && !formData.accountId) {
-      // Auto-select first account for new transactions
-      setFormData(prev => ({ ...prev, accountId: accounts[0].id }));
+      queueMicrotask(() => {
+        const initialAccountId = (type === 'expense' && defaultAccountId)
+          ? defaultAccountId
+          : accounts[0].id;
+        setFormData(prev => ({ ...prev, accountId: initialAccountId }));
+      });
     }
-  }, [isOpen, initialData, accounts, formData.accountId]);
-
-
+  }, [isOpen, initialData, accounts, formData.accountId, defaultAccountId, type]);
 
   useEffect(() => {
     const text = type === 'expense' ? formData.description :
@@ -116,7 +123,6 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     const suggestion = (text.length > 2 && !initialData) ? autoCategorize(text) : null;
 
     if (text.length > 2 && !initialData) {
-      // 1. Check for Liability Matching (EMI/Loans)
       const matchedLiability = liabilities.find(l =>
         l.name.toLowerCase() === text.toLowerCase() ||
         text.toLowerCase() === `emi: ${l.name.toLowerCase()}` ||
@@ -124,40 +130,37 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       );
 
       if (matchedLiability) {
-        try {
+        queueMicrotask(() => {
           setSuggestedCategory('EMI');
           setSuggestedTags(['emi', 'liability', matchedLiability.name.toLowerCase()]);
           setSuggestedAmount(matchedLiability.emiAmount);
           setSuggestedDescription(`EMI: ${matchedLiability.name}`);
+        });
 
-          const lStart = new Date(matchedLiability.startDate);
-          const currentMonth = new Date();
-          currentMonth.setDate(lStart.getDate());
-          const suggestedDateStr = currentMonth.toISOString().split('T')[0];
-          (formData as any).suggestedDate = suggestedDateStr;
-          if (!formData.liabilityId) {
-            setFormData(prev => ({ ...prev, liabilityId: matchedLiability.id }));
-          }
-        } catch (e) {
-          // Ignore date suggestion error
-        }
+        const lStart = new Date(matchedLiability.startDate);
+        const currentMonth = new Date();
+        currentMonth.setDate(lStart.getDate());
+        const suggestedDateStr = currentMonth.toISOString().split('T')[0];
+        queueMicrotask(() => {
+          setFormData(prev => ({ ...prev, suggestedDate: suggestedDateStr, liabilityId: matchedLiability.id } as any));
+        });
       }
     }
-    // Removed the else { setFormData(prev => ({ ...prev, liabilityId: '' })); } 
-    // logic to allow manual selection to persist.
 
     if (suggestion) {
-      setSuggestedCategory(suggestion.category);
-      setSuggestedTags(suggestion.tags);
-      setSuggestedAmount(suggestion.suggestedAmount);
-      setSuggestedDescription(suggestion.suggestedDescription);
-    } else {
-      // Clear if no match found
-      setSuggestedCategory(null);
-      setSuggestedTags([]);
-      setSuggestedAmount(undefined);
-      setSuggestedDescription(undefined);
-      delete (formData as any).suggestedDate;
+      queueMicrotask(() => {
+        setSuggestedCategory(suggestion.category);
+        setSuggestedTags(suggestion.tags);
+        setSuggestedAmount(suggestion.suggestedAmount);
+        setSuggestedDescription(suggestion.suggestedDescription);
+      });
+    } else if (!text.length || initialData) {
+      queueMicrotask(() => {
+        setSuggestedCategory(null);
+        setSuggestedTags([]);
+        setSuggestedAmount(undefined);
+        setSuggestedDescription(undefined);
+      });
     }
   }, [formData.description, formData.personName, type, initialData, liabilities]);
 
@@ -317,7 +320,12 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           return;
         }
 
-        const result = await Contacts.pickContact();
+        const result = await Contacts.pickContact({
+          projection: {
+            name: true,
+            phones: true
+          }
+        });
         if (result && result.contact) {
           const contact = result.contact;
           const contactName = contact.name?.display ||
@@ -374,14 +382,14 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
           <DialogHeader className="relative z-10">
             <DialogTitle className="text-2xl font-black tracking-tighter text-slate-100">
-              {initialData ? 'Update' : 'Add'}{' '}
-              {type === 'expense' ? 'Money Out' : type === 'income' ? 'Money In' : 'Personal IOU'}
+              {initialData ? COPY.common.actions.update : COPY.common.actions.add}{' '}
+              {type === 'expense' ? COPY.transactions.expenseLabel : type === 'income' ? COPY.transactions.incomeLabel : COPY.transactions.debtLabel}
             </DialogTitle>
             <DialogDescription className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em] mt-1">
               {type === 'debt' ? (
-                "Protocol for personal liquidity exchange"
+                "Manage personal debts and loans"
               ) : (
-                `Recording ${type === 'expense' ? 'capital depletion' : 'capital injection'} event`
+                `Recording ${type === 'expense' ? 'an expense' : 'an income'}`
               )}
             </DialogDescription>
           </DialogHeader>
@@ -392,7 +400,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             {/* Account Selection */}
             {accounts.length > 0 ? (
               <div className="space-y-2">
-                <Label htmlFor="transaction-account" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Account Reservoir</Label>
+                <Label htmlFor="transaction-account" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">{COPY.transactions.account}</Label>
                 <Select value={formData.accountId} onValueChange={(value) => setFormData({ ...formData, accountId: value })}>
                   <SelectTrigger id="transaction-account" name="accountId" className="h-12 bg-black border-white/5 sq-md focus:ring-1 focus:ring-white/10 text-slate-200 font-bold">
                     <SelectValue placeholder="Select account" />
@@ -413,7 +421,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               </div>
             ) : (
               <div className="p-4 bg-amber-500/10 border border-amber-500/20 sq-md text-[10px] font-black uppercase tracking-widest text-amber-400">
-                ⚠️ Protocol Failure: No accounts detected
+                ⚠️ {COPY.transactions.noAccounts}
               </div>
             )}
 
@@ -494,7 +502,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
             {/* Amount */}
             <div className="space-y-2">
-              <Label htmlFor="transaction-amount" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Capital Value</Label>
+              <Label htmlFor="transaction-amount" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">{COPY.common.amount}</Label>
               <div className="flex gap-2">
                 <NumberInput
                   id="transaction-amount"
@@ -585,7 +593,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             {/* Category (for expenses) */}
             {type === 'expense' && (
               <div className="space-y-2">
-                <Label htmlFor="transaction-category" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Spending Domain</Label>
+                <Label htmlFor="transaction-category" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">{COPY.transactions.category}</Label>
                 <Select value={formData.category} onValueChange={(value) => {
                   setFormData(prev => ({
                     ...prev,
@@ -614,7 +622,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             {type === 'expense' && formData.category === 'EMI' && (
               <div className="space-y-4 p-4 bg-rose-500/5 border border-rose-500/10 sq-md animate-in slide-in-from-top-2 duration-300">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-rose-400">Liability Protocol</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-rose-400">Liability Link</Label>
                   <Landmark className="w-4 h-4 text-rose-400" />
                 </div>
 
@@ -692,7 +700,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               return (
                 <div className="space-y-4 p-4 bg-black border border-white/5 sq-md animate-in slide-in-from-top-2 duration-300">
                   <div className="flex items-center justify-between">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Credit Protocol</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Credit Card</Label>
                     {isBreaching && (
                       <Badge variant="destructive" className="bg-rose-500/10 text-rose-400 border-rose-500/20 text-[8px] font-black uppercase">
                         Limit Breach Risk
@@ -714,7 +722,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
                   {isBreaching && !formData.isIncomeGenerating && (
                     <div className="space-y-3">
-                      <Label htmlFor="justification" className="text-[9px] font-black uppercase tracking-widest text-rose-400">Security Justification Required</Label>
+                      <Label htmlFor="justification" className="text-[9px] font-black uppercase tracking-widest text-rose-400">{COPY.transactions.justificationRequired}</Label>
                       <Input
                         id="justification"
                         name="justification"
@@ -737,7 +745,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             {/* Debt Type - Segmented Control */}
             {type === 'debt' && (
               <div className="space-y-3">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Asset Direction</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Transaction Type</Label>
                 <div className="flex gap-2 p-1.5 bg-black border border-white/5 sq-md">
                   <button
                     type="button"
@@ -747,7 +755,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                       : 'text-slate-500 hover:text-slate-200 hover:bg-white/5'
                       } `}
                   >
-                    I Lent Capital
+                    {COPY.transactions.lentMoney}
                   </button>
                   <button
                     type="button"
@@ -757,7 +765,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                       : 'text-slate-500 hover:text-slate-200 hover:bg-white/5'
                       } `}
                   >
-                    I Borrowed
+                    {COPY.transactions.borrowedMoney}
                   </button>
                 </div>
               </div>
@@ -780,7 +788,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
             {/* Date */}
             <div className="space-y-2">
-              <Label htmlFor="transaction-date" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Event Timestamp</Label>
+              <Label htmlFor="transaction-date" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">{COPY.common.date}</Label>
               <Input
                 id="transaction-date"
                 name="date"
@@ -794,7 +802,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
             {/* Tags */}
             <div className="space-y-3">
-              <Label htmlFor="transaction-tags" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Protocol Tags</Label>
+              <Label htmlFor="transaction-tags" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">{COPY.common.tags}</Label>
               <div className="flex gap-2">
                 <Input
                   id="transaction-tags"
@@ -844,20 +852,20 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 className="border-white/20 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
               />
               <Label htmlFor="recurring" className="text-[10px] font-black uppercase tracking-widest text-slate-100 cursor-pointer">
-                Cyclical Routine Entry
+                {COPY.transactions.recurringDescription}
               </Label>
             </div>
 
             {formData.isRecurring && (
               <div className="space-y-6 mt-4 p-4 bg-slate-900/40 border border-white/5 sq-md animate-in fade-in zoom-in-95 duration-500">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Financial Matrix Analysis</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">{COPY.transactions.loanInvestmentDetails}</Label>
                   <Sparkles className="w-3 h-3 text-indigo-400" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-600 ml-1">Principal Capital</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-600 ml-1">{COPY.transactions.principalCapital}</Label>
                     <NumberInput
                       value={formData.principal}
                       onChange={(val) => setFormData({ ...formData, principal: val })}
@@ -1029,7 +1037,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 onClick={handleClose}
                 className="flex-1 h-14 sq-md text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-100 hover:bg-white/5 border border-white/5"
               >
-                Abort
+                {COPY.common.actions.abort}
               </Button>
               <Button
                 type="submit"
@@ -1039,7 +1047,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                   }`}
                 disabled={accounts.length === 0}
               >
-                {initialData ? 'Update Matrix' : 'Record Transaction'}
+                {initialData ? COPY.common.actions.update : COPY.common.actions.record}
               </Button>
             </div>
           </form>

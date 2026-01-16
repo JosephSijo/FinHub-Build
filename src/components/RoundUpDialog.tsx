@@ -151,7 +151,7 @@ export const RoundUpDialog: React.FC<RoundUpDialogProps> = ({
                             <div className="flex-1">
                                 <Select onValueChange={(v: any) => onMute(v)}>
                                     <SelectTrigger id="mute-duration" name="muteDuration" className="h-10 bg-transparent border border-white/5 hover:bg-white/5 rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-500 justify-center gap-2 px-4 focus:ring-0">
-                                        <SelectValue placeholder="Protocol Mute" />
+                                        <SelectValue placeholder="Disabled" />
                                     </SelectTrigger>
                                     <SelectContent align="end" className="bg-slate-900 border-white/5">
                                         <SelectItem value="today" className="text-[10px] font-bold py-2">Mute 24h</SelectItem>

@@ -24,7 +24,7 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
     }, [value]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      let inputValue = e.target.value;
+      const inputValue = e.target.value;
       
       // Remove all commas
       const cleanValue = removeCommas(inputValue);

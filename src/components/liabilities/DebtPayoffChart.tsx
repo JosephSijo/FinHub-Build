@@ -1,4 +1,4 @@
-/* eslint-disable react/forbid-component-props, react/forbid-dom-props */
+ 
 import React from 'react';
 import {
     AreaChart,

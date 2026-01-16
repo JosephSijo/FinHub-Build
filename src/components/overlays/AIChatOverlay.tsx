@@ -59,7 +59,7 @@ export const AIChatOverlay: React.FC<AIChatOverlayProps> = React.memo(({ isOpen,
             } else {
                 setMessages(prev => [...prev, { text: response.text || "Analyzing financial pattern...", type: 'ai' }]);
             }
-        } catch (error) {
+        } catch {
             setMessages(prev => [...prev, { text: "Connection error. FinHub has transitioned to local 'Cached View'.", type: 'ai' }]);
         } finally {
             if (!isOffline) setIsLoading(false);

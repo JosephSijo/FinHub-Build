@@ -1,5 +1,3 @@
-/* eslint-disable react/forbid-component-props, react/forbid-dom-props */
-/* eslint-disable react/forbid-component-props, react/forbid-dom-props */
 import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -178,12 +176,26 @@ export function EmergencyFundsTab({ currency, expenses = [], accounts = [], onEm
     toast.success(`Added ${formatCurrency(amount, currency)} to emergency fund!`);
   };
 
+  const resetHealthForm = React.useCallback(() => {
+    setHealthFormData({
+      provider: '',
+      policyNumber: '',
+      coverageAmount: '',
+      premium: '',
+      frequency: 'yearly',
+      startDate: '',
+      expiryDate: ''
+    });
+    setEditingHealth(null);
+  }, [setHealthFormData, setEditingHealth]);
+
   // Health Insurance handlers
-  const handleHealthSubmit = (e: React.FormEvent) => {
+  const handleHealthSubmit = React.useCallback((e: React.FormEvent) => {
     e.preventDefault();
 
+    const timestamp = new Date().getTime();
     const newInsurance: HealthInsurance = {
-      id: editingHealth?.id || `health_${Date.now()}`,
+      id: editingHealth?.id || `health_${timestamp}`,
       provider: healthFormData.provider,
       policyNumber: healthFormData.policyNumber,
       coverageAmount: parseFloat(healthFormData.coverageAmount),
@@ -204,10 +216,10 @@ export function EmergencyFundsTab({ currency, expenses = [], accounts = [], onEm
 
     resetHealthForm();
     setIsHealthDialogOpen(false);
-  };
+  }, [editingHealth, healthFormData, healthInsurances, setHealthInsurances, resetHealthForm, setIsHealthDialogOpen]);
 
-  const resetHealthForm = () => {
-    setHealthFormData({
+  const resetTermForm = React.useCallback(() => {
+    setTermFormData({
       provider: '',
       policyNumber: '',
       coverageAmount: '',
@@ -216,15 +228,16 @@ export function EmergencyFundsTab({ currency, expenses = [], accounts = [], onEm
       startDate: '',
       expiryDate: ''
     });
-    setEditingHealth(null);
-  };
+    setEditingTerm(null);
+  }, [setTermFormData, setEditingTerm]);
 
   // Term Insurance handlers
-  const handleTermSubmit = (e: React.FormEvent) => {
+  const handleTermSubmit = React.useCallback((e: React.FormEvent) => {
     e.preventDefault();
 
+    const timestamp = new Date().getTime();
     const newInsurance: TermInsurance = {
-      id: editingTerm?.id || `term_${Date.now()}`,
+      id: editingTerm?.id || `term_${timestamp}`,
       provider: termFormData.provider,
       policyNumber: termFormData.policyNumber,
       coverageAmount: parseFloat(termFormData.coverageAmount),
@@ -245,20 +258,7 @@ export function EmergencyFundsTab({ currency, expenses = [], accounts = [], onEm
 
     resetTermForm();
     setIsTermDialogOpen(false);
-  };
-
-  const resetTermForm = () => {
-    setTermFormData({
-      provider: '',
-      policyNumber: '',
-      coverageAmount: '',
-      premium: '',
-      frequency: 'yearly',
-      startDate: '',
-      expiryDate: ''
-    });
-    setEditingTerm(null);
-  };
+  }, [editingTerm, termFormData, termInsurances, setTermInsurances, resetTermForm, setIsTermDialogOpen]);
 
   const progress = emergencyFund.targetAmount > 0
     ? (emergencyFund.currentAmount / emergencyFund.targetAmount) * 100
@@ -435,7 +435,7 @@ export function EmergencyFundsTab({ currency, expenses = [], accounts = [], onEm
           <div className="mt-10 py-12 text-center rounded-[40px] border border-dashed border-white/10 bg-slate-800/20 relative z-10">
             <AlertCircle className="w-16 h-16 mx-auto text-slate-700 mb-6" />
             <h4 className="text-xl font-black text-slate-300 mb-2">Reserve Uninitialized</h4>
-            <p className="text-sm text-slate-500 font-bold mb-8 max-w-[280px] mx-auto">Establish your survival threshold to activate the safety protocols.</p>
+            <p className="text-sm text-slate-500 font-bold mb-8 max-w-[280px] mx-auto">Establish your survival threshold to activate the safety features.</p>
             <Button
               onClick={() => setIsFundDialogOpen(true)}
               className="bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-600/20 rounded-2xl px-10 h-14 font-black"
@@ -945,7 +945,7 @@ export function EmergencyFundsTab({ currency, expenses = [], accounts = [], onEm
           <DialogHeader>
             <DialogTitle className="text-2xl font-black text-white tracking-tight">{editingTerm ? 'Refine' : 'New'} Capital Protection</DialogTitle>
             <DialogDescription className="text-slate-500 font-bold">
-              Establish financial continuity protocols.
+              Establish financial safety plans.
             </DialogDescription>
           </DialogHeader>
 
@@ -965,7 +965,7 @@ export function EmergencyFundsTab({ currency, expenses = [], accounts = [], onEm
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="term-policy" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Protocol Registry ID</Label>
+              <Label htmlFor="term-policy" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Policy Number</Label>
               <Input
                 id="term-policy"
                 name="policyNumber"
@@ -1060,7 +1060,7 @@ export function EmergencyFundsTab({ currency, expenses = [], accounts = [], onEm
                 Abort
               </Button>
               <Button type="submit" className="flex-1 h-12 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-xl shadow-lg shadow-purple-600/20">
-                {editingTerm ? 'Commit Refinement' : 'Initialize Protocol'}
+                {editingTerm ? 'Commit Refinement' : 'Create Policy'}
               </Button>
             </div>
           </form>

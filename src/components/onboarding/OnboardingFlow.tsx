@@ -176,7 +176,7 @@ export const OnboardingFlow: React.FC = () => {
                 {phase === 1 && step === 'question' && (
                     <motion.div key="p1-question" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-md w-full space-y-8 relative z-10">
                         <div className="space-y-4 text-center">
-                            <div className="text-[10px] font-black text-teal-500 uppercase tracking-[0.4em] mb-2">Protocol: Protection Check</div>
+                            <div className="text-[10px] font-black text-teal-500 uppercase tracking-[0.4em] mb-2">Security Check</div>
                             <h2 className="text-3xl font-black text-white tracking-tight leading-tight">Do you have Health and Term Insurance?</h2>
                             <p className="text-slate-500 font-bold">These are the foundations of any terminal wealth flight path.</p>
                         </div>
@@ -207,7 +207,7 @@ export const OnboardingFlow: React.FC = () => {
                     <motion.div key="p1-comp" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md w-full text-center space-y-8 relative z-10">
                         <div className="w-20 h-20 bg-teal-500/10 border border-teal-500/20 rounded-[28px] flex items-center justify-center mx-auto mb-6"><CheckCircle2 className="w-10 h-10 text-teal-400" /></div>
                         <div className="space-y-4">
-                            <h2 className="text-3xl font-black text-white tracking-tight leading-tight uppercase">Shield Protocol Deployed</h2>
+                            <h2 className="text-3xl font-black text-white tracking-tight leading-tight uppercase">Security Enabled</h2>
                             <p className="text-slate-400 text-lg font-medium leading-relaxed">Understood. We've prioritized these. A single emergency shouldn't crash your flight path.</p>
                         </div>
                         <button onClick={startPhase2} className="w-full py-5 bg-teal-500 text-black font-black uppercase tracking-[0.2em] rounded-24 hover:bg-teal-400 transition-all duration-500 shadow-xl shadow-teal-500/20">Initialize Phase 2</button>
@@ -357,7 +357,7 @@ export const OnboardingFlow: React.FC = () => {
                 {phase === 3 && step === 'question' && (
                     <motion.div key="p3-question" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-md w-full space-y-8 relative z-10">
                         <div className="space-y-4 text-center">
-                            <div className="text-[10px] font-black text-purple-500 uppercase tracking-[0.4em] mb-2">Protocol: Freedom Metric</div>
+                            <div className="text-[10px] font-black text-purple-500 uppercase tracking-[0.4em] mb-2">Financial Freedom Score</div>
                             <h2 className="text-3xl font-black text-white tracking-tight leading-tight uppercase">Target Monthly Passive Income</h2>
                             <p className="text-slate-500 font-bold text-sm leading-relaxed">This sets the baseline for your Freedom Meter. Every rupee you save now will be measured in Time.</p>
                         </div>

@@ -72,7 +72,11 @@ export function FundAllocationDialog({
         // Suggest account with enough balance, or highest balance
         const bestFit = liquidAccounts.find(a => a.balance >= availableToSpend) ||
           [...liquidAccounts].sort((a, b) => b.balance - a.balance)[0];
-        setSelectedAccountId(bestFit.id);
+        if (bestFit) {
+          queueMicrotask(() => {
+            setSelectedAccountId(bestFit.id);
+          });
+        }
       }
     }
   }, [isOpen, availableToSpend, accounts, selectedAccountId]);
@@ -168,7 +172,7 @@ export function FundAllocationDialog({
               {destinationType === 'goal' ? '🎯 ALLOCATE TO GOAL' : '🛡️ ALLOCATE TO RESERVE'}
             </DialogTitle>
             <DialogDescription className="text-slate-500 text-[10px] uppercase font-black tracking-widest">
-              Protocol: Move liquidity from account to {destinationType === 'goal' ? 'savings milestone' : 'emergency reserve'}
+              Move funds from account to {destinationType === 'goal' ? 'savings milestone' : 'emergency reserve'}
             </DialogDescription>
           </DialogHeader>
 
@@ -224,7 +228,7 @@ export function FundAllocationDialog({
                     <CyberButton
                       onClick={() => {
                         handleAutoFill();
-                        if (availableToSpend > selectedAccount?.balance!) {
+                        if (selectedAccount && availableToSpend > selectedAccount.balance) {
                           toast.warning('Surplus exceeds selected account balance. Source adjusted.');
                         }
                       }}
@@ -361,7 +365,7 @@ export function FundAllocationDialog({
               {/* Preview Header */}
               <div className="text-center pt-2">
                 <p className="text-[10px] text-emerald-500 uppercase font-black tracking-[0.2em] animate-pulse">
-                  Capital Allocation Protocol Ready
+                  Ready to Allocate Funds
                 </p>
               </div>
 

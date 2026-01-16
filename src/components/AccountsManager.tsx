@@ -1,4 +1,4 @@
-/* eslint-disable react/forbid-component-props, react/forbid-dom-props */
+ 
 import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';

@@ -64,6 +64,11 @@
     user-select: none;
   }
 
+  /* Ensure toaster always appears above all UI elements */
+  [data-sonner-toaster] {
+    z-index: 9999999 !important;
+  }
+
   button:active,
   .active-scale:active {
     transform: scale(0.97);

@@ -1,4 +1,4 @@
-/* eslint-disable react/forbid-component-props, react/forbid-dom-props */
+
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from './ui/sheet';
 import { Bell, TrendingUp, Target, Award, AlertTriangle, CheckCheck, Trash2, X, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { Button } from './ui/button';
@@ -87,7 +87,7 @@ export function NotificationsPanel({
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col h-dvh max-h-dvh bg-black border-white/5 text-slate-100 overflow-hidden z-[99999]">
         <SheetTitle className="sr-only">Notifications</SheetTitle>
-        <SheetDescription className="sr-only">Protocol Intelligence Pulse</SheetDescription>
+        <SheetDescription className="sr-only">Notifications</SheetDescription>
         {/* Modernized Panel Header */}
         <div className="px-8 pt-28 pb-10 border-b border-white/5 bg-black relative overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
           <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500 blur-[120px] opacity-10 -mr-24 -mt-24" />
@@ -144,7 +144,7 @@ export function NotificationsPanel({
                   size="icon"
                   title="Clear history"
                   onClick={() => {
-                    if (confirm(`Purge ${readCount} recorded protocol entries?`)) {
+                    if (confirm(`Clear ${readCount} notifications?`)) {
                       onClearRead?.();
                     }
                   }}
@@ -167,7 +167,7 @@ export function NotificationsPanel({
                 </div>
                 <h4 className="text-2xl font-black text-slate-100 mb-3 tracking-tight">Signal Silence</h4>
                 <p className="text-[10px] text-slate-600 font-black uppercase tracking-[0.3em] max-w-[260px] leading-relaxed">
-                  The protocol pulse is flat. We will alert you upon system breakthroughs.
+                  No new notifications. We will alert you when there are updates.
                 </p>
               </div>
             ) : (

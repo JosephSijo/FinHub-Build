@@ -1091,7 +1091,7 @@ export function InvestmentsTab() {
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-black border-white/10 text-white p-0 sq-2xl">
           <div className="p-8 border-b border-white/5">
             <DialogHeader className="p-0">
-              <DialogTitle className="text-xl font-bold tracking-tight text-white">Full Exit Protocol</DialogTitle>
+              <DialogTitle className="text-xl font-bold tracking-tight text-white">Sell All</DialogTitle>
               <DialogDescription className="text-slate-500 text-xs mt-1">
                 Liquidate your position and distribute proceeds
               </DialogDescription>

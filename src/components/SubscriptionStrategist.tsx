@@ -49,7 +49,7 @@ export const SubscriptionStrategist: React.FC<SubscriptionStrategistProps> = ({
                 // In a real app, we'd check for true duplicates. Here we flag potential "Ghost" candidates.
                 if (
                     desc.includes('trial') ||
-                    (desc.includes('premium') && Math.random() > 0.7) // Simulating "random" check for demonstration if strictly strictly regex isn't enough, but let's stick to logic.
+                    (desc.includes('premium') && (sub.id.length % 3 === 0)) // Deterministic check instead of Math.random
                 ) {
                     // Refined Ghost Logic: logic for "Ghost" is hard without usage data. 
                     // Let's assume duplicate providers are ghosts for this exercise.

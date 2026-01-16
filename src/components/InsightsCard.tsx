@@ -1,4 +1,4 @@
-/* eslint-disable react/forbid-component-props, react/forbid-dom-props */
+
 import React, { useState } from 'react';
 import { Card, CardHeader, CardContent } from './ui/card';
 import { motion, AnimatePresence } from 'motion/react';
@@ -184,7 +184,7 @@ export const InsightsCard: React.FC<InsightsCardProps> = ({
                             {activeTab === 'growth' && (
                                 <div className="flex items-center gap-4">
                                     <div>
-                                        <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Protocol Valuation</p>
+                                        <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Valuation</p>
                                         <p className="text-4xl font-black tabular-nums text-blue-400">
                                             {formatCurrency(goals.reduce((acc, g) => acc + g.currentAmount, 0), currency)}
                                         </p>

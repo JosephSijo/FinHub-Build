@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Shield, Target, CheckCircle2, MessageSquare, KeyRound } from "lucide-react";
 import { useFinance } from "../../context/FinanceContext";
@@ -22,6 +22,36 @@ export const LoginScreen = () => {
     const [showSmartPrompt, setShowSmartPrompt] = useState(false);
     const [isBiometricActive, setIsBiometricActive] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    const triggerBiometrics = React.useCallback(async () => {
+        if (!Capacitor.isNativePlatform()) return;
+
+        try {
+            const result = await NativeBiometric.isAvailable();
+            if (!result.isAvailable) return;
+
+            setIsBiometricActive(true);
+
+            await NativeBiometric.verifyIdentity({
+                reason: "Authenticate to access your private node",
+                title: "Login to FinHub",
+                subtitle: "Use biometrics to login",
+                description: "Touch the sensor to verify identity",
+                negativeButtonText: "Cancel",
+            });
+
+            // If it doesn't throw, assume success
+            // If remembered user, use the demo PIN for now since we don't store actual secrets yet
+            // In a real app, we'd use getCredentials
+            const loginSuccess = await login("2255", true);
+            if (!loginSuccess) {
+                setIsBiometricActive(false);
+            }
+        } catch (err) {
+            console.error('Biometric error:', err);
+            setIsBiometricActive(false);
+            if (navigator.vibrate) navigator.vibrate([50, 50]);
+        }
+    }, [login]);
 
     useEffect(() => {
         if (isRememberedUser && rememberedMobile) {
@@ -32,67 +62,11 @@ export const LoginScreen = () => {
             setMobile(pendingMobile);
             setPhase("verify");
         }
-    }, [isRememberedUser, rememberedMobile, pendingMobile]);
-
-    const triggerBiometrics = async () => {
-        if (!Capacitor.isNativePlatform()) return;
-
-        try {
-            const result = await NativeBiometric.isAvailable();
-            if (!result.isAvailable) return;
-
-            setIsBiometricActive(true);
-
-            const verifyResult = await NativeBiometric.verifyIdentity({
-                reason: "Authenticate to access your private node",
-                title: "Login to FinHub",
-                subtitle: "Use biometrics to login",
-                description: "Touch the sensor to verify identity",
-                negativeButtonText: "Cancel",
-            });
-
-            if (verifyResult) {
-                // If remembered user, use the demo PIN for now since we don't store actual secrets yet
-                // In a real app, we'd use getCredentials
-                const loginSuccess = await login("2255", true);
-                if (!loginSuccess) {
-                    setIsBiometricActive(false);
-                }
-            } else {
-                setIsBiometricActive(false);
-            }
-        } catch (err) {
-            console.error('Biometric error:', err);
-            setIsBiometricActive(false);
-            if (navigator.vibrate) navigator.vibrate([50, 50]);
-        }
-    };
+    }, [isRememberedUser, rememberedMobile, pendingMobile, triggerBiometrics]);
 
 
 
-    // Auto-proceed logic
-    useEffect(() => {
-        if (phase === "identity" && mobile.length === 10) {
-            handleMobileSubmit();
-        }
-    }, [mobile, phase]);
-
-    useEffect(() => {
-        if (phase === "verify" && pin.length === 4) {
-            handlePinSubmit();
-        }
-    }, [pin, phase]);
-
-    useEffect(() => {
-        if (inputRef.current) {
-            inputRef.current.focus();
-            if (inputRef.current.type !== "hidden") {
-                inputRef.current.select();
-            }
-        }
-    }, [phase]);
-
-    const handleMobileSubmit = async () => {
+    const handleMobileSubmit = React.useCallback(async () => {
         if (mobile.length !== 10) return;
         const exists = await checkIdentity(mobile);
         if (exists) {
@@ -101,37 +75,16 @@ export const LoginScreen = () => {
             setPhase("create_name");
         }
         setPin("");
-    };
+    }, [mobile, checkIdentity]);
 
-    const handleForgotPin = async () => {
-        const success = await sendOtp(mobile);
-        if (success) {
-            setPhase("otp_reset");
+    // Auto-proceed logic
+    useEffect(() => {
+        if (phase === "identity" && mobile.length === 10) {
+            handleMobileSubmit();
         }
-    };
+    }, [mobile, phase, handleMobileSubmit]);
 
-    const handleNameSubmit = async () => {
-        if (name.trim().length < 2) return;
-        const success = await sendOtp(mobile);
-        if (success) {
-            setPhase("otp_verify");
-        }
-    };
-
-    const handleOtpSubmit = async () => {
-        const success = await verifyOtp(mobile, otp);
-        if (success) {
-            if (phase === "otp_verify") {
-                setPhase("create_pin");
-            } else {
-                setPhase("reset_pin");
-            }
-        } else {
-            triggerError();
-        }
-    };
-
-    const handlePinSubmit = async () => {
+    const handlePinSubmit = React.useCallback(async () => {
         if (phase === "verify") {
             const success = await login(pin, rememberMe);
             if (success) {
@@ -162,7 +115,54 @@ export const LoginScreen = () => {
                 triggerError();
             }
         }
+    }, [phase, login, pin, rememberMe, signup, mobile, name, resetPin, newPin, confirmPin, isRememberedUser]);
+
+    useEffect(() => {
+        if (phase === "verify" && pin.length === 4) {
+            handlePinSubmit();
+        }
+    }, [pin, phase, handlePinSubmit]);
+
+    useEffect(() => {
+        if (inputRef.current) {
+            inputRef.current.focus();
+            if (inputRef.current.type !== "hidden") {
+                inputRef.current.select();
+            }
+        }
+    }, [phase]);
+
+
+
+    const handleForgotPin = async () => {
+        const success = await sendOtp(mobile);
+        if (success) {
+            setPhase("otp_reset");
+        }
     };
+
+    const handleNameSubmit = async () => {
+        if (name.trim().length < 2) return;
+        const success = await sendOtp(mobile);
+        if (success) {
+            setPhase("otp_verify");
+        }
+    };
+
+    const handleOtpSubmit = async () => {
+        const success = await verifyOtp(mobile, otp);
+        if (success) {
+            if (phase === "otp_verify") {
+                setPhase("create_pin");
+            } else {
+                setPhase("reset_pin");
+            }
+        } else {
+            triggerError();
+        }
+    };
+
+
 
     const triggerError = () => {
         setError(true);
@@ -393,7 +393,7 @@ export const LoginScreen = () => {
             </AnimatePresence>
 
             <div className="absolute bottom-8 text-center text-[10px] text-white/20">
-                <p>Protected by FinHub Node Protocols. Data is localized and encrypted.</p>
+                <p>Protected by FinHub Security. Data is localized and encrypted.</p>
             </div>
         </div>
     );

@@ -71,7 +71,7 @@ export const AboutUsPopup: React.FC<AboutUsPopupProps> = ({ isOpen, onClose }) =
                                     <section className="space-y-2">
                                         <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                             <Shield className="w-3.5 h-3.5" />
-                                            Core Protocol
+                                            Core Features
                                         </h3>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="bg-white/5 p-3 rounded-2xl border border-white/5">

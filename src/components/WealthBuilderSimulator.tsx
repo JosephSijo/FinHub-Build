@@ -67,11 +67,7 @@ export function WealthBuilderSimulator() {
         returns: 0
     });
 
-    useEffect(() => {
-        calculateWealth();
-    }, [monthlyInvestment, expectedReturn, timePeriod]);
-
-    const calculateWealth = () => {
+    const calculateWealth = React.useCallback(() => {
         const data = [];
         let currentWealth = 0;
         let totalInvested = 0;
@@ -109,7 +105,13 @@ export function WealthBuilderSimulator() {
             wealth: currentWealth,
             returns: Math.max(0, currentWealth - totalInvested)
         });
-    };
+    }, [monthlyInvestment, expectedReturn, timePeriod]);
+
+    useEffect(() => {
+        queueMicrotask(() => {
+            calculateWealth();
+        });
+    }, [calculateWealth]);
 
     const formatValue = (value: number) => {
         return globalFormatCurrency(value, settings.currency, true);

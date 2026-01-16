@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Target,
   TrendingUp,
@@ -72,7 +72,7 @@ const GENERIC_AVERAGES = {
   debts: [] as Debt[]
 };
 
-export const Dashboard: React.FC<DashboardProps> = ({
+export const Dashboard: React.FC<DashboardProps> = React.memo(({
   expenses,
   incomes = [],
   currency,
@@ -89,41 +89,39 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onResumeOnboarding
 }) => {
 
-  const displayExpenses = isSampleMode ? GENERIC_AVERAGES.expenses : expenses;
-  const displayIncomes = isSampleMode ? GENERIC_AVERAGES.incomes : incomes;
-  const displayAccounts = isSampleMode ? GENERIC_AVERAGES.accounts : accounts;
-  const displayGoals = isSampleMode ? GENERIC_AVERAGES.goals : goals;
-  const displayLiabilities = isSampleMode ? GENERIC_AVERAGES.liabilities : liabilities;
-  const displayDebts = isSampleMode ? GENERIC_AVERAGES.debts : debts;
+  const displayExpenses = useMemo(() => isSampleMode ? GENERIC_AVERAGES.expenses : expenses, [isSampleMode, expenses]);
+  const displayIncomes = useMemo(() => isSampleMode ? GENERIC_AVERAGES.incomes : incomes, [isSampleMode, incomes]);
+  const displayAccounts = useMemo(() => isSampleMode ? GENERIC_AVERAGES.accounts : accounts, [isSampleMode, accounts]);
+  const displayGoals = useMemo(() => isSampleMode ? GENERIC_AVERAGES.goals : goals, [isSampleMode, goals]);
+  const displayLiabilities = useMemo(() => isSampleMode ? GENERIC_AVERAGES.liabilities : liabilities, [isSampleMode, liabilities]);
+  const displayDebts = useMemo(() => isSampleMode ? GENERIC_AVERAGES.debts : debts, [isSampleMode, debts]);
   const displayHealthScore = isSampleMode ? 85 : healthScore;
 
   // 1. Cross-Account Reconciliation Logic
-  const reconciledExpenses = displayExpenses.map(e => ({ ...e, isInternalTransfer: e.isInternalTransfer || isTransfer(e as any) }));
-  const reconciledIncomes = displayIncomes.map(i => ({ ...i, isInternalTransfer: i.isInternalTransfer || isTransfer(i as any) }));
+  const { reconciledExpenses, reconciledIncomes } = useMemo(() => {
+    const rExpenses = displayExpenses.map(e => ({ ...e, isInternalTransfer: e.isInternalTransfer || isTransfer(e as any) }));
+    const rIncomes = displayIncomes.map(i => ({ ...i, isInternalTransfer: i.isInternalTransfer || isTransfer(i as any) }));
 
-  // Auto-detect matching outflow/inflow pairs on the same day across different accounts
-  reconciledExpenses.forEach(exp => {
-    if (exp.isInternalTransfer) return;
-    const match = reconciledIncomes.find(inc =>
-      !inc.isInternalTransfer &&
-      inc.amount === exp.amount &&
-      inc.date.split('T')[0] === exp.date.split('T')[0] && // Compare date parts only
-      inc.accountId !== exp.accountId
-    );
-    if (match) {
-      exp.isInternalTransfer = true;
-      match.isInternalTransfer = true;
-    }
-  });
+    // Auto-detect matching outflow/inflow pairs on the same day across different accounts
+    rExpenses.forEach(exp => {
+      if (exp.isInternalTransfer) return;
+      const match = rIncomes.find(inc =>
+        !inc.isInternalTransfer &&
+        inc.amount === exp.amount &&
+        inc.date.split('T')[0] === exp.date.split('T')[0] &&
+        inc.accountId !== exp.accountId
+      );
+      if (match) {
+        exp.isInternalTransfer = true;
+        match.isInternalTransfer = true;
+      }
+    });
+
+    return { reconciledExpenses: rExpenses, reconciledIncomes: rIncomes };
+  }, [displayExpenses, displayIncomes]);
 
   // Logic for Available-to-Spend
-  const {
-    shadowWalletTotal,
-    totalReserved,
-    availableToSpend,
-    totalCreditUsage,
-    totalCommitments
-  } = useShadowWallet({
+  const shadowWallet = useShadowWallet({
     accounts: displayAccounts as any,
     goals: displayGoals,
     liabilities: displayLiabilities,
@@ -131,90 +129,204 @@ export const Dashboard: React.FC<DashboardProps> = ({
     emergencyFundAmount
   });
 
+  const {
+    shadowWalletTotal,
+    totalReserved,
+    availableToSpend,
+    totalCreditUsage,
+    totalCommitments
+  } = shadowWallet;
+
   const [activeCard, setActiveCard] = useState<string | null>(null);
 
   // Time & Filtering Logic for Guru Vitals
-  const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
+  const stats = useMemo(() => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
 
-  const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
-  const lastMonth = lastMonthDate.getMonth();
-  const lastMonthYear = lastMonthDate.getFullYear();
+    const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
+    const lastMonth = lastMonthDate.getMonth();
+    const lastMonthYear = lastMonthDate.getFullYear();
 
-  const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const daysRemaining = lastDayOfMonth - today.getDate() + 1;
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const daysRemaining = lastDayOfMonth - today.getDate() + 1;
 
+    const currentMonthExpenses = reconciledExpenses.filter(e => {
+      const d = new Date(e.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear && !e.isInternalTransfer;
+    });
 
-  // Filter expenses for current month only for accurate velocity
-  const currentMonthExpenses = reconciledExpenses.filter(e => {
-    const d = new Date(e.date);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear && !e.isInternalTransfer;
-  });
+    const lastMonthExpenses = reconciledExpenses.filter(e => {
+      const d = new Date(e.date);
+      return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear && !e.isInternalTransfer;
+    });
 
-  const lastMonthExpenses = reconciledExpenses.filter(e => {
-    const d = new Date(e.date);
-    return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear && !e.isInternalTransfer;
-  });
+    const activeGoalsCount = displayGoals.length;
+    const totalLiabilities = displayLiabilities.reduce((sum: number, l: any) => sum + (l.outstanding || l.principal || 0), 0);
+
+    const pendingBorrowedDebts = displayDebts.filter(d => d.type === 'borrowed' && d.status === 'pending');
+    const totalMoneyOwed = pendingBorrowedDebts.reduce((sum, d) => sum + d.amount, 0);
+
+    const pendingLentDebts = displayDebts.filter(d => d.type === 'lent' && d.status === 'pending');
+    const totalMoneyLent = pendingLentDebts.reduce((sum, d) => sum + d.amount, 0);
+
+    const filteredInvestments = investments.filter(inv => {
+      if (inv.accountId && inv.accountId !== 'none') {
+        const acc = displayAccounts.find(a => a.id === inv.accountId);
+        if (acc && acc.type !== 'investment') return false;
+      }
+      return true;
+    });
+
+    const totalPrincipal = filteredInvestments.reduce((sum: number, inv: any) => sum + (inv.buyPrice * inv.quantity), 0);
+    const totalInvestmentValue = filteredInvestments.reduce((sum: number, inv: any) => sum + ((inv.currentPrice || inv.buyPrice) * inv.quantity), 0);
+
+    const portfolioVelocity = totalPrincipal > 0
+      ? (((totalInvestmentValue - totalPrincipal) / totalPrincipal) * 100).toFixed(1)
+      : "0.0";
+
+    const m1Assets = displayAccounts
+      .filter(acc => acc.type === 'bank' || acc.type === 'cash')
+      .reduce((sum, acc) => sum + acc.balance, 0);
+
+    const grossIncome = reconciledIncomes.filter(i => !i.isInternalTransfer).reduce((sum: number, i: Income) => sum + i.amount, 0) || 42500;
+    const grossBurn = currentMonthExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
+    const lastMonthBurn = lastMonthExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
+
+    const spendingVariance = lastMonthBurn > 0
+      ? Math.round(((grossBurn - lastMonthBurn) / lastMonthBurn) * 100)
+      : 0;
+
+    const subscriptionBurden = currentMonthExpenses
+      .filter(e => e.category === 'Subscription')
+      .reduce((sum, e) => sum + e.amount, 0);
+
+    const velocityValue = m1Assets > 0 ? (grossBurn / m1Assets) : 0;
+    const liquidVelocity = (velocityValue * 100).toFixed(1) + '%';
+
+    // Advanced Insights Calculations
+    const totalEMIs = displayLiabilities.reduce((sum: number, l: any) => sum + (l.emiAmount || 0), 0);
+    const totalCCDebt = displayAccounts
+      .filter(a => a.type === 'credit_card')
+      .reduce((sum: number, a: any) => sum + Math.abs(a.balance), 0);
+    const monthlyCCPayment = totalCCDebt * 0.05;
+    const totalMonthlyDebt = totalEMIs + monthlyCCPayment;
+
+    const bankAccountIds = displayAccounts.filter(a => a.type === 'bank').map(a => a.id);
+    const spendAccountIds = displayAccounts.filter(a => ['bank', 'cash', 'credit_card'].includes(a.type)).map(a => a.id);
+
+    const currentMonthIncomes = reconciledIncomes.filter(i => {
+      const d = new Date(i.date);
+      return d.getMonth() === currentMonth &&
+        d.getFullYear() === currentYear &&
+        bankAccountIds.includes(i.accountId) &&
+        !i.isInternalTransfer;
+    }).reduce((sum, i) => sum + i.amount, 0) || grossIncome;
+
+    const currentMonthInvestments = investments.filter(inv => {
+      const d = new Date(inv.purchaseDate);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    }).reduce((sum, inv) => sum + (inv.buyPrice * inv.quantity), 0);
+
+    const refinedSpend = reconciledExpenses.filter(e => {
+      const d = new Date(e.date);
+      return d.getMonth() === currentMonth &&
+        d.getFullYear() === currentYear &&
+        spendAccountIds.includes(e.accountId) &&
+        !e.isInternalTransfer;
+    }).reduce((sum, e) => sum + e.amount, 0);
+
+    const totalOutflows = refinedSpend + currentMonthInvestments;
+    const outflowRatio = currentMonthIncomes > 0 ? (totalOutflows / currentMonthIncomes) : 0;
+    const finalSavingsRateScore = grossIncome > 0 ? ((grossIncome - grossBurn) / grossIncome * 100) : 0;
+    const dtiRatio = grossIncome > 0 ? (totalMonthlyDebt / grossIncome) : 0;
+
+    const architectureContext: AIContext = {
+      totalIncome: displayIncomes.reduce((sum, i) => sum + i.amount, 0),
+      totalExpenses: displayExpenses.reduce((sum, e) => sum + e.amount, 0),
+      expenses: displayExpenses,
+      incomes: displayIncomes,
+      accounts: displayAccounts as any,
+      liabilities: displayLiabilities as any,
+      goals: displayGoals as any,
+      healthScore: displayHealthScore,
+      currency,
+      investments: investments as any,
+      debts: displayDebts as any,
+      currentMonthExpenses: reconciledExpenses as any,
+      recentTransactions: reconciledExpenses.slice(0, 5) as any,
+      savingsRate: grossIncome > 0 ? (grossIncome - grossBurn) / grossIncome : 0,
+      activeDebts: displayLiabilities.length + displayDebts.filter(d => d.status === 'pending').length,
+      goalsCount: displayGoals.length
+    };
+
+    const foundationMetrics = calculateFoundationMetrics(architectureContext);
+    const safeDailyLimit = foundationMetrics.foundationLimit;
+
+    const hasExpensesInLast3Days = reconciledExpenses.some(e => {
+      const diffTime = Math.abs(today.getTime() - new Date(e.date).getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= 3;
+    });
+
+    const missingEssentials = !hasExpensesInLast3Days;
+
+    return {
+      daysRemaining,
+      activeGoalsCount,
+      totalLiabilities,
+      pendingBorrowedDebts,
+      totalMoneyOwed,
+      pendingLentDebts,
+      totalMoneyLent,
+      totalInvestmentValue,
+      portfolioVelocity,
+      m1Assets,
+      grossIncome,
+      grossBurn,
+      spendingVariance,
+      subscriptionBurden,
+      velocityValue,
+      liquidVelocity,
+      foundationMetrics,
+      safeDailyLimit,
+      missingEssentials,
+      architectureContext,
+      outflowRatio,
+      finalSavingsRateScore,
+      dtiRatio
+    };
+  }, [displayExpenses, displayIncomes, displayAccounts, displayGoals, displayLiabilities, displayDebts, investments, currency, displayHealthScore, reconciledExpenses, reconciledIncomes]);
+
+  const {
+    daysRemaining,
+    activeGoalsCount,
+    totalLiabilities,
+    pendingBorrowedDebts,
+    totalMoneyOwed,
+    pendingLentDebts,
+    totalMoneyLent,
+    totalInvestmentValue,
+    portfolioVelocity,
+    m1Assets,
+    grossIncome,
+    grossBurn,
+    spendingVariance,
+    subscriptionBurden,
+    velocityValue,
+    liquidVelocity,
+    foundationMetrics,
+    safeDailyLimit,
+    missingEssentials,
+    outflowRatio,
+    finalSavingsRateScore,
+    dtiRatio
+  } = stats;
 
   const toggleCard = (cardId: string) => {
     setActiveCard(activeCard === cardId ? null : cardId);
   };
-
-  // derived stats
-  const activeGoalsCount = goals.length;
-  const totalLiabilities = liabilities.reduce((sum: number, l: any) => sum + (l.outstanding || l.principal || 0), 0);
-
-  // Money Owed: Pending Borrowed Debts
-  const pendingBorrowedDebts = debts.filter(d => d.type === 'borrowed' && d.status === 'pending');
-  const totalMoneyOwed = pendingBorrowedDebts.reduce((sum, d) => sum + d.amount, 0);
-
-  // Money I Lent: Pending Lent Debts
-  const pendingLentDebts = debts.filter(d => d.type === 'lent' && d.status === 'pending');
-  const totalMoneyLent = pendingLentDebts.reduce((sum, d) => sum + d.amount, 0);
-
-  // Investment Speed: (Current Value - Principal) / Principal * 100
-  // Aggregation Rule: Source Independence & Ghost Node Protection
-  const filteredInvestments = investments.filter(inv => {
-    if (inv.accountId && inv.accountId !== 'none') {
-      const acc = accounts.find(a => a.id === inv.accountId);
-      if (acc && acc.type !== 'investment') return false;
-    }
-
-    // Time-Weighting: Optional filtering by purchase date
-    // Removed timeRange filtering as it's no longer used
-    return true;
-  });
-
-  const totalPrincipal = filteredInvestments.reduce((sum: number, inv: any) => sum + (inv.buyPrice * inv.quantity), 0);
-  const totalInvestmentValue = filteredInvestments.reduce((sum: number, inv: any) => sum + ((inv.currentPrice || inv.buyPrice) * inv.quantity), 0);
-
-  const portfolioVelocity = totalPrincipal > 0
-    ? (((totalInvestmentValue - totalPrincipal) / totalPrincipal) * 100).toFixed(1)
-    : "0.0";
-
-  // Total M1 assets (Bank + Cash)
-  const m1Assets = displayAccounts
-    .filter(acc => acc.type === 'bank' || acc.type === 'cash')
-    .reduce((sum, acc) => sum + acc.balance, 0);
-
-  // Guru Vitals
-  const grossIncome = reconciledIncomes.filter(i => !i.isInternalTransfer).reduce((sum: number, i: Income) => sum + i.amount, 0) || 42500;
-  const grossBurn = currentMonthExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
-  const lastMonthBurn = lastMonthExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
-
-  // Spending Variance (+/- %)
-  const spendingVariance = lastMonthBurn > 0
-    ? Math.round(((grossBurn - lastMonthBurn) / lastMonthBurn) * 100)
-    : 0;
-
-  const subscriptionBurden = currentMonthExpenses
-    .filter(e => e.category === 'Subscription')
-    .reduce((sum, e) => sum + e.amount, 0);
-
-  // Cash Flow Speed = (Total Monthly Spending / M1 Assets) * 100
-  const velocityValue = m1Assets > 0 ? (grossBurn / m1Assets) : 0;
-  const liquidVelocity = (velocityValue * 100).toFixed(1) + '%';
 
   const getVelocityInterpretation = (velocity: number) => {
     if (velocity > 1.0) return {
@@ -239,45 +351,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
       bg: 'bg-emerald-500/10',
       border: 'border-emerald-500/20',
       advice: 'Optimal circulation. Capital flow is balanced between spending and holding.',
-      suggestion: 'Protocol: Continue current flow. System is in high-efficiency state.'
+      suggestion: 'Continue current spending pattern. System is in high-efficiency state.'
     };
   };
 
-  const velocityInfo = getVelocityInterpretation(velocityValue);
-
-  // 1.5 The Foundation Filter Logic
-  const architectureContext: AIContext = {
-    totalIncome: displayIncomes.reduce((sum, i) => sum + i.amount, 0),
-    totalExpenses: displayExpenses.reduce((sum, e) => sum + e.amount, 0),
-    expenses: displayExpenses,
-    incomes: displayIncomes,
-    accounts: displayAccounts as any,
-    liabilities: displayLiabilities as any,
-    goals: displayGoals as any,
-    healthScore: displayHealthScore,
-    currency,
-    investments: investments as any,
-    debts: displayDebts as any,
-    currentMonthExpenses: reconciledExpenses as any,
-    recentTransactions: reconciledExpenses.slice(0, 5),
-    savingsRate: grossIncome > 0 ? (grossIncome - (grossBurn as number)) / (grossIncome as number) : 0,
-    activeDebts: displayLiabilities.length + displayDebts.filter(d => d.status === 'pending').length,
-    goalsCount: displayGoals.length
-  };
-
-  const foundationMetrics = calculateFoundationMetrics(architectureContext);
-  const safeDailyLimit = foundationMetrics.foundationLimit;
-
-  // 1.6 Missing Essentials Nudge Logic
-  const hasExpensesInLast3Days = reconciledExpenses.some(e => {
-    const diffTime = Math.abs(today.getTime() - new Date(e.date).getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 3;
-  });
-
-  const missingEssentials = !hasExpensesInLast3Days;
-
-
+  const velocityInfo = useMemo(() => getVelocityInterpretation(velocityValue), [velocityValue, m1Assets, currency]);
 
   return (
     <div className="main-grid">
@@ -331,7 +409,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* AI Truth Banner */}
       <TruthBanner
-        message={`Assessment: ${foundationMetrics.isRestricted ? 'Restricted' : 'Growth'}-protocol active. Foundation-adjusted limit is ${formatCurrency(safeDailyLimit, currency, true)} for the next ${foundationMetrics.remainingDays} days.`}
+        message={`Assessment: ${foundationMetrics.isRestricted ? 'Restricted' : 'Growth'} mode active. Foundation-adjusted limit is ${formatCurrency(safeDailyLimit, currency, true)} for the next ${foundationMetrics.remainingDays} days.`}
         icon={foundationMetrics.isRestricted ? <Zap className="w-4 h-4 text-orange-400" /> : <ShieldCheck className="w-4 h-4 text-blue-400" />}
       />
 
@@ -391,7 +469,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <TooltipTrigger><Info className="w-3 h-3 text-slate-500" /></TooltipTrigger>
                     <TooltipContent className="bg-slate-900 border-white/10 p-4 sq-xl shadow-2xl backdrop-blur-xl z-[100]">
                       <div className="space-y-2 text-[10px] font-bold uppercase tracking-widest min-w-[200px]">
-                        <p className="text-slate-500 mb-2 border-b border-white/5 pb-2">DSL Protocol Breakdown</p>
+                        <p className="text-slate-500 mb-2 border-b border-white/5 pb-2">Daily Spending Limit Breakdown</p>
                         <div className="flex justify-between gap-4">
                           <span className="text-slate-400">Total Liquidity</span>
                           <span className="text-white">{formatCurrency(m1Assets, currency)}</span>
@@ -798,10 +876,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 title="Active Liabilities"
                 subtitle={`${liabilities.length + pendingBorrowedDebts.length} Active Strings`}
                 icon={<Activity className="w-4 h-4" />}
-                value={<InteractiveFinancialValue value={totalLiabilities + totalMoneyOwed + totalCreditUsage} currency={currency} />}
+                value={formatFinancialValue(totalLiabilities + totalMoneyOwed + totalCreditUsage, currency)}
                 valueColor="text-rose-400"
-                isOpen={activeCard === 'debt-widget'}
-                onToggle={() => toggleCard('debt-widget')}
+                isOpen={activeCard === 'obligations-vault'}
+                onToggle={() => toggleCard('obligations-vault')}
               >
                 <div className="space-y-3">
                   {liabilities.map((l: any) => (
@@ -886,70 +964,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       {/* 8. ADVANCED INSIGHTS GRID */}
-      {
-        (() => {
-          const totalEMIs = liabilities.reduce((sum, l) => sum + (l.emiAmount || 0), 0);
-          const totalCCDebt = accounts
-            .filter(a => a.type === 'credit_card')
-            .reduce((sum, a) => sum + Math.abs(a.balance), 0);
-          const monthlyCCPayment = totalCCDebt * 0.05; // 5% minimum payment estimate
-          const totalMonthlyDebt = totalEMIs + monthlyCCPayment;
-
-          // Outflow Calculation for Leakage Tracker (Multi-Account Aggregate)
-          const bankAccountIds = accounts.filter(a => a.type === 'bank').map(a => a.id);
-          const spendAccountIds = accounts.filter(a => ['bank', 'cash', 'credit_card'].includes(a.type)).map(a => a.id);
-
-          const currentMonthIncomes = reconciledIncomes.filter(i => {
-            const d = new Date(i.date);
-            return d.getMonth() === currentMonth &&
-              d.getFullYear() === currentYear &&
-              bankAccountIds.includes(i.accountId) &&
-              !i.isInternalTransfer;
-          }).reduce((sum, i) => sum + i.amount, 0) || grossIncome;
-
-          const currentMonthInvestments = investments.filter(inv => {
-            const d = new Date(inv.purchaseDate);
-            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-          }).reduce((sum, inv) => sum + (inv.buyPrice * inv.quantity), 0);
-
-          // Outflow = Spending from Credit Cards + Cash + Bank
-          const refinedSpend = reconciledExpenses.filter(e => {
-            const d = new Date(e.date);
-            return d.getMonth() === currentMonth &&
-              d.getFullYear() === currentYear &&
-              spendAccountIds.includes(e.accountId) &&
-              !e.isInternalTransfer;
-          }).reduce((sum, e) => sum + e.amount, 0);
-
-          // Leakage = Refined Spending + Investments
-          const totalOutflows = refinedSpend + currentMonthInvestments;
-          const outflowRatio = currentMonthIncomes > 0 ? (totalOutflows / currentMonthIncomes) : 0;
-
-          return (
-            <AdvancedInsights
-              currency={currency}
-              expenses={reconciledExpenses}
-              incomes={reconciledIncomes}
-              accounts={accounts}
-              goals={goals}
-              liabilities={liabilities}
-              savingsRate={grossIncome > 0 ? ((grossIncome - grossBurn) / grossIncome * 100) : 0}
-              dtiRatio={grossIncome > 0 ? (totalMonthlyDebt / grossIncome) : 0}
-              outflowRatio={outflowRatio}
-              healthScore={healthScore}
-              userName={userName}
-              debts={debts}
-              isOffline={isOffline}
-            />
-          );
-        })()
-      }
+      <AdvancedInsights
+        currency={currency}
+        expenses={reconciledExpenses}
+        incomes={reconciledIncomes}
+        accounts={accounts}
+        goals={goals}
+        liabilities={liabilities}
+        savingsRate={finalSavingsRateScore}
+        dtiRatio={dtiRatio}
+        outflowRatio={outflowRatio}
+        healthScore={healthScore}
+        userName={userName}
+        debts={debts}
+        isOffline={isOffline}
+        investments={investments}
+      />
 
       {/* FAB STACK IS NOW HANDLED BY layout/FabStack.tsx (FabDock) rendered in App.tsx */}
 
       {/* HIDDEN SPACER for Last Item Visibility */}
       <div className="h-24 w-full col-span-full" />
 
-    </div >
+    </div>
   );
-};
+});

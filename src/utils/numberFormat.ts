@@ -30,7 +30,7 @@ export function formatCurrency(
 
   try {
     return new Intl.NumberFormat(locale, options).format(numValue);
-  } catch (e) {
+  } catch {
     // Fallback if currency code is invalid
     return new Intl.NumberFormat(locale, {
       ...options,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Compass, Layers, FlaskConical } from 'lucide-react';
 import { Liability } from '@/types';
 import { CyberButton } from '../ui/CyberButton';
@@ -7,22 +7,21 @@ interface TacticalRecoveryProps {
     liabilities: Liability[];
 }
 
-export const TacticalRecovery: React.FC<TacticalRecoveryProps> = ({ liabilities }) => {
+export const TacticalRecovery: React.FC<TacticalRecoveryProps> = React.memo(({ liabilities }) => {
     const [strategy, setStrategy] = React.useState<'avalanche' | 'snowball'>('avalanche');
 
-    // Logic to sort based on strategy
-    const sortedLiabilities = [...liabilities].sort((a, b) => {
+    // Logic to sort based on strategy - memoized
+    const sortedLiabilities = useMemo(() => [...liabilities].sort((a, b) => {
         if (strategy === 'avalanche') return (b.interestRate || 0) - (a.interestRate || 0);
         return (a.outstanding || 0) - (b.outstanding || 0);
-    });
+    }), [liabilities, strategy]);
 
     const targetLoan = sortedLiabilities[0];
 
-    // Simple rule-of-thumb for "Future Money Saved"
-    // Calc: (Balance * Rate * TenureFactor) -> illustrative estimate
-    const estimatedSavings = targetLoan
+    // Simple rule-of-thumb for "Future Money Saved" - memoized
+    const estimatedSavings = useMemo(() => targetLoan
         ? Math.round((targetLoan.outstanding * (targetLoan.interestRate / 100)) * 2.5)
-        : 32400;
+        : 32400, [targetLoan]);
 
     if (liabilities.length === 0) return null;
 
@@ -100,4 +99,4 @@ export const TacticalRecovery: React.FC<TacticalRecoveryProps> = ({ liabilities 
             </div>
         </div>
     );
-};
+});

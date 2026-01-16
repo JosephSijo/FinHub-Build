@@ -20,7 +20,10 @@ export function AchievementDetailDialog({
 
   useEffect(() => {
     if (isOpen && achievementId) {
-      setQuote(getRandomQuote());
+      // Use queueMicrotask to defer state update and avoid "cascading render" warnings
+      queueMicrotask(() => {
+        setQuote(getRandomQuote());
+      });
       confetti({
         particleCount: 150,
         spread: 100,
@@ -47,7 +50,7 @@ export function AchievementDetailDialog({
             Achievement Unlocked
           </DialogTitle>
           <DialogDescription className="text-center text-[8px] sm:text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] sm:tracking-[0.3em] mt-1 sm:mt-2 transition-all">
-            Protocol Milestone Verified
+            Achievement Unlocked
           </DialogDescription>
         </DialogHeader>
 

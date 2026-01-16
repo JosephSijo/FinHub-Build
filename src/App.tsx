@@ -56,6 +56,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { calculateBalanceMetrics, mapContextToBalanceBoardData } from "./features/balanceBoard";
 
 // Lazy Load Heavy Components
 const Dashboard = lazy(() => import("./components/Dashboard").then(module => ({ default: module.Dashboard })));
@@ -63,10 +64,8 @@ const TransactionList = lazy(() => import("./components/TransactionList").then(m
 const GoalsTracker = lazy(() => import("./components/GoalsTracker").then(module => ({ default: module.GoalsTracker })));
 const EmergencyFundsTab = lazy(() => import("./components/EmergencyFundsTab").then(module => ({ default: module.EmergencyFundsTab })));
 const InvestmentsTab = lazy(() => import("./components/InvestmentsTab").then(module => ({ default: module.InvestmentsTab })));
-const LiabilityTab = lazy(() => import("./components/LiabilityTab").then(module => ({ default: module.LiabilityTab })));
-const LiabilityDashboard = lazy(() => import("./components/LiabilityDashboard").then(module => ({ default: module.LiabilityDashboard })));
 
-type View = "dashboard" | "transactions" | "goals" | "investments" | "accounts" | "emergency" | "liability" | "more" | "recurring";
+type View = "dashboard" | "transactions" | "goals" | "investments" | "accounts" | "emergency" | "more" | "recurring";
 type TransactionType = "expense" | "income" | "debt";
 
 export default function App() {
@@ -116,7 +115,8 @@ export default function App() {
     backfillRequest,
     setBackfillRequest,
     executeBackfill,
-    createRecurring
+    createRecurring,
+    recurringTransactions
   } = useFinance();
 
   const [view, setView] = useState<View>("dashboard");
@@ -145,13 +145,10 @@ export default function App() {
   } | null>(null);
 
   // Setup edge swipe gestures
-  useEffect(() => {
-    const cleanup = useEdgeSwipe(
-      () => setIsSettingsOpen(true),  // Left edge swipe - Settings
-      () => setIsNotificationsOpen(true)  // Right edge swipe - Notifications
-    );
-    return cleanup;
-  }, []);
+  useEdgeSwipe(
+    () => setIsSettingsOpen(true),  // Left edge swipe - Settings
+    () => setIsNotificationsOpen(true)  // Right edge swipe - Notifications
+  );
 
   // Handle Native Local Notifications Click/Navigation
   useEffect(() => {
@@ -162,14 +159,14 @@ export default function App() {
           if (status.display !== 'granted') {
             await LocalNotifications.requestPermissions();
           }
-        } catch (e) {
-          console.error('Error checking notification permissions:', e);
+        } catch (error) {
+          console.error('Error checking notification permissions:', error);
         }
       };
 
       checkPermissions();
 
-      const actionListener = LocalNotifications.addListener('localNotificationActionPerformed', (notificationAction) => {
+      const actionListenerPromise = LocalNotifications.addListener('localNotificationActionPerformed', (notificationAction) => {
         const { notification } = notificationAction;
         const extra = notification.extra;
 
@@ -186,7 +183,7 @@ export default function App() {
       });
 
       return () => {
-        actionListener.remove();
+        actionListenerPromise.then(handle => handle.remove());
       };
     }
   }, []);
@@ -315,8 +312,14 @@ export default function App() {
     )
   }), [incomes, expenses, debts, goals, healthScore.savingsRate, healthScore.score, accounts, investments, liabilities, currentMonthExpenses, settings.currency, view]);
 
+  // Balance Metrics for Suggested Account
+  const balanceMetrics = useMemo(() => {
+    const data = mapContextToBalanceBoardData({ accounts, recurringTransactions, goals, liabilities, settings });
+    return calculateBalanceMetrics(data);
+  }, [accounts, recurringTransactions, goals, liabilities, settings]);
+
   // Calculate totals
-  const totalIncome = useMemo(() => incomes.reduce((sum: number, i: Income) => sum + i.amount, 0), [incomes]);
+  // const totalIncome = useMemo(() => incomes.reduce((sum: number, i: Income) => sum + i.amount, 0), [incomes]);
 
   // Show branded loader while initial data is being fetched
   if (isLoading) {
@@ -623,24 +626,6 @@ export default function App() {
                         />
                       )}
 
-                      {view === "liability" && (
-                        <div className="space-y-6">
-                          {/* Only show LiabilityDashboard when specifically in liability tab */}
-                          <LiabilityDashboard
-                            liabilities={liabilities}
-                            debts={debts}
-                            currency={settings.currency}
-                            totalMonthlyIncome={totalIncome}
-                          />
-                          <LiabilityTab
-                            currency={settings.currency}
-                            expenses={expenses}
-                            accounts={accounts}
-                            debts={debts}
-                            liabilities={liabilities}
-                          />
-                        </div>
-                      )}
 
                       {view === "recurring" && (
                         <RecurringTransactions />
@@ -678,6 +663,7 @@ export default function App() {
                   liabilities={liabilities}
                   currency={settings.currency}
                   roundUpEnabled={settings.roundUpEnabled}
+                  defaultAccountId={balanceMetrics.suggestedSpendAccountId || undefined}
                 />
               )}
 
@@ -747,7 +733,7 @@ export default function App() {
                       setNotifications((prev: any[]) =>
                         prev.map((n: any) => n.id === notification.id ? { ...n, read: true } : n)
                       );
-                    } catch (error) {
+                    } catch {
                       toast.error("Failed to automate subscription.");
                     }
                   } else if (notification.action && notification.action.status === 'dismissed') {
@@ -760,7 +746,7 @@ export default function App() {
                   // Only close if it wasn't an action interaction (actions stopPropagation, but just in case)
                   if (!notification.action) {
                     if (notification.category === 'reminders') {
-                      setView('liability');
+                      setView('recurring');
                     } else if (notification.category === 'transactions') {
                       setView('transactions');
                     }
@@ -859,10 +845,10 @@ export default function App() {
             color: '#FFFFFF',
             borderRadius: '20px',
             backdropFilter: 'none',
-            zIndex: 999999,
+            zIndex: 9999999,
           },
         }}
-        className="!z-[999999]"
+        className="!z-[9999999]"
       />
 
 

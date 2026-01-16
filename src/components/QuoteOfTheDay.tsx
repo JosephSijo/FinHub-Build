@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import { getQuoteOfTheDay } from '../data/financial-quotes';
 import { Button } from './ui/button';
@@ -22,11 +22,7 @@ interface QuoteData {
 export function QuoteOfTheDay({ onDismiss, context, settings }: QuoteOfTheDayProps) {
   const [quote, setQuote] = useState<QuoteData | null>(null);
 
-  useEffect(() => {
-    loadQuote();
-  }, [settings.apiKeys]);
-
-  const loadQuote = async () => {
+  const loadQuote = React.useCallback(async () => {
     // 1. Check Cache (One quote per day)
     const today = new Date().toDateString();
     const cached = localStorage.getItem('daily_ai_quote');
@@ -38,7 +34,7 @@ export function QuoteOfTheDay({ onDismiss, context, settings }: QuoteOfTheDayPro
           setQuote(parsed.data);
           return;
         }
-      } catch (e) {
+      } catch {
         localStorage.removeItem('daily_ai_quote');
       }
     }
@@ -73,7 +69,13 @@ export function QuoteOfTheDay({ onDismiss, context, settings }: QuoteOfTheDayPro
 
     // 3. Fallback to Static
     setQuote(getQuoteOfTheDay());
-  };
+  }, [context, settings]);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      loadQuote();
+    });
+  }, [loadQuote]);
 
   if (!quote) return null;
 

@@ -1,4 +1,4 @@
-/* eslint-disable react/forbid-component-props, react/forbid-dom-props */
+
 import { useState, useMemo } from 'react';
 import { Card } from './ui/card';
 import {
@@ -54,7 +54,7 @@ export const LiabilityDashboard = React.memo(({ liabilities, debts, currency, to
         .map(l => l.id);
       setSelectedLiabilityIds(defaults.length > 0 ? defaults : liabilities.map(l => l.id));
     }
-  }, [liabilities.length]);
+  }, [liabilities, selectedLiabilityIds]);
 
   const {
     totalOutstanding,
@@ -456,7 +456,7 @@ export const LiabilityDashboard = React.memo(({ liabilities, debts, currency, to
                         <ToggleGroup
                           type="single"
                           value={selectedStrategy || ""}
-                          onValueChange={(val) => setSelectedStrategy(val || null)}
+                          onValueChange={(val: string) => setSelectedStrategy(val || null)}
                           className="bg-slate-900/50 p-1 border border-white/5 rounded-lg"
                         >
                           <ToggleGroupItem value="avalanche" className="px-3 text-[10px] h-7 data-[state=active]:bg-slate-700">Avalanche</ToggleGroupItem>
@@ -537,7 +537,7 @@ export const LiabilityDashboard = React.memo(({ liabilities, debts, currency, to
                                 min={Math.max(0, averageInterestRate - 5)}
                                 max={Math.max(20, averageInterestRate + 5)}
                                 step={0.1}
-                                onValueChange={(val) => setWhatIfInterest(val[0])}
+                                onValueChange={(val: number[]) => setWhatIfInterest(val[0])}
                                 className="py-4 cursor-pointer"
                               />
 
@@ -555,7 +555,7 @@ export const LiabilityDashboard = React.memo(({ liabilities, debts, currency, to
                                 min={12}
                                 max={360}
                                 step={12}
-                                onValueChange={(val) => setTargetTenure(val[0])}
+                                onValueChange={(val: number[]) => setTargetTenure(val[0])}
                                 className="py-4 cursor-pointer"
                               />
                             </div>

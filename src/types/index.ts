@@ -262,6 +262,7 @@ export interface Liability {
   min_payment?: number;
   penalty_applied?: boolean;
   next_due_date?: string;
+  createdAt: string;
 }
 
 // Notification
@@ -294,4 +295,120 @@ export interface AuthUser {
   id: string;
   mobile: string;
   name: string;
+}
+
+export interface FinanceContextType {
+  // State
+  userId: string;
+  settings: UserSettings;
+  currency: string;
+  expenses: Expense[];
+  incomes: Income[];
+  debts: Debt[];
+  goals: Goal[];
+  accounts: Account[];
+  investments: Investment[];
+  liabilities: Liability[];
+  recurringTransactions: RecurringTransaction[];
+  notifications: Notification[];
+  emergencyFundAmount: number;
+  isLoading: boolean;
+  isRefreshing: boolean;
+  isOffline: boolean;
+  apiStatus: 'online' | 'offline' | 'error';
+  pendingMobile: string;
+  authMessage?: { message: string, subMessage?: string };
+
+  // Auth State
+  authStatus: 'guest' | 'authenticating' | 'authenticated';
+  currentUser: AuthUser | null;
+  isAwaitingPin: boolean;
+  isRememberedUser: boolean;
+  rememberedMobile: string;
+
+  // Actions
+  refreshData: () => Promise<void>;
+  updateSettings: (updates: Partial<UserSettings>) => Promise<void>;
+
+  // Auth Actions
+  checkIdentity: (mobile: string) => Promise<boolean>;
+  login: (pin: string, rememberMe?: boolean) => Promise<boolean>;
+  signup: (mobile: string, pin: string, name: string, rememberMe?: boolean) => Promise<boolean>;
+  sendOtp: (mobile: string) => Promise<boolean>;
+  verifyOtp: (mobile: string, otp: string) => Promise<boolean>;
+  resetPin: (mobile: string, newPin: string) => Promise<boolean>;
+  logout: () => void;
+  clearPendingSession: () => void;
+  scheduleAccountDeletion: () => Promise<void>;
+  cancelAccountDeletion: () => Promise<void>;
+  deletionDate: string | null;
+
+  // CRUD Actions
+  createExpense: (data: any) => Promise<void>;
+  updateExpense: (id: string, data: any) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
+
+  createIncome: (data: any) => Promise<void>;
+  updateIncome: (id: string, data: any) => Promise<void>;
+  deleteIncome: (id: string) => Promise<void>;
+
+  createDebt: (data: any) => Promise<void>;
+  updateDebt: (id: string, data: any) => Promise<void>;
+  deleteDebt: (id: string) => Promise<void>;
+  settleDebt: (id: string) => Promise<void>;
+
+  createGoal: (data: any) => Promise<void>;
+  updateGoal: (id: string, data: any) => Promise<void>;
+  deleteGoal: (id: string) => Promise<void>;
+
+  createAccount: (data: any) => Promise<void>;
+  updateAccount: (id: string, data: any) => Promise<void>;
+  deleteAccount: (id: string) => Promise<void>;
+
+  // Liabilities
+  createLiability: (data: Omit<Liability, 'id'>) => Promise<void>;
+  updateLiability: (id: string, data: Partial<Liability>) => Promise<void>;
+  deleteLiability: (id: string) => Promise<void>;
+
+  // Migration
+  migrateSubscriptions: () => Promise<{ count: number }>;
+  cleanupDuplicates: () => Promise<{ count: number }>;
+
+  // Investments
+  createInvestment: (data: any, sourceAccountId?: string) => Promise<void>;
+  updateInvestment: (id: string, data: any) => Promise<void>;
+  deleteInvestment: (id: string) => Promise<void>;
+
+  // Recurring
+  createRecurringTransaction: (data: any) => Promise<void>;
+  updateRecurringTransaction: (id: string, data: any) => Promise<void>;
+  createRecurring: (data: any) => Promise<void>;
+  deleteRecurringTransaction: (id: string) => Promise<void>;
+  processRecurringTransactions: () => Promise<void>;
+
+  setEmergencyFundAmount: (amount: number | ((prev: number) => number)) => void;
+  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+
+  // Helpers
+  applyTheme: (theme: "light" | "dark" | "system") => void;
+
+  // Fund Allocation
+  isFundAllocationOpen: boolean;
+  fundAllocationType: 'goal' | 'emergency';
+  openFundAllocation: (type: 'goal' | 'emergency') => void;
+  closeFundAllocation: () => void;
+  performFundAllocation: (data: {
+    accountId: string;
+    destinationId: string;
+    amount: number;
+    destinationType: 'goal' | 'emergency';
+  }) => Promise<void>;
+  deductFromAccount: (accountId: string, amount: number) => Promise<void>;
+  transferFunds: (sourceId: string, destinationId: string, amount: number) => Promise<void>;
+  clearAllData: () => void;
+
+  // Backfill Logic
+  backfillRequest: { count: number; dates: Date[]; recurring: any } | null;
+  setBackfillRequest: React.Dispatch<React.SetStateAction<{ count: number; dates: Date[]; recurring: any } | null>>;
+  executeBackfill: () => Promise<void>;
 }

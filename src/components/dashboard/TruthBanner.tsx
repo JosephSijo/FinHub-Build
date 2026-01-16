@@ -1,3 +1,4 @@
+import React from 'react';
 import { Sparkles } from 'lucide-react';
 import { MeshBackground } from '../ui/MeshBackground';
 
@@ -7,7 +8,7 @@ interface TruthBannerProps {
     icon?: React.ReactNode;
 }
 
-export const TruthBanner: React.FC<TruthBannerProps> = ({ message, loading, icon }) => {
+export const TruthBanner: React.FC<TruthBannerProps> = React.memo(({ message, loading, icon }) => {
     return (
         <div className="col-span-full mesh-ghost-blue p-8 mb-8 relative group overflow-hidden sq-2xl">
             <MeshBackground variant="ghost" />
@@ -30,4 +31,4 @@ export const TruthBanner: React.FC<TruthBannerProps> = ({ message, loading, icon
             </div>
         </div>
     );
-};
+});

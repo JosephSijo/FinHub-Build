@@ -223,7 +223,7 @@ export function TransferForm({
                             <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-2xl flex gap-3">
                                 <TrendingDown className="w-5 h-5 text-amber-500 flex-shrink-0" />
                                 <p className="text-[10px] text-amber-200/60 font-medium leading-relaxed">
-                                    Notice: This migration will instantly adjust the liquidity status of both reservoirs. This action is recorded in the central protocol.
+                                    Notice: This transfer will instantly adjust the balance of both accounts. This action is recorded in your transaction history.
                                 </p>
                             </div>
 

@@ -30,6 +30,7 @@ import { getAllAchievements } from '../utils/achievements';
 import { resolveApiKey, validateApiKey } from '../services/ai';
 import { toast } from 'sonner';
 import { useFinance } from '../context/FinanceContext';
+import { COPY } from '../content';
 
 interface EnhancedSettingsPanelProps {
   isOpen: boolean;
@@ -231,9 +232,9 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
         toast.success('Connection successful!');
       }
     } catch (error: any) {
-      const msg = error.message || 'Unknown protocol error';
-      setTestResult({ success: false, message: msg });
-      toast.error(`Protocol breach: ${msg}`);
+      const msg = error.message || 'Unknown error';
+      console.error('Settings save error:', error);
+      toast.error(`${COPY.common.status.error}: ${msg}`);
     } finally {
       setIsTestingConnection(false);
     }
@@ -478,7 +479,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                     </div>
                     {exchangeRates[toCurrency] && (
                       <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-700">Protocol Rate</span>
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-700">Interest Rate</span>
                         <span className="text-[10px] font-black text-slate-500 tabular-nums">
                           1 {fromCurrency} = {exchangeRates[toCurrency].toFixed(4)} {toCurrency}
                         </span>
@@ -765,7 +766,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
             <div className="p-6 bg-slate-900/40 rounded-[32px] border border-white/5 relative overflow-hidden">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-300">Subscription Protocol Scan</h4>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-300">{COPY.settings.subscriptionScanner}</h4>
                   <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wide mt-1">
                     DETECT & MIGRATE RECURRING SIGNALS
                   </p>
@@ -806,7 +807,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                   }}
                   className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 font-black uppercase tracking-widest text-[9px] h-9 px-4 rounded-xl"
                 >
-                  Purge Logs
+                  {COPY.settings.cleanupDuplicates}
                 </Button>
               </div>
             </div>
@@ -818,7 +819,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
           <div className="space-y-6">
             <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 flex items-center gap-2">
               <Trophy className="w-3.5 h-3.5 text-amber-500" />
-              Reputation Rank ({settings.unlockedAchievements.length}/{allAchievements.length})
+              {COPY.settings.achievementLevel} ({settings.unlockedAchievements.length}/{allAchievements.length})
             </Label>
 
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
@@ -845,7 +846,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
             </div>
 
             <p className="text-[10px] text-slate-500 font-bold text-center leading-relaxed">
-              {settings.unlockedAchievements.length > 0 ? 'Select a sigil to view the record of your triumph.' : 'Initiate financial protocols to manifest higher ranks.'}
+              {settings.unlockedAchievements.length > 0 ? COPY.settings.achievementSelect : COPY.settings.achievementLocked}
             </p>
           </div>
 
@@ -855,9 +856,9 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
           <div className="space-y-4">
             <div className="p-4 bg-rose-500/5 border border-rose-500/10 rounded-2xl flex items-center justify-between">
               <div>
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400">Factory Reset</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400">{COPY.settings.factoryReset}</h4>
                 <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wide mt-1">
-                  WIPE ALL TRANSACTIONS & RECURRING (KEEP ACCOUNT)
+                  {COPY.settings.wipeDescription}
                 </p>
               </div>
               <Button
@@ -868,7 +869,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                 }}
                 className="bg-slate-950 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/20 font-black uppercase tracking-widest text-[9px] h-9 px-4 rounded-xl transition-colors"
               >
-                Wipe Data
+                {COPY.settings.wipeData}
               </Button>
             </div>
           </div>
@@ -888,7 +889,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
               onClick={onOpenAbout}
               className="mt-4 text-[8px] font-black text-indigo-400/60 hover:text-indigo-400 uppercase tracking-[0.2em] transition-colors"
             >
-              [ Protocol Info // About ]
+              [ {COPY.settings.about} ]
             </button>
           </div>
 

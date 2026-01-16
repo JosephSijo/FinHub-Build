@@ -135,7 +135,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               </div>
               <div>
                 <h3 className="text-balance text-xl text-slate-100">Financial Architect</h3>
-                <p className="text-label text-[10px] opacity-60">Freedom Protocol Engine</p>
+                <p className="text-label text-[10px] opacity-60">AI Financial Advisor</p>
               </div>
             </div>
             <Button
@@ -192,7 +192,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         {/* Quick Questions */}
         {messages.length === 1 && (
           <div className="px-6 pb-4 bg-black">
-            <p className="text-label text-[9px] mb-3 opacity-60">Suggested Protocols</p>
+            <p className="text-label text-[9px] mb-3 opacity-60">Suggested Actions</p>
             <div className="flex flex-wrap gap-2">
               {quickQuestions.map((question, index) => (
                 <button

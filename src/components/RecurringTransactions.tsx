@@ -5,12 +5,13 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Plus, Trash2, RefreshCw, Calendar, Sparkles, ArrowUpRight, Wallet, Target, Edit2 } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Calendar, Sparkles, ArrowUpRight, Wallet, Target, Edit2, TrendingDown } from 'lucide-react';
 import { MONEY_OUT_CATEGORIES, RecurringTransaction } from '../types';
 import { useFinance } from '../context/FinanceContext';
 import { formatCurrency } from '../utils/numberFormat';
 import { MeshBackground } from './ui/MeshBackground';
 import { SubscriptionStrategist } from './SubscriptionStrategist';
+import { LiabilityDashboard } from './LiabilityDashboard';
 import { toast } from 'sonner';
 
 export function RecurringTransactions() {
@@ -18,13 +19,17 @@ export function RecurringTransactions() {
     accounts,
     currency,
     recurringTransactions: recurring,
+    liabilities,
+    debts,
     createRecurringTransaction,
     updateRecurringTransaction,
     deleteRecurringTransaction,
-    processRecurringTransactions
+    processRecurringTransactions,
+    createLiability,
+    updateLiability
   } = useFinance();
 
-  const [viewMode, setViewMode] = useState<'list' | 'strategist'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'strategist' | 'debt'>('list');
 
   // Calculate total monthly income for Strategist
   // Note: This is an approximation based on recurring incomes. Ideally usage of actual monthly income logic.
@@ -50,6 +55,9 @@ export function RecurringTransactions() {
   // Helper component for categorized lists
   const RecurringCard = ({ rec }: { rec: RecurringTransaction }) => {
     const account = accounts.find(a => a.id === rec.accountId);
+    const liability = liabilities.find(l => l.id === rec.liabilityId);
+    const progress = liability ? Math.max(0, Math.min(100, ((liability.principal - liability.outstanding) / liability.principal) * 100)) : 0;
+
     return (
       <Card className="p-6 bg-slate-900/40 border-white/5 rounded-[28px] border hover:bg-slate-900/60 transition-all duration-300 group relative overflow-hidden">
         <div className={`absolute top-0 right-0 w-24 h-24 blur-3xl opacity-5 -mr-12 -mt-12 transition-opacity group-hover:opacity-20 ${rec.type === 'income' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
@@ -58,14 +66,14 @@ export function RecurringTransactions() {
           <div className="flex items-center gap-4">
             <div className={`w-14 h-14 border border-white/5 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform text-2xl ${rec.type === 'income' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
               }`}>
-              {rec.type === 'income' ? '💰' : '💸'}
+              {rec.type === 'income' ? '💰' : liability ? '🏦' : '💸'}
             </div>
             <div className="min-w-0">
               <h3 className="text-base font-bold text-slate-100 truncate flex items-center gap-2">
                 {rec.description || rec.source}
               </h3>
               <p className="text-[10px] uppercase font-black tracking-widest text-slate-600 mt-1">
-                {getFrequencyLabel(rec.frequency)}
+                {getFrequencyLabel(rec.frequency)} {liability && '• Loan'}
               </p>
             </div>
           </div>
@@ -82,7 +90,7 @@ export function RecurringTransactions() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => deleteRecurringTransaction(rec.id)}
+              onClick={() => handleDelete(rec)}
               className="w-10 h-10 p-0 rounded-r-xl hover:bg-rose-500/10 hover:text-rose-400 text-slate-500 hover:text-rose-400"
             >
               <Trash2 className="w-4 h-4" />
@@ -93,7 +101,7 @@ export function RecurringTransactions() {
         <div className="space-y-6 relative z-10">
           <div className="flex justify-between items-end">
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-widest font-black text-slate-600 mb-1 font-mono">Commitment</span>
+              <span className="text-[10px] uppercase tracking-widest font-black text-slate-600 mb-1 font-mono">{liability ? 'Monthly EMI' : 'Commitment'}</span>
               <span className={`text-2xl font-black tabular-nums leading-none font-mono ${rec.type === 'income' ? 'text-emerald-400' : 'text-slate-100'}`}>
                 {rec.type === 'income' ? '+' : '-'}{formatCurrency(rec.amount, currency)}
               </span>
@@ -105,6 +113,33 @@ export function RecurringTransactions() {
               </span>
             </div>
           </div>
+
+          {liability && (
+            <div className="pt-4 space-y-3">
+              <div className="flex justify-between items-end">
+                <p className="text-[10px] uppercase font-black text-rose-500/60 tracking-wider">Debt Clearance</p>
+                <div className="text-right">
+                  <p className="text-xs font-black text-slate-300 tabular-nums">{progress.toFixed(0)}%</p>
+                </div>
+              </div>
+              <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-rose-500 to-orange-400 transition-all duration-1000"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <div className="flex justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold text-slate-600 uppercase">Outstanding</span>
+                  <span className="text-[11px] font-black text-rose-400/80">{formatCurrency(liability.outstanding, currency)}</span>
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="text-[9px] font-bold text-slate-600 uppercase">Remaining</span>
+                  <span className="text-[11px] font-black text-slate-400">{liability.tenure} Months</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="pt-6 border-t border-white/5 flex items-center justify-between">
             <div className="flex flex-col gap-1">
@@ -148,7 +183,12 @@ export function RecurringTransactions() {
     frequency: 'monthly' as RecurringTransaction['frequency'],
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
-    tags: [] as string[]
+    tags: [] as string[],
+    // Liability fields
+    principal: '',
+    interestRate: '',
+    tenure: '',
+    liabilityId: ''
   });
 
   // Smart Detection Logic
@@ -161,26 +201,30 @@ export function RecurringTransactions() {
 
     if (subKeywords.some(kw => name.includes(kw))) {
       if (formData.type !== 'expense' || formData.category !== 'Subscription') {
-        setFormData(prev => ({
-          ...prev,
-          type: 'expense',
-          category: 'Subscription',
-          description: prev.source || prev.description // Sync name if switched
-        }));
+        queueMicrotask(() => {
+          setFormData(prev => ({
+            ...prev,
+            type: 'expense',
+            category: 'Subscription',
+            description: prev.source || prev.description // Sync name if switched
+          }));
+        });
         toast.info(`Smart Detection: Categorized as Subscription`, { icon: '🤖' });
       }
     } else if (emiKeywords.some(kw => name.includes(kw))) {
       if (formData.type !== 'expense' || formData.category !== 'EMI') {
-        setFormData(prev => ({
-          ...prev,
-          type: 'expense',
-          category: 'EMI',
-          description: prev.source || prev.description
-        }));
+        queueMicrotask(() => {
+          setFormData(prev => ({
+            ...prev,
+            type: 'expense',
+            category: 'EMI',
+            description: prev.source || prev.description
+          }));
+        });
         toast.info(`Smart Detection: Categorized as EMI`, { icon: '🤖' });
       }
     }
-  }, [formData.description, formData.source, formData.type, editingId]);
+  }, [formData.description, formData.source, formData.type, formData.category, editingId]);
 
   const handleCreateRecurring = async () => {
     const data: any = {
@@ -202,8 +246,36 @@ export function RecurringTransactions() {
 
     if (editingId) {
       await updateRecurringTransaction(editingId, data);
+
+      // If linked to a liability, update that too
+      if (formData.liabilityId) {
+        await updateLiability(formData.liabilityId, {
+          name: formData.type === 'expense' ? formData.description : formData.source,
+          principal: parseFloat(formData.principal) || 0,
+          interestRate: parseFloat(formData.interestRate) || 0,
+          emiAmount: parseFloat(formData.amount) || 0,
+          tenure: parseInt(formData.tenure) || 0,
+          accountId: formData.accountId
+        });
+      }
     } else {
-      await createRecurringTransaction(data);
+      if (formData.category === 'EMI' || formData.category === 'Loan') {
+        // Create as Liability (which will auto-create recurring)
+        await createLiability({
+          name: formData.type === 'expense' ? formData.description : formData.source,
+          type: 'personal_loan',
+          principal: parseFloat(formData.principal) || parseFloat(formData.amount),
+          outstanding: parseFloat(formData.principal) || parseFloat(formData.amount),
+          interestRate: parseFloat(formData.interestRate) || 0,
+          emiAmount: parseFloat(formData.amount),
+          startDate: formData.startDate,
+          tenure: parseInt(formData.tenure) || 12,
+          accountId: formData.accountId,
+          createdAt: new Date().toISOString()
+        });
+      } else {
+        await createRecurringTransaction(data);
+      }
     }
     setIsAddDialogOpen(false);
     resetForm();
@@ -220,8 +292,22 @@ export function RecurringTransactions() {
       frequency: rec.frequency,
       startDate: rec.startDate.split('T')[0],
       endDate: rec.endDate ? rec.endDate.split('T')[0] : '',
-      tags: rec.tags || []
+      tags: rec.tags || [],
+      principal: '',
+      interestRate: '',
+      tenure: '',
+      liabilityId: rec.liabilityId || ''
     });
+
+    const liability = liabilities.find(l => l.id === rec.liabilityId);
+    if (liability) {
+      setFormData(prev => ({
+        ...prev,
+        principal: liability.principal.toString(),
+        interestRate: liability.interestRate.toString(),
+        tenure: liability.tenure.toString()
+      }));
+    }
     setEditingId(rec.id);
     setIsAddDialogOpen(true);
   };
@@ -243,9 +329,25 @@ export function RecurringTransactions() {
       frequency: 'monthly',
       startDate: new Date().toISOString().split('T')[0],
       endDate: '',
-      tags: []
+      tags: [],
+      principal: '',
+      interestRate: '',
+      tenure: '',
+      liabilityId: ''
     });
     setEditingId(null);
+  };
+
+  const handleDelete = async (rec: RecurringTransaction) => {
+    if (rec.liabilityId) {
+      const confirmDelete = window.confirm(`Deleting this flow will also remove the linked liability "${rec.description || 'Loan'}". Continue?`);
+      if (confirmDelete) {
+        await deleteLiability(rec.liabilityId);
+        toast.success('Liability and flow removed');
+      }
+    } else {
+      await deleteRecurringTransaction(rec.id);
+    }
   };
 
 
@@ -330,20 +432,34 @@ export function RecurringTransactions() {
           </button>
           <button
             onClick={() => setViewMode('strategist')}
-            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${viewMode === 'strategist' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${viewMode === 'strategist' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
           >
-            <Target className="w-4 h-4" />
+            <Target className="w-3.5 h-3.5" />
             Strategist
+          </button>
+          <button
+            onClick={() => setViewMode('debt')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${viewMode === 'debt' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            <TrendingDown className="w-3.5 h-3.5" />
+            Debt Node
           </button>
         </div>
       </div>
 
-      {viewMode === 'strategist' ? (
+      {viewMode === 'debt' ? (
+        <LiabilityDashboard
+          liabilities={liabilities}
+          debts={debts}
+          currency={currency}
+          totalMonthlyIncome={totalMonthlyIncome || 1}
+        />
+      ) : viewMode === 'strategist' ? (
         <SubscriptionStrategist
           recurring={recurring}
           currency={currency}
           totalMonthlyIncome={totalMonthlyIncome}
-          onDelete={(id, _desc) => {
+          onDelete={(id) => {
             deleteRecurringTransaction(id);
             // toast.success(`Cancelled ${desc}`); // Done in context typically
           }}
@@ -703,6 +819,49 @@ export function RecurringTransactions() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                  )}
+
+                  {(formData.category === 'EMI' || formData.category === 'Loan' || formData.liabilityId) && (
+                    <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10 space-y-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-rose-500/60 pl-1">Liability Details</p>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="liability-principal" className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Principal</Label>
+                          <Input
+                            id="liability-principal"
+                            type="number"
+                            value={formData.principal}
+                            onChange={(e) => setFormData({ ...formData, principal: e.target.value })}
+                            placeholder="Total Loan"
+                            className="bg-white/5 border-white/5 rounded-xl h-11 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="liability-tenure" className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Tenure (Mo)</Label>
+                          <Input
+                            id="liability-tenure"
+                            type="number"
+                            value={formData.tenure}
+                            onChange={(e) => setFormData({ ...formData, tenure: e.target.value })}
+                            placeholder="Months"
+                            className="bg-white/5 border-white/5 rounded-xl h-11 text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="liability-rate" className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Interest Rate (%)</Label>
+                        <Input
+                          id="liability-rate"
+                          type="number"
+                          value={formData.interestRate}
+                          onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })}
+                          placeholder="Annual %"
+                          className="bg-white/5 border-white/5 rounded-xl h-11 text-xs"
+                        />
+                      </div>
                     </div>
                   )}
 

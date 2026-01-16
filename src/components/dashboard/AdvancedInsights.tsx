@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Haptics } from '@/utils/haptics';
 import { MeshBackground } from '../ui/MeshBackground';
 import { Button } from '../ui/button';
+import { COPY } from '@/content';
 
 import { Expense, Income, Account, Goal, Liability, Debt } from '@/types';
 import { analyzeFinancialFreedom } from '@/utils/architect';
@@ -73,7 +74,7 @@ const normalizeScore = (value: number, benchmark: number, inverted: boolean = fa
 };
 
 
-export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
+export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
     currency,
     expenses,
     incomes,
@@ -312,7 +313,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
             <div className="flex flex-col items-center gap-4 mb-10">
                 <div className="flex items-center gap-6 w-full">
                     <div className="h-px bg-white/5 flex-1"></div>
-                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.5em]">Personal Money Plan</span>
+                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.5em]">{COPY.dashboard.planTitle}</span>
                     <div className="h-px bg-white/5 flex-1"></div>
                 </div>
 
@@ -605,7 +606,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                         <Bot className="w-6 h-6 text-slate-400" />
                                     </div>
                                     <div>
-                                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Protocol Interpretation</h4>
+                                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">{COPY.dashboard.protocolInterpretation}</h4>
                                         <p className="text-xl font-medium text-slate-100 italic leading-relaxed tracking-tight">
                                             "{analysis.summarySentence}"
                                         </p>
@@ -636,7 +637,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                 <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/50" />
                                 <div className="stack-cap flex justify-between items-start border-white/5 relative z-10">
                                     <div>
-                                        <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] mb-2">Safe Zone Health</h3>
+                                        <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] mb-2">{COPY.dashboard.safeZoneHealth}</h3>
                                         <div className="text-4xl font-black text-white">{overallHealth}<span className="text-sm text-slate-500 font-normal ml-2">/100</span></div>
                                     </div>
                                     <div className={`text-[9px] font-black px-3 py-1.5 rounded-full border uppercase tracking-widest ${overallHealth > 70 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}>
@@ -668,7 +669,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                 <div className="absolute top-0 left-0 w-1 h-full bg-teal-500/50" />
                                 <div className="stack-cap flex justify-between items-center border-white/5 relative z-10">
                                     <div className="flex flex-col gap-1">
-                                        <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em]">Action Flow: Burn</h3>
+                                        <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em]">{COPY.dashboard.actionFlow}: {COPY.dashboard.expenses}</h3>
                                         <div className="text-2xl font-black text-white leading-tight">{peakCategory}</div>
                                     </div>
                                     <CircleDot className="text-teal-500/50 w-4 h-4" />
@@ -702,12 +703,12 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                     {/* Centered Label */}
                                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
                                         <span className="text-[10px] text-slate-500 block font-bold">{peakPercentage}%</span>
-                                        <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest block">BURN</span>
+                                        <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest block">{COPY.dashboard.expenses.toUpperCase()}</span>
                                     </div>
                                 </div>
                                 <div className="stack-footer py-4">
                                     <div className="flex justify-between items-center px-2">
-                                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">High Power Node identified</span>
+                                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{COPY.dashboard.highPowerNode}</span>
                                         <span className="text-xs font-bold text-blue-400">{peakCategory}</span>
                                     </div>
                                 </div>
@@ -718,7 +719,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                 <MeshBackground variant="safe" animate />
                                 <div className="absolute top-0 left-0 w-1 h-full bg-teal-500/50" />
                                 <div className="stack-cap border-white/5 relative z-10">
-                                    <h3 className="text-slate-400 text-[9px] font-bold uppercase tracking-[0.2em]">Action Zone: Burn Trend</h3>
+                                    <h3 className="text-slate-400 text-[9px] font-bold uppercase tracking-[0.2em]">{COPY.dashboard.actionFlow}: {COPY.dashboard.burnTrend}</h3>
                                 </div>
                                 <div className="stack-body px-0 pb-0 h-[200px] w-full">
                                     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
@@ -762,15 +763,15 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                 <MeshBackground variant="safe" animate />
                                 <div className="absolute top-0 left-0 w-1 h-full bg-teal-500/50" />
                                 <div className="stack-cap flex justify-between items-center border-white/5 relative z-10">
-                                    <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em]">Action Flow Efficiency</h3>
+                                    <h3 className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em]">{COPY.dashboard.actionFlowEfficiency}</h3>
                                     <div className="flex gap-4">
                                         <div className="flex items-center gap-1.5">
                                             <div className="w-2 h-2 rounded-full bg-[#30D158]" />
-                                            <span className="text-[8px] font-bold text-slate-500">FUEL</span>
+                                            <span className="text-[8px] font-bold text-slate-500">{COPY.dashboard.income.toUpperCase()}</span>
                                         </div>
                                         <div className="flex items-center gap-1.5">
                                             <div className="w-2 h-2 rounded-full bg-[#1C1C1E] border border-white/10" />
-                                            <span className="text-[8px] font-bold text-slate-500">BURN</span>
+                                            <span className="text-[8px] font-bold text-slate-500">{COPY.dashboard.expenses.toUpperCase()}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -787,8 +788,8 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                                 cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                                 content={<CustomTooltip />}
                                             />
-                                            <Bar dataKey="Fuel" fill="#30D158" radius={[4, 4, 0, 0]} barSize={12} />
-                                            <Bar dataKey="Burn" fill="#2C2C2E" radius={[4, 4, 0, 0]} barSize={12} />
+                                            <Bar dataKey="Fuel" fill="#30D158" radius={[4, 4, 0, 0]} barSize={12} name={COPY.dashboard.income} />
+                                            <Bar dataKey="Burn" fill="#2C2C2E" radius={[4, 4, 0, 0]} barSize={12} name={COPY.dashboard.expenses} />
                                         </BarChart>
                                     </ResponsiveContainer>
                                 </div>
@@ -850,7 +851,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                         </div>
                                         <div className="stack-footer">
                                             <p className="text-[10px] text-slate-500 text-center italic">
-                                                Protocol: A DTI below 36% is considered healthy for asset growth management.
+                                                A DTI below 36% is considered healthy for asset growth management.
                                             </p>
                                         </div>
                                     </>
@@ -912,7 +913,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
                                                 </div>
 
                                                 <div className="p-6 bg-blue-500/5 border border-blue-500/10 rounded-xl">
-                                                    <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">Protocol Interpretation</h4>
+                                                    <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">Analysis</h4>
                                                     <p className="text-xs text-slate-300 leading-relaxed mb-4">
                                                         {outflowRatio <= 0.7
                                                             ? "Perfect circulation. Your liquid accumulation (30%+) is optimal for future high-power asset allocation."
@@ -944,4 +945,4 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = ({
             </AnimatePresence>
         </div>
     );
-};
+});

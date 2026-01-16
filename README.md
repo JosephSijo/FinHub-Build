@@ -71,8 +71,42 @@ Built with **React 19**, **Vite 7**, and **Tailwind CSS 4**.
 
 ## 📦 Installation
 
-```bash
-git clone https://github.com/your-org/finhub.git
-cd finhub
-npm install
-npm run dev
+1. **Clone the repository**:
+
+    ```bash
+    git clone https://github.com/your-org/finhub.git
+    cd finhub
+    ```
+
+2. **Use the correct Node version**:
+    If you use `nvm`, run:
+
+    ```bash
+    nvm use
+    ```
+
+3. **Set up environment variables**:
+
+    ```bash
+    cp .env.example .env
+    # Add your API keys to the .env file
+    ```
+
+4. **Install dependencies**:
+
+    ```bash
+    npm install
+    ```
+
+5. **Start development server**:
+
+    ```bash
+    npm run dev
+    ```
+
+## 🛠️ Development
+
+- **Linting**: Run `npm run lint` to check for code style issues.
+- **Build**: Run `npm run build` to create a production-ready build in the `build/` directory.
+- **Contributing**: Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+- **License**: This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

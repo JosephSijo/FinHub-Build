@@ -6,8 +6,7 @@ import {
   Settings,
   Bell,
   HelpCircle,
-  FileText,
-  RefreshCw
+  FileText
 } from 'lucide-react';
 import { formatCurrency } from '../utils/numberFormat';
 
