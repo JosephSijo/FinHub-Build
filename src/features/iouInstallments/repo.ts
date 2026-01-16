@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { DB_TABLES } from '../../repositories/supa';
 import { IOUInstallment, EMIPlanInput } from './types';
 import { iouInstallmentsLogic } from './logic';
 import { iousRepo } from '../ious/repo';
@@ -28,7 +29,7 @@ export async function createEMIPlan(userId: string, plan: EMIPlanInput): Promise
 
     // Insert installments
     const { data, error } = await supabase
-        .from('iou_installments')
+        .from(DB_TABLES.IOU_INSTALLMENTS)
         .insert(installmentSchedule)
         .select();
 
@@ -45,7 +46,7 @@ export async function createEMIPlan(userId: string, plan: EMIPlanInput): Promise
  */
 export async function fetchInstallments(iouId: string): Promise<IOUInstallment[]> {
     const { data, error } = await supabase
-        .from('iou_installments')
+        .from(DB_TABLES.IOU_INSTALLMENTS)
         .select('*')
         .eq('iou_id', iouId)
         .order('sequence_no', { ascending: true });
@@ -63,7 +64,7 @@ export async function fetchInstallments(iouId: string): Promise<IOUInstallment[]
  */
 export async function fetchPendingInstallments(userId: string): Promise<IOUInstallment[]> {
     const { data, error } = await supabase
-        .from('iou_installments')
+        .from(DB_TABLES.IOU_INSTALLMENTS)
         .select('*')
         .eq('user_id', userId)
         .eq('status', 'PENDING')
@@ -87,7 +88,7 @@ export async function markInstallmentPaid(
 ): Promise<void> {
     // Fetch the installment
     const { data: installment, error: fetchError } = await supabase
-        .from('iou_installments')
+        .from(DB_TABLES.IOU_INSTALLMENTS)
         .select('*')
         .eq('id', installmentId)
         .eq('user_id', userId)
@@ -100,7 +101,7 @@ export async function markInstallmentPaid(
 
     // Mark installment as paid
     const { error: updateError } = await supabase
-        .from('iou_installments')
+        .from(DB_TABLES.IOU_INSTALLMENTS)
         .update({
             status: 'PAID',
             paid_on: paidOn
@@ -127,7 +128,7 @@ export async function markInstallmentPaid(
  */
 export async function cancelInstallment(userId: string, installmentId: string): Promise<void> {
     const { error } = await supabase
-        .from('iou_installments')
+        .from(DB_TABLES.IOU_INSTALLMENTS)
         .update({ status: 'CANCELLED' })
         .eq('id', installmentId)
         .eq('user_id', userId);
