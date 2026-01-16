@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { fromTable, DB_TABLES } from '../../repositories/supa';
 import { IOU, IOUPayment, IOUStatus } from './types';
 import { iousLogic } from './logic';
 
@@ -6,8 +6,7 @@ import { iousLogic } from './logic';
  * Fetch all IOUs for the current user
  */
 export async function fetchIOUs(userId: string): Promise<IOU[]> {
-    const { data, error } = await supabase
-        .from('ious')
+    const { data, error } = await fromTable(DB_TABLES.IOUS)
         .select('*')
         .eq('user_id', userId)
         .order('due_date', { ascending: true });
@@ -24,8 +23,7 @@ export async function fetchIOUs(userId: string): Promise<IOU[]> {
  * Fetch payments for a specific IOU
  */
 export async function fetchIOUPayments(iouId: string): Promise<IOUPayment[]> {
-    const { data, error } = await supabase
-        .from('iou_payments')
+    const { data, error } = await fromTable(DB_TABLES.IOU_PAYMENTS)
         .select('*')
         .eq('iou_id', iouId)
         .order('paid_on', { ascending: false });
@@ -49,8 +47,7 @@ export async function addIOU(userId: string, iou: Omit<IOU, 'id' | 'user_id' | '
         status: 'OPEN' as IOUStatus
     };
 
-    const { data, error } = await supabase
-        .from('ious')
+    const { data, error } = await fromTable(DB_TABLES.IOUS)
         .insert([newIOU])
         .select()
         .single();
@@ -72,8 +69,7 @@ export async function addPayment(
     payment: Omit<IOUPayment, 'id' | 'user_id' | 'iou_id' | 'created_at'>
 ): Promise<void> {
     // First, fetch the IOU and its payments
-    const iou = await supabase
-        .from('ious')
+    const iou = await fromTable(DB_TABLES.IOUS)
         .select('*')
         .eq('id', iouId)
         .eq('user_id', userId)
@@ -87,8 +83,7 @@ export async function addPayment(
     const payments = await fetchIOUPayments(iouId);
 
     // Add the new payment
-    const { error: paymentError } = await supabase
-        .from('iou_payments')
+    const { error: paymentError } = await fromTable(DB_TABLES.IOU_PAYMENTS)
         .insert([{
             ...payment,
             iou_id: iouId,
@@ -106,8 +101,7 @@ export async function addPayment(
     const newStatus = iousLogic.deriveStatus(iou.data.principal_amount, newOutstanding, allPayments.length > 0);
 
     // Update the IOU
-    const { error: updateError } = await supabase
-        .from('ious')
+    const { error: updateError } = await fromTable(DB_TABLES.IOUS)
         .update({
             outstanding_amount: newOutstanding,
             status: newStatus
@@ -125,8 +119,7 @@ export async function addPayment(
  * Close an IOU (mark as CLOSED or CANCELLED)
  */
 export async function closeIOU(userId: string, iouId: string, status: 'CLOSED' | 'CANCELLED'): Promise<void> {
-    const { error } = await supabase
-        .from('ious')
+    const { error } = await fromTable(DB_TABLES.IOUS)
         .update({ status })
         .eq('id', iouId)
         .eq('user_id', userId);
@@ -141,8 +134,7 @@ export async function closeIOU(userId: string, iouId: string, status: 'CLOSED' |
  * Delete an IOU
  */
 export async function deleteIOU(userId: string, iouId: string): Promise<void> {
-    const { error } = await supabase
-        .from('ious')
+    const { error } = await fromTable(DB_TABLES.IOUS)
         .delete()
         .eq('id', iouId)
         .eq('user_id', userId);
