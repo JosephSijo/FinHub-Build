@@ -1,4 +1,4 @@
- 
+
 import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
@@ -208,7 +208,7 @@ export function AccountsManager({
       <div className="space-y-6">
         <h3 className="text-[10px] uppercase font-black tracking-[0.3em] text-slate-600 flex items-center gap-2 ml-2">
           <CreditCard className="w-3.5 h-3.5" />
-          Credit Pools (Cards)
+          Credit Cards
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {accounts.filter(a => a.type === 'credit_card').map((account) => (
@@ -309,14 +309,14 @@ export function AccountsManager({
                   onClick={() => setFormData({ ...formData, type: 'bank' })}
                 >
                   <div className="w-10 h-10 squircle-12 bg-emerald-500/20 flex items-center justify-center text-xl mb-2">🏦</div>
-                  <p className="text-[9px] font-black uppercase text-white leading-tight">Bank Reservoir</p>
+                  <p className="text-[9px] font-black uppercase text-white leading-tight">Bank Account</p>
                 </div>
                 <div
                   className={`p-4 squircle-12 border-2 cursor-pointer transition-all ${formData.type === 'credit_card' ? 'border-rose-500 bg-rose-500/10' : 'border-white/5 bg-white/5 hover:border-white/10'}`}
                   onClick={() => setFormData({ ...formData, type: 'credit_card' })}
                 >
                   <div className="w-10 h-10 squircle-12 bg-rose-500/20 flex items-center justify-center text-xl mb-2">💳</div>
-                  <p className="text-[9px] font-black uppercase text-white leading-tight">Credit Pool</p>
+                  <p className="text-[9px] font-black uppercase text-white leading-tight">Credit Card</p>
                 </div>
                 <div
                   className={`p-4 squircle-12 border-2 cursor-pointer transition-all ${formData.type === 'cash' ? 'border-amber-500 bg-amber-500/10' : 'border-white/5 bg-white/5 hover:border-white/10'}`}
@@ -330,13 +330,13 @@ export function AccountsManager({
                   onClick={() => setFormData({ ...formData, type: 'investment' })}
                 >
                   <div className="w-10 h-10 squircle-12 bg-blue-500/20 flex items-center justify-center text-xl mb-2">📈</div>
-                  <p className="text-[9px] font-black uppercase text-white leading-tight">Growth Node</p>
+                  <p className="text-[9px] font-black uppercase text-white leading-tight">Investment</p>
                 </div>
               </div>
 
               <div>
                 <Label htmlFor="balance" className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">
-                  {formData.type === 'bank' || formData.type === 'cash' || formData.type === 'investment' ? 'Initial Liquidity' : 'Current Spent Balance'}
+                  {formData.type === 'bank' || formData.type === 'cash' || formData.type === 'investment' ? 'Current Balance' : 'Amount Owed'}
                 </Label>
                 <NumberInput
                   id="balance"
@@ -365,7 +365,7 @@ export function AccountsManager({
                       />
                     </div>
                     <div>
-                      <Label htmlFor="safeLimit" className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Safe Use Threshold (%)</Label>
+                      <Label htmlFor="safeLimit" className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Safe Limit (%)</Label>
                       <NumberInput
                         id="safeLimit"
                         name="safeLimitPercentage"
@@ -379,7 +379,7 @@ export function AccountsManager({
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="serviceCharge" className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Svc Charge (%)</Label>
+                      <Label htmlFor="serviceCharge" className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Service Fee (%)</Label>
                       <NumberInput
                         id="serviceCharge"
                         name="serviceChargePercentage"
@@ -507,7 +507,7 @@ export function AccountsManager({
               <div className="flex items-center gap-1.5 mt-1">
                 <div className={`w-1.5 h-1.5 rounded-full ${!isCC ? 'bg-emerald-500' : isSafe ? 'bg-indigo-500' : 'bg-rose-500'}`} />
                 <span className="text-[10px] uppercase font-black tracking-widest text-slate-500">
-                  {!isCC ? 'Bank Account' : 'Credit Pool'}
+                  {!isCC ? 'Bank Account' : 'Credit Card'}
                 </span>
               </div>
             </div>
