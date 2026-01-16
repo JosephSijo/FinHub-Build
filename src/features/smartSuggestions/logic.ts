@@ -19,6 +19,9 @@ export const suggestionRules = {
      * it might be a subscription.
      */
     detectSubscriptions(transactions: any[]): any[] {
+        // Validate input is an array
+        if (!Array.isArray(transactions)) return [];
+
         const merchants: Record<string, any[]> = {};
 
         // Group by merchant and sort by date
