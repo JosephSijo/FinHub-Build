@@ -23,7 +23,6 @@ export const useFinanceData = () => {
         notificationsEnabled: false,
         roundUpEnabled: true,
         aiProvider: "openai",
-        onboardingPhase: 0,
         passiveIncomeTarget: 0,
         isSampleMode: false,
     });

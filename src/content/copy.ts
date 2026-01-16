@@ -146,8 +146,5 @@ export const COPY = {
     insurance: {
         safetyFeatures: "safety features",
         safetyPlans: "financial safety plans",
-    },
-    onboarding: {
-        freedomScore: "Financial Freedom Score",
     }
 };

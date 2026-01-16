@@ -93,7 +93,6 @@ export interface UserSettings {
   photoURL: string;
   notificationsEnabled: boolean;
   roundUpEnabled: boolean;
-  onboardingPhase?: number; // 0: Not started, 1: Shield done, 2: Leaks done, 3: Completion
   passiveIncomeTarget?: number;
   isSampleMode?: boolean;
   apiKeys?: {
