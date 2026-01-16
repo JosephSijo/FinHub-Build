@@ -9,8 +9,7 @@ import {
   Zap,
   Activity,
   ArrowRightLeft,
-  Info,
-  ChevronRight
+  Info
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { InteractiveFinancialValue } from './ui/InteractiveFinancialValue';
@@ -32,6 +31,8 @@ import { CategoryBackdrop } from './ui/CategoryBackdrop';
 import { isTransfer } from '@/utils/isTransfer';
 import { Expense, Income, Account, Debt, AIContext, Goal, Liability } from '@/types';
 import { calculateFoundationMetrics } from '@/utils/architect';
+import { ActionInsightCard, actionInsightsLogic } from '../features/actionInsights';
+import { NotificationCard, notificationsLogic, NotificationContext } from '../features/notifications';
 
 export interface DashboardProps {
   expenses: Expense[];
@@ -47,28 +48,51 @@ export interface DashboardProps {
   userName?: string;
   isOffline?: boolean;
   isSampleMode?: boolean;
-  onResumeOnboarding?: () => void;
+  onNavigate?: (view: any) => void;
+  onAddTransaction?: (type: any) => void;
 }
 
 const GENERIC_AVERAGES = {
   expenses: [
+    // Current Month
     { id: 's1', description: 'Monthly Rent', amount: 35000, category: 'Housing', date: new Date().toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
-    { id: 's2', description: 'Grocery Run', amount: 8000, category: 'Food', date: new Date().toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
-    { id: 's3', description: 'Internet & Power', amount: 4500, category: 'Bills', date: new Date().toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
-    { id: 's4', description: 'Dining Out', amount: 6000, category: 'Leisure', date: new Date().toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
+    { id: 's2', description: 'Grocery Run', amount: 8000, category: 'Groceries', date: new Date().toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
+    { id: 's3', description: 'Internet & Power', amount: 4500, category: 'Bills & Utilities', date: new Date().toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
+    { id: 's4', description: 'Dining Out High', amount: 12000, category: 'Food & Dining', date: new Date().toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
+    { id: 's5', description: 'Weekend Shopping', amount: 15000, category: 'Shopping', date: new Date().toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
+    // Month -1
+    { id: 's1-1', description: 'Rent', amount: 35000, category: 'Housing', date: new Date(new Date().setDate(0)).toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
+    { id: 's4-1', description: 'Dining', amount: 5000, category: 'Food & Dining', date: new Date(new Date().setDate(0)).toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
+    // Month -2
+    { id: 's4-2', description: 'Dining', amount: 4500, category: 'Food & Dining', date: new Date(new Date().setMonth(new Date().getMonth() - 2)).toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
   ] as Expense[],
   incomes: [
     { id: 'i1', amount: 150000, source: 'Monthly Salary', date: new Date().toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
+    { id: 'i2', amount: 150000, source: 'Salary m-1', date: new Date(new Date().setDate(0)).toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
+    { id: 'i3', amount: 150000, source: 'Salary m-2', date: new Date(new Date().setMonth(new Date().getMonth() - 2)).toISOString(), tags: [], accountId: 'a1', createdAt: new Date().toISOString() },
   ] as Income[],
   accounts: [
     { id: 'a1', name: 'Primary Bank', balance: 450000, type: 'bank', color: '#3B82F6', icon: 'building', createdAt: new Date().toISOString() },
     { id: 'a2', name: 'Cash on Hand', balance: 5000, type: 'cash', color: '#10B981', icon: 'wallet', createdAt: new Date().toISOString() },
   ] as Account[],
   goals: [
-    { id: 'g1', name: 'Emergency Fund', targetAmount: 240000, currentAmount: 240000, emoji: '🛡️', type: 'protection', targetDate: new Date().toISOString(), status: 'active', createdAt: new Date().toISOString() },
+    { id: 'g1', name: 'Emergency Fund', targetAmount: 240000, currentAmount: 240000, emoji: '🛡️', type: 'protection', targetDate: new Date().toISOString(), status: 'active', createdAt: new Date().toISOString(), monthly_contribution: 20000 },
     { id: 'g2', name: 'House Fund', targetAmount: 5000000, currentAmount: 1500000, emoji: '🏠', type: 'growth', targetDate: new Date().toISOString(), status: 'active', createdAt: new Date().toISOString() },
   ] as Goal[],
-  liabilities: [] as Liability[],
+  liabilities: [
+    {
+      id: 'l1',
+      name: 'Car Loan',
+      type: 'car_loan',
+      principal: 800000,
+      outstanding: 400000,
+      emiAmount: 15000,
+      interestRate: 8.5,
+      tenure: 60,
+      startDate: '2023-01-01',
+      createdAt: new Date().toISOString()
+    }
+  ] as Liability[],
   debts: [] as Debt[]
 };
 
@@ -86,7 +110,8 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
   userName = "User",
   isOffline = false,
   isSampleMode = false,
-  onResumeOnboarding
+  onNavigate,
+  onAddTransaction
 }) => {
 
   const displayExpenses = useMemo(() => isSampleMode ? GENERIC_AVERAGES.expenses : expenses, [isSampleMode, expenses]);
@@ -328,7 +353,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
     setActiveCard(activeCard === cardId ? null : cardId);
   };
 
-  const getVelocityInterpretation = (velocity: number) => {
+  const getVelocityInterpretation = React.useCallback((velocity: number) => {
     if (velocity > 1.0) return {
       status: 'Aggressive',
       color: 'text-rose-400',
@@ -353,38 +378,61 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
       advice: 'Optimal circulation. Capital flow is balanced between spending and holding.',
       suggestion: 'Continue current spending pattern. System is in high-efficiency state.'
     };
-  };
+  }, [m1Assets, currency]);
 
-  const velocityInfo = useMemo(() => getVelocityInterpretation(velocityValue), [velocityValue, m1Assets, currency]);
+  const velocityInfo = useMemo(() => getVelocityInterpretation(velocityValue), [velocityValue, getVelocityInterpretation]);
+
+  const topInsight = useMemo(() => {
+    return actionInsightsLogic.generateTopInsight(
+      reconciledExpenses as any,
+      displayIncomes as any,
+      displayLiabilities as any,
+      displayGoals as any,
+      availableToSpend
+    );
+  }, [reconciledExpenses, displayIncomes, displayLiabilities, displayGoals, availableToSpend]);
+
+  // Smart Notifications Engine
+  const topNotifications = useMemo(() => {
+    const today = new Date();
+    const accountAge = displayAccounts.length > 0
+      ? Math.ceil((today.getTime() - new Date(displayAccounts[0].createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    const lastExpenseDate = reconciledExpenses.length > 0
+      ? new Date(Math.max(...reconciledExpenses.map(e => new Date(e.date).getTime())))
+      : new Date(0);
+    const daysSinceLastExpense = Math.ceil((today.getTime() - lastExpenseDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    const context: NotificationContext = {
+      userId: 'current-user',
+      accountCount: displayAccounts.length,
+      totalBalance: shadowWalletTotal,
+      hasIncome: displayIncomes.length > 0,
+      transactionCount: reconciledExpenses.length + displayIncomes.length,
+      accountAge,
+      scheduledPayments: displayLiabilities.map(l => ({
+        id: l.id,
+        amount: l.emiAmount || 0,
+        dueDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
+        accountBalance: shadowWalletTotal
+      })),
+      budgetGaps: [],
+      overdueIOUs: [],
+      missedEMIs: [],
+      feeAlerts: [],
+      daysSinceLastExpense,
+      safeToSpend: availableToSpend
+    };
+
+    return notificationsLogic.generateNotifications(context, currency, 1);
+  }, [displayAccounts, shadowWalletTotal, displayIncomes, reconciledExpenses, displayLiabilities, availableToSpend, currency]);
 
   return (
     <div className="main-grid">
 
       {isSampleMode && (
         <div className="mx-4 mb-6 pt-4">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-indigo-600/10 border border-indigo-500/20 p-6 squircle-24 relative overflow-hidden group"
-          >
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Zap className="w-12 h-12 text-indigo-400" />
-            </div>
-            <div className="relative z-10 space-y-4">
-              <div className="space-y-1">
-                <div className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em]">Simulation: Healthy Flight Path</div>
-                <p className="text-white font-medium leading-relaxed">
-                  This is what a healthy flight path looks like. To see your actual <span className="text-indigo-400 font-bold">Freedom Days</span>, we need to plug in your specific Shield and Leak data.
-                </p>
-              </div>
-              <button
-                onClick={onResumeOnboarding}
-                className="w-full py-3 bg-indigo-500 text-black font-black uppercase tracking-widest rounded-2xl hover:bg-indigo-400 transition-all flex items-center justify-center gap-2"
-              >
-                Resume Onboarding <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </motion.div>
         </div>
       )}
 
@@ -701,6 +749,32 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
           </CollapsibleSection>
         </div>
       </motion.div>
+
+      {/* 1.1 Action Insight Card (Conditional) */}
+      {topInsight && (
+        <div className="col-span-full mx-4">
+          <ActionInsightCard
+            insight={topInsight}
+            onViewBudget={() => onNavigate?.('budgets')}
+            onAddIncome={() => onAddTransaction?.('income')}
+          />
+        </div>
+      )}
+
+      {/* 1.2 Smart Notification Card (Evidence-Based) */}
+      {topNotifications.length > 0 && (
+        <div className="col-span-full mx-4">
+          <NotificationCard
+            notification={topNotifications[0]}
+            onAction={() => {
+              const route = topNotifications[0].action.route;
+              if (route) {
+                onNavigate?.(route.replace('/', ''));
+              }
+            }}
+          />
+        </div>
+      )}
 
 
       {/* SECONDARY METRICS GRID (2x2 on Desktop) */}
