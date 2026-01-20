@@ -318,7 +318,7 @@ export function InvestmentsTab() {
   };
 
   const calculateTotalValue = () => {
-    // Aggregation Rule: Source Independence & Ghost Node Protection
+    // Aggregation Rule: Privacy & Security Guard
     return investments
       .filter(inv => {
         // Exclude if linked to an existing account that is NOT 'investment'
@@ -434,14 +434,14 @@ export function InvestmentsTab() {
                 <TrendingUp className="w-6 h-6 text-blue-400" />
               </div>
               <div className="min-w-0">
-                <h3 className="text-white font-black text-xs uppercase tracking-[0.3em]">Growth Node</h3>
+                <h3 className="text-white font-black text-xs uppercase tracking-[0.3em]">Investment Portfolio</h3>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                  Active Capital Projection
+                  Active Investment
                 </p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-[9px] text-slate-500 uppercase font-black tracking-[0.2em] mb-1">Portfolio Valuation</p>
+              <p className="text-[9px] text-slate-500 uppercase font-black tracking-[0.2em] mb-1">Portfolio Value</p>
               <div className="relative">
                 <div className="text-xl font-black text-white tabular-nums font-mono">
                   <InteractiveFinancialValue value={totalValue} currency={currency} />
@@ -855,7 +855,7 @@ export function InvestmentsTab() {
             <DialogHeader className="p-0">
               <DialogTitle className="text-xl font-bold tracking-tight text-white">Edit Asset</DialogTitle>
               <DialogDescription className="text-slate-500 text-xs mt-1">
-                Update details of your existing investment node
+                Update details of your existing investment
               </DialogDescription>
             </DialogHeader>
           </div>

@@ -1,86 +1,48 @@
 import { useCallback, useMemo } from 'react';
-import { supabase } from '../lib/supabase';
+import { api } from '../utils/api';
 import { toast } from 'sonner';
 import { catalogService } from '../features/catalog/service';
 
 export const useAccountActions = (state: any) => {
-    const { userId, setAccounts, currentUser } = state;
+    const { setAccounts, userId } = state;
 
     const createAccount = useCallback(async (data: any) => {
         try {
-            // Validate authentication
-            if (!currentUser || !currentUser.id) {
+            if (!userId) {
                 toast.error("Please login to add an account");
                 return;
             }
 
-            // Prepare account data with canonical columns
-            const accountData = {
-                user_id: currentUser.id,
-                name: data.name,
-                type: data.type,
-                currency: 'INR', // Default currency
-                current_balance: Number(data.balance) || 0,
-                min_buffer: 500, // Default min buffer
-                is_active: true,
-                // Legacy columns (sync trigger will handle these)
-                currency_code: 'INR',
-                opening_balance: Number(data.balance) || 0
-            };
+            const response = await api.createAccount(userId, data);
 
-            // Insert into Supabase
-            const { data: newAccount, error } = await supabase
-                .from('accounts')
-                .insert([accountData])
-                .select()
-                .single();
+            if (response.success && response.account) {
+                const newAccount = response.account;
+                setAccounts((prev: any[]) => [...prev, {
+                    ...newAccount,
+                    color: data.color,
+                    icon: data.icon,
+                    creditLimit: data.creditLimit,
+                    safeLimitPercentage: data.safeLimitPercentage,
+                    serviceChargePercentage: data.serviceChargePercentage,
+                    statementDate: data.statementDate
+                }]);
 
-            if (error) {
-                console.error('Supabase error:', error);
-                toast.error(`Failed to create account: ${error.message}`);
+                toast.success("Account created successfully");
 
-                // Fallback to local creation
-                const temp = {
-                    id: `temp_${Date.now()}`,
-                    ...data,
-                    createdAt: new Date().toISOString()
-                };
-                setAccounts((prev: any[]) => [...prev, temp]);
-                toast.warning("Created locally (offline mode)");
-                return;
+                // Auto-link to catalog (bank kind)
+                catalogService.ensureCatalogAndLink(
+                    userId,
+                    'account',
+                    newAccount.id,
+                    'bank',
+                    data.name
+                ).catch(e => console.error("Catalog link failed", e));
+            } else {
+                throw new Error("Failed to create account on server");
             }
-
-            // Success - update state
-            setAccounts((prev: any[]) => [...prev, {
-                id: newAccount.id,
-                name: newAccount.name,
-                type: newAccount.type,
-                balance: newAccount.current_balance,
-                color: data.color,
-                icon: data.icon,
-                createdAt: newAccount.created_at,
-                creditLimit: data.creditLimit,
-                safeLimitPercentage: data.safeLimitPercentage,
-                serviceChargePercentage: data.serviceChargePercentage,
-                statementDate: data.statementDate
-            }]);
-
-            toast.success("Account created successfully");
-
-            // Auto-link to catalog (bank kind)
-            catalogService.ensureCatalogAndLink(
-                currentUser.id,
-                'account',
-                newAccount.id,
-                'bank',
-                data.name
-            ).catch(e => console.error("Catalog link failed", e));
 
         } catch (error: any) {
             console.error('Error creating account:', error);
-            toast.error(`Failed to create account: ${error.message || 'Unknown error'}`);
-
-            // Fallback to local creation
             const temp = {
                 id: `temp_${Date.now()}`,
                 ...data,
@@ -89,83 +51,53 @@ export const useAccountActions = (state: any) => {
             setAccounts((prev: any[]) => [...prev, temp]);
             toast.warning("Created locally (offline mode)");
         }
-    }, [userId, currentUser, setAccounts]);
+    }, [userId, setAccounts]);
 
     const updateAccount = useCallback(async (id: string, data: any) => {
         try {
-            if (!currentUser || !currentUser.id) {
+            if (!userId) {
                 toast.error("Please login to update account");
                 return;
             }
 
-            const updateData: any = {};
-            if (data.name) updateData.name = data.name;
-            if (data.type) updateData.type = data.type;
-            if (data.balance !== undefined) {
-                updateData.current_balance = Number(data.balance);
-                updateData.opening_balance = Number(data.balance); // Sync legacy
-            }
+            const response = await api.updateAccount(userId, id, data);
 
-            const { error } = await supabase
-                .from('accounts')
-                .update(updateData)
-                .eq('id', id)
-                .eq('user_id', currentUser.id);
-
-            if (error) {
-                console.error('Supabase error:', error);
-                toast.error(`Failed to update: ${error.message}`);
-
-                // Fallback to local update
+            if (response.success) {
                 setAccounts((prev: any[]) => prev.map(a => a.id === id ? { ...a, ...data } : a));
-                toast.warning("Updated locally");
-                return;
+                toast.success("Account updated");
+            } else {
+                throw new Error("Update failed");
             }
-
-            // Success
-            setAccounts((prev: any[]) => prev.map(a => a.id === id ? { ...a, ...data } : a));
-            toast.success("Account updated");
 
         } catch (error: any) {
             console.error('Error updating account:', error);
             setAccounts((prev: any[]) => prev.map(a => a.id === id ? { ...a, ...data } : a));
             toast.warning("Updated locally");
         }
-    }, [userId, currentUser, setAccounts]);
+    }, [userId, setAccounts]);
 
     const deleteAccount = useCallback(async (id: string) => {
         try {
-            if (!currentUser || !currentUser.id) {
+            if (!userId) {
                 toast.error("Please login to delete account");
                 return;
             }
 
-            const { error } = await supabase
-                .from('accounts')
-                .delete()
-                .eq('id', id)
-                .eq('user_id', currentUser.id);
+            const response = await api.deleteAccount(userId, id);
 
-            if (error) {
-                console.error('Supabase error:', error);
-                toast.error(`Failed to delete: ${error.message}`);
-
-                // Fallback to local delete
+            if (response.success) {
                 setAccounts((prev: any[]) => prev.filter(a => a.id !== id));
-                toast.warning("Deleted locally");
-                return;
+                toast.success("Account deleted");
+            } else {
+                throw new Error("Deletion failed");
             }
-
-            // Success
-            setAccounts((prev: any[]) => prev.filter(a => a.id !== id));
-            toast.success("Account deleted");
 
         } catch (error: any) {
             console.error('Error deleting account:', error);
             setAccounts((prev: any[]) => prev.filter(a => a.id !== id));
             toast.warning("Deleted locally");
         }
-    }, [userId, currentUser, setAccounts]);
+    }, [userId, setAccounts]);
 
     return useMemo(() => ({ createAccount, updateAccount, deleteAccount }), [createAccount, updateAccount, deleteAccount]);
 };

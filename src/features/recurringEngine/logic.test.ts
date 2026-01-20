@@ -24,8 +24,10 @@ function testDaily() {
     const to = new Date('2024-01-03T12:00:00Z');
     const results = generateOccurrences(rule, from, to);
     assert(results.length === 3, `Expected 3 occurrences, got ${results.length}`);
-    assert(results[0].toISOString().startsWith('2024-01-01'), 'First occurrence date mismatch');
-    assert(results[2].toISOString().startsWith('2024-01-03'), 'Last occurrence date mismatch');
+    assert(results[0].date.toISOString().startsWith('2024-01-01'), 'First occurrence date mismatch');
+    assert(results[2].date.toISOString().startsWith('2024-01-03'), 'Last occurrence date mismatch');
+    assert(results[0].index === 1, 'First occurrence index should be 1');
+    assert(results[2].index === 3, 'Third occurrence index should be 3');
 }
 
 function testMonthlyClamping() {
@@ -47,7 +49,8 @@ function testMonthlyClamping() {
     const results = generateOccurrences(rule, from, to);
     // Jan 31, Feb 29 (leap year 2024), Mar 31
     assert(results.length === 3, `Expected 3 occurrences, got ${results.length}`);
-    assert(results[1].getDate() === 29, `Feb date should be 29, got ${results[1].getDate()}`);
+    assert(results[1].date.getDate() === 29, `Feb date should be 29, got ${results[1].date.getDate()}`);
+    assert(results[1].index === 2, 'Feb occurrence index should be 2');
 }
 
 function testNthWeekday() {
@@ -71,8 +74,10 @@ function testNthWeekday() {
     // Jan 2024: 1st is Mon. Fri are 5, 12, 19, 26. 2nd Fri is Jan 12.
     // Feb 2024: 1st is Thu. Fri are 2, 9, 16, 23. 2nd Fri is Feb 9.
     assert(results.length === 2, `Expected 2 occurrences, got ${results.length}`);
-    assert(results[0].getDate() === 12, `Jan 2nd Fri should be 12, got ${results[0].getDate()}`);
-    assert(results[1].getDate() === 9, `Feb 2nd Fri should be 9, got ${results[1].getDate()}`);
+    assert(results[0].date.getDate() === 12, `Jan 2nd Fri should be 12, got ${results[0].date.getDate()}`);
+    assert(results[1].date.getDate() === 9, `Feb 2nd Fri should be 9, got ${results[1].date.getDate()}`);
+    assert(results[0].index === 1, 'Jan occurrence index should be 1');
+    assert(results[1].index === 2, 'Feb occurrence index should be 2');
 }
 
 async function runTests() {

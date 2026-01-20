@@ -37,7 +37,7 @@ export function MoreTab({
       <div>
         <h2 className="text-3xl font-black text-slate-100 tracking-tight leading-none mb-3">Settings & Assets</h2>
         <p className="text-slate-500 font-bold max-w-md">
-          Configure your financial universe and manage core system components.
+          Manage your accounts, app settings, and personal preferences.
         </p>
       </div>
 
@@ -95,7 +95,7 @@ export function MoreTab({
             </div>
 
             <div className="mt-8 flex items-center justify-between text-slate-500">
-              <span className="text-[10px] font-black uppercase tracking-widest">Manage Liquidity</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">Manage Accounts</span>
               <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
@@ -107,7 +107,7 @@ export function MoreTab({
       <div className="pt-4">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-1.5 h-6 bg-slate-700 rounded-full" />
-          <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-600">System Configuration</h3>
+          <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-600">App Settings</h3>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -139,8 +139,8 @@ export function MoreTab({
                   <Bell className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-black text-slate-200 uppercase tracking-tight">Alert Center</p>
-                  <p className="text-[10px] text-slate-600 font-bold">System Notifications</p>
+                  <p className="text-sm font-black text-slate-200 uppercase tracking-tight">Notifications</p>
+                  <p className="text-[10px] text-slate-600 font-bold">View your alerts</p>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-slate-700 group-hover:text-slate-400 transition-colors" />
@@ -185,7 +185,7 @@ export function MoreTab({
       {/* App Info Footer */}
       <div className="text-center pt-8 border-t border-white/5">
         <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-700 mb-1">FinHub Obsidian System</p>
-        <p className="text-[9px] font-bold text-slate-800">BUILD 50.3.0 // QUANTUM CORE</p>
+        <p className="text-[9px] font-bold text-slate-800">BUILD 50.3.0 // ADVANCED ENGINE</p>
       </div>
     </div>
   );

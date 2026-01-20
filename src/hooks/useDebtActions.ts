@@ -4,12 +4,11 @@ import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 
 export const useDebtActions = (state: any, actions: any) => {
-    const { userId, debts, setDebts, accounts, setExpenses, setIncomes } = state;
-
-    const dataRef = useRef({ debts, accounts });
+    const { userId, debts, setDebts, accounts, setExpenses, setIncomes, recurringTransactions } = state;
+    const dataRef = useRef({ debts, accounts, recurringTransactions });
     useEffect(() => {
-        dataRef.current = { debts, accounts };
-    }, [debts, accounts]);
+        dataRef.current = { debts, accounts, recurringTransactions };
+    }, [debts, accounts, recurringTransactions]);
 
     const actionsRef = useRef(actions);
     useEffect(() => {
@@ -24,12 +23,9 @@ export const useDebtActions = (state: any, actions: any) => {
                 const { accounts: currentAccounts } = dataRef.current;
                 const targetAccount = currentAccounts.find((a: any) => a.id === data.accountId);
                 if (targetAccount) {
-                    const { updateAccount } = actionsRef.current;
-                    const balanceChange = data.type === 'borrowed' ? data.amount : -data.amount;
-                    const newBalance = targetAccount.type === 'credit_card'
-                        ? targetAccount.balance - balanceChange
-                        : targetAccount.balance + balanceChange;
-                    await updateAccount(targetAccount.id, { balance: newBalance });
+                    // Balance update is now handled by the ledger system/triggers
+                    // const balanceChange = data.type === 'borrowed' ? data.amount : -data.amount;
+                    // await updateAccount(targetAccount.id, { balance: newBalance });
                 }
                 if (data.isRecurring) {
                     const { createRecurringTransaction } = actionsRef.current;
@@ -56,26 +52,15 @@ export const useDebtActions = (state: any, actions: any) => {
         try {
             const response = await api.updateDebt(userId, id, data);
             if (response.success) {
-                const { debts: currentDebts, accounts: currentAccounts } = dataRef.current;
+                const { debts: currentDebts } = dataRef.current;
                 const oldDebt = currentDebts.find((d: any) => d.id === id);
                 if (oldDebt) {
-                    const { updateAccount, updateRecurringTransaction, createRecurringTransaction } = actionsRef.current;
-                    const oldAccount = currentAccounts.find((a: any) => a.id === oldDebt.accountId);
-                    if (oldAccount) {
-                        const balanceChange = oldDebt.type === 'borrowed' ? -oldDebt.amount : oldDebt.amount;
-                        const oldBalance = oldAccount.type === 'credit_card' ? oldAccount.balance - balanceChange : oldAccount.balance + balanceChange;
-                        await updateAccount(oldAccount.id, { balance: oldBalance });
-                    }
-                    const newDebt = response.debt;
-                    const newAccount = currentAccounts.find((a: any) => a.id === newDebt.accountId);
-                    if (newAccount) {
-                        const balanceChange = newDebt.type === 'borrowed' ? newDebt.amount : -newDebt.amount;
-                        const newBalance = newAccount.type === 'credit_card' ? newAccount.balance - balanceChange : newAccount.balance + balanceChange;
-                        await updateAccount(newAccount.id, { balance: newBalance });
-                    }
+                    const { updateRecurringTransaction, createRecurringTransaction } = actionsRef.current;
                     if (data.isRecurring) {
-                        if (oldDebt.recurringId) {
-                            await updateRecurringTransaction(oldDebt.recurringId, { amount: data.amount, description: `Debt: ${data.personName} (${data.type})` });
+                        const { recurringTransactions: currentRT } = dataRef.current;
+                        const existingRec = currentRT.find((rt: any) => rt.iouId === id);
+                        if (oldDebt.recurringId || existingRec) {
+                            await updateRecurringTransaction(oldDebt.recurringId || existingRec.id, { amount: data.amount, description: `Debt: ${data.personName} (${data.type})` });
                         } else {
                             await createRecurringTransaction({
                                 type: 'expense', description: `Debt: ${data.personName} (${data.type})`,
@@ -98,35 +83,30 @@ export const useDebtActions = (state: any, actions: any) => {
         try {
             const response = await api.updateDebt(userId, id, { status: "settled" });
             if (response.success) {
-                const { debts: currentDebts, accounts: currentAccounts } = dataRef.current;
+                const { debts: currentDebts } = dataRef.current;
                 const debt = currentDebts.find((d: any) => d.id === id);
-                if (debt && debt.status !== 'settled') {
-                    const { updateAccount } = actionsRef.current;
-                    const targetAccount = currentAccounts.find((a: any) => a.id === debt.accountId);
-                    if (targetAccount) {
-                        const settlementAmount = debt.type === 'borrowed' ? -debt.amount : debt.amount;
-                        const newBalance = targetAccount.type === 'credit_card' ? targetAccount.balance - settlementAmount : targetAccount.balance + settlementAmount;
-                        await updateAccount(targetAccount.id, { balance: newBalance });
+                if (debt.accountId) {
+                    // Balance update is now handled by the ledger system/triggers
+                    // the settlement transaction created below will update the ledger
 
-                        const settlementTransaction = {
-                            description: `Debt Settlement: ${debt.personName}`,
-                            amount: debt.amount, category: 'Transfer',
-                            date: new Date().toISOString().split('T')[0],
-                            tags: ['debt-settlement'], accountId: debt.accountId
-                        };
-                        if (debt.type === 'borrowed') {
-                            const res = await api.createExpense(userId, settlementTransaction);
-                            if (res.success) setExpenses((prev: any[]) => [...prev, res.expense]);
-                        } else {
-                            const res = await api.createIncome(userId, settlementTransaction);
-                            if (res.success) setIncomes((prev: any[]) => [...prev, res.income]);
-                        }
+                    const settlementTransaction = {
+                        description: `Debt Settlement: ${debt.personName}`,
+                        amount: debt.amount, category: 'Transfer',
+                        date: new Date().toISOString().split('T')[0],
+                        tags: ['debt-settlement'], accountId: debt.accountId
+                    };
+                    if (debt.type === 'borrowed') {
+                        const res = await api.createExpense(userId, settlementTransaction);
+                        if (res.success) setExpenses((prev: any[]) => [...prev, res.expense]);
+                    } else {
+                        const res = await api.createIncome(userId, settlementTransaction);
+                        if (res.success) setIncomes((prev: any[]) => [...prev, res.income]);
                     }
                 }
-                setDebts((prev: any[]) => prev.map(d => d.id === id ? response.debt : d));
-                toast.success("🎉 Debt settled! Great job!");
-                confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
             }
+            setDebts((prev: any[]) => prev.map(d => d.id === id ? response.debt : d));
+            toast.success("🎉 Debt settled! Great job!");
+            confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
         } catch {
             setDebts((prev: any[]) => prev.map(d => d.id === id ? { ...d, status: "settled" as const } : d));
             toast.warning("Marked as settled locally");
@@ -137,17 +117,6 @@ export const useDebtActions = (state: any, actions: any) => {
         try {
             const response = await api.deleteDebt(userId, id);
             if (response.success) {
-                const { debts: currentDebts, accounts: currentAccounts } = dataRef.current;
-                const debt = currentDebts.find((d: any) => d.id === id);
-                if (debt) {
-                    const { updateAccount } = actionsRef.current;
-                    const targetAccount = currentAccounts.find((a: any) => a.id === debt.accountId);
-                    if (targetAccount) {
-                        const balanceChange = debt.type === 'borrowed' ? -debt.amount : debt.amount;
-                        const newBalance = targetAccount.type === 'credit_card' ? targetAccount.balance - balanceChange : targetAccount.balance + balanceChange;
-                        await updateAccount(targetAccount.id, { balance: newBalance });
-                    }
-                }
                 setDebts((prev: any[]) => prev.filter(d => d.id !== id));
                 toast.success("Debt deleted");
             }

@@ -270,7 +270,7 @@ export const LiabilityDashboard = React.memo(({ liabilities, debts, currency, to
                 <TrendingDown className="w-6 h-6 text-rose-400" />
               </div>
               <div>
-                <h3 className="text-white font-black text-xs uppercase tracking-[0.2em]">Liability Node</h3>
+                <h3 className="text-white font-black text-xs uppercase tracking-[0.2em]">Debt Overview</h3>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
                   Strategic Debt Stream
                 </p>

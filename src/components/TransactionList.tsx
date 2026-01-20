@@ -174,7 +174,7 @@ const TransactionListComponent: React.FC<TransactionListProps> = ({
               <p className="text-slate-500 font-mono text-sm uppercase tracking-widest">No Stream Data Found</p>
               <p className="text-[10px] text-slate-600 mt-2 uppercase">
                 {filter === "emis"
-                  ? "Initialize EMI parameters in Liability Node"
+                  ? "Set up payment details in Bills"
                   : "Adjust filter parameters or search query"}
               </p>
             </div>

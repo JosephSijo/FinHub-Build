@@ -45,7 +45,7 @@ import { LoginScreen } from "./components/auth/LoginScreen";
 import { LoadingSprite } from "./components/ui/LoadingSprite";
 import { motion, AnimatePresence } from "framer-motion";
 import { AboutUsPopup } from "./components/overlays/AboutUsPopup";
-// Removed OnboardingFlow import
+import { SetupWizard } from "./components/SetupWizard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -138,6 +138,7 @@ export default function App() {
 
   // Round-Up State
   const [isRoundUpOpen, setIsRoundUpOpen] = useState(false);
+  const [isSetupWizardOpen, setIsSetupWizardOpen] = useState(false);
   const [roundUpData] = useState<{
     expenseAmount: number;
     roundedAmount: number;
@@ -412,8 +413,14 @@ export default function App() {
     const account = accounts.find(a => a.id === targetAccountId);
 
     if (account) {
-      await updateAccount(account.id, {
-        balance: account.balance - diff
+      // Record the round-up as an expense (OUT) from the account
+      await createExpense({
+        accountId: account.id,
+        amount: diff,
+        description: `Round-up to ${destinationType === 'goal' ? 'Goal' : 'Emergency Fund'}`,
+        date: new Date().toISOString(),
+        category: 'Savings',
+        tags: ['round-up']
       });
     }
 
@@ -556,6 +563,7 @@ export default function App() {
                             isOffline={isOffline}
                             isSampleMode={settings.isSampleMode}
                             onNavigate={(view) => setView(view)}
+                            onOpenSetupWizard={() => setIsSetupWizardOpen(true)}
                             onAddTransaction={(type) => {
                               setTransactionFormType(type);
                               setIsTransactionFormOpen(true);
@@ -654,6 +662,11 @@ export default function App() {
                   </ErrorBoundary>
                 </PullToRefresh>
               </ScrollAwareLayout>
+
+              <SetupWizard
+                isOpen={isSetupWizardOpen}
+                onClose={() => setIsSetupWizardOpen(false)}
+              />
 
               {/* Modals */}
               {isTransactionFormOpen && (

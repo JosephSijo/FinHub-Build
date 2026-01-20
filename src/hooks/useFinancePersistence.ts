@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { STORAGE_KEYS } from '../utils/constants';
 
 export const useFinancePersistence = (state: any) => {

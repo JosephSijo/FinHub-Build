@@ -240,7 +240,7 @@ export function AccountsManager({
       <div className="space-y-6">
         <h3 className="text-[10px] uppercase font-black tracking-[0.3em] text-slate-600 flex items-center gap-2 ml-2">
           <TrendingUp className="w-3.5 h-3.5" />
-          Investment Holding Nodes
+          Investments
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {accounts.filter(a => a.type === 'investment').map((account) => (
@@ -248,7 +248,7 @@ export function AccountsManager({
           ))}
           {accounts.filter(a => a.type === 'investment').length === 0 && (
             <div className="md:col-span-2 lg:col-span-3 p-8 border border-dashed border-white/5 squircle-22 flex items-center justify-center text-slate-600 font-bold text-xs">
-              No investment nodes detected. Link them to track growth separately.
+              No investments detected. Link them to track growth separately.
             </div>
           )}
         </div>

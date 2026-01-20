@@ -54,7 +54,7 @@ export const useRecurringActions = (state: any) => {
                 if (preview.count > 0) {
                     setBackfillRequest({
                         count: preview.count,
-                        dates: preview.dates,
+                        dates: preview.occurrences.map(o => o.date),
                         recurring: updatedRec
                     });
                 } else {
@@ -73,28 +73,32 @@ export const useRecurringActions = (state: any) => {
             const response = await api.createRecurring(userId, data);
             if (response.success) {
                 const newRec = response.recurring;
-                setRecurringTransactions((prev: RecurringTransaction[]) => [...prev, newRec]);
-                toast.success('Recurring transaction created');
+                if (newRec) {
+                    setRecurringTransactions((prev: RecurringTransaction[]) => [...prev, newRec]);
+                    toast.success('Recurring transaction created');
 
-                // Auto-link to catalog (subscription kind)
-                catalogService.ensureCatalogAndLink(
-                    userId,
-                    'subscription',
-                    newRec.id,
-                    'subscription',
-                    data.name
-                ).catch(e => console.error("Catalog link failed", e));
+                    // Auto-link to catalog (subscription kind)
+                    catalogService.ensureCatalogAndLink(
+                        userId,
+                        'subscription',
+                        newRec.id,
+                        'subscription',
+                        data.name || data.description || 'Subscription'
+                    ).catch(e => console.error("Catalog link failed", e));
 
-                // Check for Backfill
-                const preview = await recurringService.getBackfillPreview(newRec);
-                if (preview.count > 0) {
-                    setBackfillRequest({
-                        count: preview.count,
-                        dates: preview.dates,
-                        recurring: newRec
-                    });
+                    // Check for Backfill
+                    const preview = await recurringService.getBackfillPreview(newRec);
+                    if (preview.count > 0) {
+                        setBackfillRequest({
+                            count: preview.count,
+                            dates: preview.occurrences.map(o => o.date),
+                            recurring: newRec
+                        });
+                    } else {
+                        toast.success("Transaction history is up to date.");
+                    }
                 } else {
-                    toast.success("Transaction history is up to date.");
+                    toast.error("Failed to create recurring transaction");
                 }
             }
         } catch (error) {

@@ -39,7 +39,7 @@ export const AIChatOverlay: React.FC<AIChatOverlayProps> = React.memo(({ isOpen,
                 // Simulate local processing for offline mode
                 setTimeout(() => {
                     setMessages(prev => [...prev, {
-                        text: "FinHub is currently in 'Cached View' (Offline). I've analyzed your local financial fabric: your liquidity nodes are stable, but synchronizing with global AI intelligence requires a stable link. How can I help you optimize your local state?",
+                        text: "FinHub is currently Offline. I've analyzed your local data: your account balances are stable, but syncing with the AI requires an internet connection. How can I help you?",
                         type: 'ai'
                     }]);
                     setIsLoading(false);
@@ -57,7 +57,7 @@ export const AIChatOverlay: React.FC<AIChatOverlayProps> = React.memo(({ isOpen,
             if (response.error) {
                 setMessages(prev => [...prev, { text: response.error as string, type: 'ai' }]);
             } else {
-                setMessages(prev => [...prev, { text: response.text || "Analyzing financial pattern...", type: 'ai' }]);
+                setMessages(prev => [...prev, { text: response.text || "Analyzing financial trends...", type: 'ai' }]);
             }
         } catch {
             setMessages(prev => [...prev, { text: "Connection error. FinHub has transitioned to local 'Cached View'.", type: 'ai' }]);
@@ -80,7 +80,7 @@ export const AIChatOverlay: React.FC<AIChatOverlayProps> = React.memo(({ isOpen,
                     <div>
                         <h2 className="font-black text-2xl text-white tracking-tight leading-none">AI Analyst</h2>
                         <div className="flex items-center gap-2 mt-1">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Neural Core Context</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Analysis Context</p>
                             {isOffline && (
                                 <span className="text-[8px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20 font-black tracking-tighter uppercase">Cached View</span>
                             )}
@@ -111,7 +111,7 @@ export const AIChatOverlay: React.FC<AIChatOverlayProps> = React.memo(({ isOpen,
                         {msg.type === 'ai' && (
                             <div className="flex items-center gap-2 mb-2">
                                 <Sparkles className="w-3 h-3 text-indigo-400 font-black" />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Guru Analysis</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">AI Analysis</span>
                             </div>
                         )}
                         {msg.text}
@@ -149,7 +149,7 @@ export const AIChatOverlay: React.FC<AIChatOverlayProps> = React.memo(({ isOpen,
                 </button>
             </div>
             <p className="text-[9px] font-bold text-slate-600 text-center uppercase tracking-widest mt-4">
-                Encryption Verified // Neural Fabric Link Stable
+                Data Encrypted // Connection Secure
             </p>
         </div>
     );

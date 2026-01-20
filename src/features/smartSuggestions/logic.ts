@@ -19,6 +19,7 @@ export const suggestionRules = {
      * it might be a subscription.
      */
     detectSubscriptions(transactions: any[]): any[] {
+        // ... (existing logic)
         // Validate input is an array
         if (!Array.isArray(transactions)) return [];
 
@@ -57,6 +58,97 @@ export const suggestionRules = {
             }
         });
 
+        return suggestions;
+    },
+
+    detectDuplicates(subscriptions: any[]): any[] {
+        if (!Array.isArray(subscriptions)) return [];
+        const suggestions: any[] = [];
+        const seenNames: Record<string, any> = {};
+
+        subscriptions.forEach(sub => {
+            // Simple normalization: remove spaces, lowercase
+            const normalized = sub.name.toLowerCase().replace(/\s+/g, '');
+            if (seenNames[normalized]) {
+                // Check if amounts are similar (within 10%)
+                const prev = seenNames[normalized];
+                const ratio = Math.abs(sub.amount - prev.amount) / Math.max(sub.amount, prev.amount);
+                if (ratio < 0.1) {
+                    suggestions.push({
+                        type: 'duplicate_subscription',
+                        title: 'Duplicate Subscription Detected',
+                        message: `It looks like "${sub.name}" matches another active subscription.`,
+                        severity: 'medium',
+                        action: {
+                            type: 'MERGE_SUBSCRIPTION',
+                            payload: { keepId: prev.id, dropId: sub.id }
+                        }
+                    });
+                }
+            } else {
+                seenNames[normalized] = sub;
+            }
+        });
+        return suggestions;
+    },
+
+    detectOverpriced(subscriptions: any[], income: number): any[] {
+        if (!Array.isArray(subscriptions) || income <= 0) return [];
+        const suggestions: any[] = [];
+        const totalCost = subscriptions.reduce((sum, s) => sum + s.amount, 0);
+
+        // Rule 1: Single sub > 3% of income
+        subscriptions.forEach(sub => {
+            if (sub.amount > (income * 0.03)) {
+                suggestions.push({
+                    type: 'overpriced_subscription',
+                    title: 'High Cost Subscription',
+                    message: `"${sub.name}" consumes >3% of your monthly income. Consider reviewing.`,
+                    severity: 'medium',
+                    action: {
+                        type: 'REVIEW_SUBSCRIPTION',
+                        payload: { id: sub.id }
+                    }
+                });
+            }
+        });
+
+        // Rule 2: Total subs > 10% of income
+        if (totalCost > (income * 0.10)) {
+            suggestions.push({
+                type: 'budget_alert',
+                title: 'High Subscription Load',
+                message: `You spend ${(totalCost / income * 100).toFixed(1)}% of your income on subscriptions.`,
+                severity: 'high',
+                action: {
+                    type: 'VIEW_BUDGET',
+                    payload: {}
+                }
+            });
+        }
+        return suggestions;
+    },
+
+    detectMandateCandidates(subscriptions: any[]): any[] {
+        if (!Array.isArray(subscriptions)) return [];
+        const suggestions: any[] = [];
+
+        subscriptions.forEach(sub => {
+            // If active, consistent, and not already offered/declined
+            if (sub.status === 'active' && !sub.mandateStatus) {
+                // Simple logic: suggest mandate for all stable subs initially
+                suggestions.push({
+                    type: 'mandate_suggestion',
+                    title: 'Enable Auto-Pay?',
+                    message: `Set up a mandate for "${sub.name}" so you never miss a payment.`,
+                    severity: 'low',
+                    action: {
+                        type: 'ENABLE_MANDATE',
+                        payload: { id: sub.id }
+                    }
+                });
+            }
+        });
         return suggestions;
     }
 };

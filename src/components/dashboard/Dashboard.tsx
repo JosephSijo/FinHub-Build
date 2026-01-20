@@ -39,14 +39,14 @@ export const Dashboard = () => {
             <header className="mb-6 flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-black text-white tracking-tight">Dashboard</h1>
-                    <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.2em] mt-1">Intelligence Node Active</p>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.2em] mt-1">Insights Active</p>
                 </div>
             </header>
 
             <div className="space-y-6">
                 {isFeatureEnabled('BALANCE_BOARD') && (
                     <div className="h-full">
-                        {React.createElement(getFeatureComponent('BALANCE_BOARD'))}
+                        {React.createElement(getFeatureComponent('BALANCE_BOARD') as React.ComponentType)}
                     </div>
                 )}
 

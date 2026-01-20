@@ -7,143 +7,167 @@ import { RecurringRule } from './types';
  * @param fromDate Start date for generation (inclusive)
  * @param toDate End date for generation (inclusive)
  */
+/**
+ * Internal helper to find the nth weekday of a given month.
+ */
+function findNthWeekdayOfMonth(year: number, month: number, nth: number, weekday: number): Date {
+    const date = new Date(year, month, 1, 12, 0, 0, 0);
+
+    if (nth > 0) {
+        let found = 0;
+        while (found < nth) {
+            if (date.getDay() === weekday) {
+                found++;
+            }
+            if (found < nth) {
+                date.setDate(date.getDate() + 1);
+            }
+        }
+    } else {
+        // For nth < 0 (like -1 for last), go to last day of month and work backwards
+        date.setMonth(month + 1);
+        date.setDate(0);
+        let found = 0;
+        const absNth = Math.abs(nth);
+        while (found < absNth) {
+            if (date.getDay() === weekday) {
+                found++;
+            }
+            if (found < absNth) {
+                date.setDate(date.getDate() - 1);
+            }
+        }
+    }
+    return date;
+}
+
+export interface OccurrenceInfo {
+    date: Date;
+    index: number;
+}
+
 export function generateOccurrences(
     rule: RecurringRule,
     fromDate: Date,
     toDate: Date
-): Date[] {
-    const occurrences: Date[] = [];
+): OccurrenceInfo[] {
+    const occurrences: OccurrenceInfo[] = [];
+    const interval = rule.interval || 1;
     let current = new Date(rule.startDate);
-
-    // Set time to noon to avoid day-flipping issues with DST/timezones
     current.setHours(12, 0, 0, 0);
+
+    // Initial Alignment: Ensure 'current' starts at a valid occurrence on or after rule.startDate
+    if (rule.frequency === 'monthly') {
+        if (rule.nthWeek !== undefined && rule.weekday !== undefined) {
+            const first = findNthWeekdayOfMonth(current.getFullYear(), current.getMonth(), rule.nthWeek, rule.weekday);
+            if (first < new Date(rule.startDate)) {
+                // If the nth weekday of the start month is before startDate, find it in the next interval
+                current = findNthWeekdayOfMonth(current.getFullYear(), current.getMonth() + interval, rule.nthWeek, rule.weekday);
+            } else {
+                current = first;
+            }
+        } else {
+            const targetDay = rule.dayOfMonth || new Date(rule.startDate).getDate();
+            const year = current.getFullYear();
+            const month = current.getMonth();
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            const clampedDay = Math.min(targetDay, lastDay);
+
+            current.setDate(clampedDay);
+            if (current < new Date(rule.startDate)) {
+                current = getNextMonthlyDate(current, targetDay, interval);
+            }
+        }
+    }
+
     const startLimit = new Date(fromDate);
     startLimit.setHours(12, 0, 0, 0);
     const endLimit = new Date(toDate);
     endLimit.setHours(12, 0, 0, 0);
 
-    const interval = rule.interval || 1;
-    const safetyLimit = 2000; // Prevent infinite loops
+    const safetyLimit = 2000;
     let count = 0;
+    let occurrenceIndex = 1;
+
+    const ruleEndLimit = rule.endDate ? new Date(rule.endDate) : null;
+    if (ruleEndLimit) {
+        ruleEndLimit.setHours(12, 0, 0, 0);
+    }
 
     while (current <= endLimit && count < safetyLimit) {
+        if (ruleEndLimit && current > ruleEndLimit) break;
+
         if (current >= startLimit) {
-            occurrences.push(new Date(current));
+            occurrences.push({
+                date: new Date(current),
+                index: occurrenceIndex
+            });
         }
 
         switch (rule.frequency) {
             case 'daily':
                 current.setDate(current.getDate() + interval);
                 break;
-
             case 'weekly':
                 current.setDate(current.getDate() + (interval * 7));
                 break;
-
-            case 'monthly': {
+            case 'monthly':
                 if (rule.nthWeek !== undefined && rule.weekday !== undefined) {
-                    // Handle Nth weekday of month (e.g., 2nd Friday)
-                    current = getNextNthWeekday(current, rule.nthWeek, rule.weekday, interval);
+                    // Correctly move to the nth weekday of the next applicable month
+                    const nextMonthTotal = current.getMonth() + interval;
+                    current = findNthWeekdayOfMonth(current.getFullYear(), nextMonthTotal, rule.nthWeek, rule.weekday);
                 } else {
-                    // Handle fixed day of month
                     const targetDay = rule.dayOfMonth || new Date(rule.startDate).getDate();
                     current = getNextMonthlyDate(current, targetDay, interval);
                 }
                 break;
-            }
-
             case 'yearly':
                 current.setFullYear(current.getFullYear() + interval);
                 break;
-
-            case 'custom': {
-                // Treat custom as daily with customIntervalDays if provided, else default to 30
-                const days = rule.customIntervalDays || 30;
-                current.setDate(current.getDate() + days);
+            case 'custom':
+                current.setDate(current.getDate() + (rule.customIntervalDays || 30));
                 break;
-            }
-
             default:
-                // Default to monthly if frequency is unrecognized
                 current.setMonth(current.getMonth() + 1);
         }
 
+        occurrenceIndex++;
         count++;
-
-        // Break if we have an end date and we passed it
-        if (rule.endDate && current > new Date(rule.endDate)) {
-            break;
-        }
     }
 
     return occurrences;
 }
 
-/**
- * Gets the next date for a fixed day-of-month recurrence, clamping to month end.
- */
 function getNextMonthlyDate(current: Date, targetDay: number, interval: number): Date {
     const next = new Date(current);
-    const targetMonth = next.getMonth() + interval;
-
-    // Set date to 1 first to avoid overflow when changing month
-    // e.g., Jan 31 -> setMonth(1) becomes Mar 2 or 3.
     next.setDate(1);
-    next.setMonth(targetMonth);
-
-    const year = next.getFullYear();
-    const month = next.getMonth();
-    const lastDayOfNextMonth = new Date(year, month + 1, 0).getDate();
-    const clampedDay = Math.min(targetDay, lastDayOfNextMonth);
-
-    next.setDate(clampedDay);
+    next.setMonth(next.getMonth() + interval);
+    const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+    next.setDate(Math.min(targetDay, lastDay));
     return next;
 }
 
-/**
- * Gets the next date for an Nth weekday recurrence (e.g., 2nd Friday).
- */
-function getNextNthWeekday(current: Date, nth: number, weekday: number, interval: number): Date {
-    const nextMonth = new Date(current);
-    nextMonth.setMonth(nextMonth.getMonth() + interval);
-    nextMonth.setDate(1); // Start at 1st of the target month
-
-    if (nth > 0) {
-        // nth > 0 means "from start of month"
-        let found = 0;
-        while (found < nth) {
-            if (nextMonth.getDay() === weekday) {
-                found++;
-            }
-            if (found < nth) {
-                nextMonth.setDate(nextMonth.getDate() + 1);
-            }
-        }
-    } else {
-        // nth < 0 means "from end of month" (e.g., -1 for last)
-        // Go to last day of month and work backwards
-        nextMonth.setMonth(nextMonth.getMonth() + 1);
-        nextMonth.setDate(0);
-
-        let found = 0;
-        const absNth = Math.abs(nth);
-        while (found < absNth) {
-            if (nextMonth.getDay() === weekday) {
-                found++;
-            }
-            if (found < absNth) {
-                nextMonth.setDate(nextMonth.getDate() - 1);
-            }
-        }
-    }
-
-    return nextMonth;
-}
 
 /**
  * Deterministic transaction ID generator for duplicate prevention.
+ * Returns a valid UUID format derived from the inputs.
  */
 export function getOccurrenceId(recurringId: string, date: Date): string {
     const dateStr = date.toISOString().split('T')[0];
-    return `rec_gen_${recurringId}_${dateStr}`;
+    const seed = `rec_${recurringId}_${dateStr}`;
+
+    // Create a deterministic hash-like string
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+        hash |= 0;
+    }
+
+    // Format as valid UUID (v4-like format but deterministic)
+    const h = Math.abs(hash).toString(16).padStart(8, '0');
+    const rId = recurringId.replace(/-/g, '').substring(0, 12);
+
+    // xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+    // We use the hash for the first 8 chars, and parts of recurringId for the rest
+    return `${h}-4444-4000-8000-${rId.padStart(12, '0')}`;
 }

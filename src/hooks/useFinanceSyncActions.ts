@@ -27,7 +27,7 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
         };
     }, [expenses, incomes, goals, accounts, liabilities, recurringTransactions, settings]);
 
-    const { updateAccount, createRecurringTransaction, deleteExpense,
+    const { createRecurringTransaction, deleteExpense,
         deleteIncome, applyTheme } = actions;
 
     const updateSettings = useCallback(async (updates: Partial<UserSettings>) => {
@@ -46,7 +46,7 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
                     apiKeys: { ...prev.apiKeys, ...response.settings.apiKeys }
                 }));
             } else {
-                throw new Error(response.error);
+                throw new Error("Failed to update settings");
             }
         } catch (error) {
             console.error("Failed to sync settings", error);
@@ -114,15 +114,13 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
     const executeBackfill = useCallback(async () => {
         if (!backfillRequest) return;
         const { count, dates, recurring: newRec } = backfillRequest;
-        const { accounts: currentAccounts, goals: currentGoals, liabilities: currentLiabilities } = dataRef.current;
+        const { goals: currentGoals, liabilities: currentLiabilities } = dataRef.current;
 
         setBackfillRequest(null);
 
         const toastId = toast.loading(`Generating ${count} entries...`);
         const createdIncomes: any[] = [];
         const createdExpenses: any[] = [];
-        let balanceChange = 0;
-        const targetAccount = currentAccounts.find((a: any) => a.id === newRec.accountId);
 
         const goalChanges: Record<string, number> = {};
         const liabilityChanges: Record<string, number> = {};
@@ -141,7 +139,6 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
                     const res = await api.createExpense(userId, txData);
                     if (res.success) {
                         createdExpenses.push(res.expense);
-                        if (targetAccount) balanceChange += (targetAccount.type === 'credit_card' ? res.expense.amount : -res.expense.amount);
                         if (newRec.goalId) goalChanges[newRec.goalId] = (goalChanges[newRec.goalId] || 0) + res.expense.amount;
                         if (newRec.liabilityId) liabilityChanges[newRec.liabilityId] = (liabilityChanges[newRec.liabilityId] || 0) + res.expense.amount;
                     }
@@ -149,7 +146,6 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
                     const res = await api.createIncome(userId, txData);
                     if (res.success) {
                         createdIncomes.push(res.income);
-                        if (targetAccount) balanceChange += (targetAccount.type === 'credit_card' ? -res.income.amount : res.income.amount);
                     }
                 }
                 await new Promise(r => setTimeout(r, 30));
@@ -174,15 +170,12 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
                     setLiabilities((prev: any[]) => prev.map(l => l.id === lid ? { ...l, outstanding: newOutstanding } : l));
                 }
             }
-            if (targetAccount && balanceChange !== 0) {
-                await updateAccount(targetAccount.id, { balance: targetAccount.balance + balanceChange });
-            }
             toast.success("Backfill complete", { id: toastId });
         } catch (error) {
             console.error("Backfill failed", error);
             toast.error("Backfill partial failure", { id: toastId });
         }
-    }, [userId, backfillRequest, setIncomes, setExpenses, setGoals, setLiabilities, updateAccount, setBackfillRequest]);
+    }, [userId, backfillRequest, setIncomes, setExpenses, setGoals, setLiabilities, setBackfillRequest]);
 
     const migrateSubscriptions = useCallback(async (): Promise<{ count: number }> => {
         let updateCount = 0;

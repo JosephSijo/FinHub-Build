@@ -28,18 +28,14 @@ export const useIncomeActions = (state: any, actions: any) => {
                     'transaction',
                     response.income.id,
                     'merchant',
-                    data.description,
+                    data.source || data.description || 'Income',
                     { amount: data.amount, category: data.category }
                 ).catch(e => console.error("Catalog link failed", e));
                 const { accounts: currentAccounts } = dataRef.current;
                 const targetAccount = currentAccounts.find((a: any) => a.id === data.accountId);
+                const { createRecurringTransaction } = actionsRef.current;
                 if (targetAccount) {
-                    const { updateAccount, createRecurringTransaction } = actionsRef.current;
-                    const newBalance = targetAccount.type === 'credit_card'
-                        ? targetAccount.balance - data.amount
-                        : targetAccount.balance + data.amount;
-                    await updateAccount(targetAccount.id, { balance: newBalance });
-
+                    // DB Trigger handles balance
                     if (data.isRecurring) {
                         await createRecurringTransaction({
                             type: 'income', description: data.description, amount: data.amount, category: data.category,
@@ -67,21 +63,14 @@ export const useIncomeActions = (state: any, actions: any) => {
                 const { incomes: currentIncomes, accounts: currentAccounts } = dataRef.current;
                 const oldIncome = currentIncomes.find((i: any) => i.id === id);
                 if (oldIncome) {
-                    const { updateAccount } = actionsRef.current;
                     const oldAccount = currentAccounts.find((a: any) => a.id === oldIncome.accountId);
                     if (oldAccount) {
-                        const oldBalance = oldAccount.type === 'credit_card'
-                            ? oldAccount.balance + oldIncome.amount
-                            : oldAccount.balance - oldIncome.amount;
-                        await updateAccount(oldAccount.id, { balance: oldBalance });
+                        // DB trigger handles balance reversal
                     }
                     const newIncome = response.income;
                     const newAccount = currentAccounts.find((a: any) => a.id === newIncome.accountId);
                     if (newAccount) {
-                        const newBalance = newAccount.type === 'credit_card'
-                            ? newAccount.balance - newIncome.amount
-                            : newAccount.balance + newIncome.amount;
-                        await updateAccount(newAccount.id, { balance: newBalance });
+                        // DB trigger handles balance update
                     }
                 }
                 setIncomes((prev: any[]) => prev.map(i => i.id === id ? response.income : i));
@@ -100,13 +89,9 @@ export const useIncomeActions = (state: any, actions: any) => {
                 const { incomes: currentIncomes, accounts: currentAccounts } = dataRef.current;
                 const income = currentIncomes.find((i: any) => i.id === id);
                 if (income) {
-                    const { updateAccount } = actionsRef.current;
                     const targetAccount = currentAccounts.find((a: any) => a.id === income.accountId);
                     if (targetAccount) {
-                        const newBalance = targetAccount.type === 'credit_card'
-                            ? targetAccount.balance + income.amount
-                            : targetAccount.balance - income.amount;
-                        await updateAccount(targetAccount.id, { balance: newBalance });
+                        // DB trigger handles balance reversal on delete
                     }
                 }
                 setIncomes((prev: any[]) => prev.filter(i => i.id !== id));

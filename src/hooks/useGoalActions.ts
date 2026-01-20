@@ -19,22 +19,23 @@ export const useGoalActions = (state: any, actions: any) => {
 
     const createGoal = useCallback(async (data: any) => {
         try {
-            const response = await api.createGoal(userId, data);
-            if (response.success) {
-                setGoals((prev: Goal[]) => [...prev, response.goal]);
+            const response: any = await api.createGoal(userId, data);
+            const newGoal = response.goal;
+            if (response.success && newGoal) {
+                setGoals((prev: Goal[]) => [...prev, newGoal]);
 
                 if (data.monthly_contribution > 0) {
                     const { createRecurringTransaction } = actionsRef.current;
                     await createRecurringTransaction({
                         type: 'expense',
-                        description: `Goal Contribution: ${response.goal.name}`,
+                        description: `Goal Contribution: ${newGoal.name}`,
                         amount: data.monthly_contribution,
                         category: 'Transfer',
                         accountId: data.accountId || 'none',
                         frequency: 'monthly',
-                        startDate: data.startDate || response.goal.createdAt.split('T')[0],
-                        tags: ['goal', 'contribution', response.goal.name.toLowerCase()],
-                        goalId: response.goal.id
+                        startDate: data.startDate || newGoal.createdAt.split('T')[0],
+                        tags: ['goal', 'contribution', newGoal.name.toLowerCase()],
+                        goalId: newGoal.id
                     });
                 }
 
@@ -49,30 +50,31 @@ export const useGoalActions = (state: any, actions: any) => {
 
     const updateGoal = useCallback(async (id: string, data: any) => {
         try {
-            const response = await api.updateGoal(userId, id, data);
-            if (response.success) {
+            const response: any = await api.updateGoal(userId, id, data);
+            const updatedGoal = response.goal;
+            if (response.success && updatedGoal) {
                 const { goals: currentGoals, recurringTransactions: currentRT } = dataRef.current;
                 const oldGoal = currentGoals.find((g: Goal) => g.id === id);
                 if (oldGoal) {
                     const { createRecurringTransaction, updateRecurringTransaction, deleteRecurringTransaction } = actionsRef.current;
-                    if ((response.goal.monthly_contribution || 0) > 0) {
+                    if ((updatedGoal.monthly_contribution || 0) > 0) {
                         const existingRec = currentRT.find((rt: any) => rt.goalId === id);
                         if (existingRec) {
                             await updateRecurringTransaction(existingRec.id, {
-                                amount: response.goal.monthly_contribution || 0,
-                                description: `Goal Contribution: ${response.goal.name}`
+                                amount: updatedGoal.monthly_contribution || 0,
+                                description: `Goal Contribution: ${updatedGoal.name}`
                             });
                         } else {
                             await createRecurringTransaction({
                                 type: 'expense',
-                                description: `Goal Contribution: ${response.goal.name}`,
-                                amount: response.goal.monthly_contribution || 0,
+                                description: `Goal Contribution: ${updatedGoal.name}`,
+                                amount: updatedGoal.monthly_contribution || 0,
                                 category: 'Transfer',
-                                accountId: response.goal.accountId || 'none',
+                                accountId: updatedGoal.accountId || 'none',
                                 frequency: 'monthly',
-                                startDate: response.goal.startDate || oldGoal.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
-                                tags: ['goal', 'contribution', response.goal.name.toLowerCase()],
-                                goalId: response.goal.id
+                                startDate: updatedGoal.startDate || oldGoal.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+                                tags: ['goal', 'contribution', updatedGoal.name.toLowerCase()],
+                                goalId: updatedGoal.id
                             });
                         }
                     } else if (oldGoal.monthly_contribution && oldGoal.monthly_contribution > 0) {
@@ -81,9 +83,9 @@ export const useGoalActions = (state: any, actions: any) => {
                     }
                 }
 
-                setGoals((prev: Goal[]) => prev.map(g => g.id === id ? response.goal : g));
-                if (response.goal.currentAmount >= response.goal.targetAmount) {
-                    toast.success(`🎉 Goal "${response.goal.name}" completed!`);
+                setGoals((prev: Goal[]) => prev.map(g => g.id === id ? updatedGoal : g));
+                if (updatedGoal.currentAmount >= updatedGoal.targetAmount) {
+                    toast.success(`🎉 Goal "${updatedGoal.name}" completed!`);
                     confetti({ particleCount: 200, spread: 120, origin: { y: 0.5 } });
                 } else {
                     toast.success("Goal updated");

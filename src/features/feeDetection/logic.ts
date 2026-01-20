@@ -37,7 +37,6 @@ function matchesRule(transaction: TransactionInput, rule: FeeRule): boolean {
  */
 function formatFeeMessage(
     transaction: TransactionInput,
-    rule: FeeRule,
     estimatedFee: number,
     currency: string = '₹'
 ): string {
@@ -77,7 +76,7 @@ export function detectFees(
 
     return {
         severity: topRule.severity,
-        message: formatFeeMessage(transaction, topRule, estimatedFee, currency),
+        message: formatFeeMessage(transaction, estimatedFee, currency),
         estimated_fee: estimatedFee,
         rule_name: topRule.name
     };

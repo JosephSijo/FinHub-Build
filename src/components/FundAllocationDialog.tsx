@@ -110,7 +110,7 @@ export function FundAllocationDialog({
         });
       }
     } else {
-      toast.error('No surplus liquidity available for auto-fill');
+      toast.error('No surplus cash available for auto-fill');
     }
   };
 
@@ -169,10 +169,10 @@ export function FundAllocationDialog({
         <div className="max-h-[85vh] overflow-y-auto p-8 custom-scrollbar">
           <DialogHeader className="mb-6">
             <DialogTitle className="text-xl font-black tracking-tight text-white mb-1">
-              {destinationType === 'goal' ? '🎯 ALLOCATE TO GOAL' : '🛡️ ALLOCATE TO RESERVE'}
+              {destinationType === 'goal' ? '🎯 ALLOCATE TO GOAL' : '🛡️ ADD TO EMERGENCY FUND'}
             </DialogTitle>
             <DialogDescription className="text-slate-500 text-[10px] uppercase font-black tracking-widest">
-              Move funds from account to {destinationType === 'goal' ? 'savings milestone' : 'emergency reserve'}
+              Move money from account to {destinationType === 'goal' ? 'savings goal' : 'emergency fund'}
             </DialogDescription>
           </DialogHeader>
 
@@ -189,7 +189,7 @@ export function FundAllocationDialog({
                           <Sparkles className="w-5 h-5 text-emerald-400" />
                         </div>
                         <div>
-                          <p className="text-[9px] text-emerald-500/70 font-black uppercase tracking-widest">Surplus Detected</p>
+                          <p className="text-[9px] text-emerald-500/70 font-black uppercase tracking-widest">Extra Cash Detected</p>
                           <h4 className="text-xl font-black text-white tabular-nums">
                             {formatCurrency(availableToSpend, currency)}
                           </h4>
@@ -207,11 +207,11 @@ export function FundAllocationDialog({
                     {showCalculation && (
                       <div className="py-3 border-t border-emerald-500/10 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                         <div className="flex justify-between text-[10px] text-emerald-500/60 font-medium">
-                          <span>Total Liquidity</span>
+                          <span>Total Cash</span>
                           <span>{formatCurrency(totalBankBalance, currency)}</span>
                         </div>
                         <div className="flex justify-between text-[10px] text-rose-500/60 font-medium">
-                          <span>Shadow Wallet (Goals + EF)</span>
+                          <span>Reserved Funds (Goals + EF)</span>
                           <span>-{formatCurrency(shadowWalletTotal, currency)}</span>
                         </div>
                         <div className="flex justify-between text-[10px] text-rose-500/60 font-medium pb-2 border-b border-emerald-500/10">
@@ -219,7 +219,7 @@ export function FundAllocationDialog({
                           <span>-{formatCurrency(totalCommitments, currency)}</span>
                         </div>
                         <div className="flex justify-between text-[10px] text-emerald-400 font-bold uppercase pt-1">
-                          <span>Available Safety Margin</span>
+                          <span>Extra Cash</span>
                           <span>{formatCurrency(availableToSpend, currency)}</span>
                         </div>
                       </div>
@@ -229,7 +229,7 @@ export function FundAllocationDialog({
                       onClick={() => {
                         handleAutoFill();
                         if (selectedAccount && availableToSpend > selectedAccount.balance) {
-                          toast.warning('Surplus exceeds selected account balance. Source adjusted.');
+                          toast.warning('Transfer exceeds selected account balance. Source adjusted.');
                         }
                       }}
                       className="w-full h-11 bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-black tracking-widest"
@@ -241,10 +241,10 @@ export function FundAllocationDialog({
               )}
               {/* Source Account Selection */}
               <div className="space-y-2 text-label">
-                <Label htmlFor="allocate-from-account" className="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2 block">Source Node</Label>
+                <Label htmlFor="allocate-from-account" className="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2 block">From Account</Label>
                 <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
                   <SelectTrigger id="allocate-from-account" name="fromAccountId" className="bg-black border-white/5 sq-md h-14 text-white focus:ring-1 focus:ring-blue-500/50">
-                    <SelectValue placeholder="Select Capital Source" />
+                    <SelectValue placeholder="Select Account" />
                   </SelectTrigger>
                   <SelectContent className="bg-black border-white/10 text-white sq-xl">
                     {accounts.map(account => (
@@ -261,7 +261,7 @@ export function FundAllocationDialog({
                 </Select>
                 {selectedAccount && (
                   <p className="text-[10px] text-slate-500 mt-2 italic px-1">
-                    Available Liquidity: {formatCurrency(selectedAccount.balance, currency)}
+                    Available Cash: {formatCurrency(selectedAccount.balance, currency)}
                   </p>
                 )}
               </div>
@@ -269,7 +269,7 @@ export function FundAllocationDialog({
               {/* Destination Selection */}
               {destinationType === 'goal' ? (
                 <div className="space-y-2 text-label">
-                  <Label htmlFor="allocate-to-goal" className="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2 block">Target Milestone</Label>
+                  <Label htmlFor="allocate-to-goal" className="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2 block">Target Goal</Label>
                   <Select value={selectedDestinationId} onValueChange={setSelectedDestinationId}>
                     <SelectTrigger id="allocate-to-goal" name="toGoalId" className="bg-black border-white/5 sq-md h-14 text-white focus:ring-1 focus:ring-emerald-500/50">
                       <SelectValue placeholder="Choose Destination Goal" />
@@ -284,7 +284,7 @@ export function FundAllocationDialog({
                               <div className="min-w-0">
                                 <div className="font-bold text-xs uppercase tracking-tight">{goal.name}</div>
                                 <div className="text-[9px] text-slate-500 font-mono">
-                                  {Math.round(progress)}% SYNCHRONIZED • {formatCurrency(goal.currentAmount, currency)}
+                                  {Math.round(progress)}% SAVED • {formatCurrency(goal.currentAmount, currency)}
                                 </div>
                               </div>
                             </div>
@@ -296,7 +296,7 @@ export function FundAllocationDialog({
                 </div>
               ) : (
                 <div className="space-y-2 text-label">
-                  <Label className="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2 block">Stability Reserve</Label>
+                  <Label className="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2 block">Emergency Fund</Label>
                   <div className="p-4 bg-white/5 border border-white/10 sq-md">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-blue-500/10 sq-md flex items-center justify-center border border-blue-500/20">
@@ -318,7 +318,7 @@ export function FundAllocationDialog({
               {/* Amount Input */}
               <div className="space-y-2 text-label">
                 <div className="flex justify-between items-center mb-1">
-                  <Label htmlFor="allocate-amount" className="text-[10px] uppercase tracking-widest font-black text-slate-500 block">Contribution Volume</Label>
+                  <Label htmlFor="allocate-amount" className="text-[10px] uppercase tracking-widest font-black text-slate-500 block">Amount To Transfer</Label>
                 </div>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
@@ -376,21 +376,21 @@ export function FundAllocationDialog({
                   <div className="absolute top-0 right-0 p-2 opacity-5">
                     <Wallet className="w-8 h-8" />
                   </div>
-                  <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3 opacity-60">Debit Source</p>
+                  <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3 opacity-60">From Account</p>
                   <p className="font-black text-sm text-white tracking-tight">{selectedAccount?.name}</p>
 
                   <div className="mt-4 space-y-2.5">
                     <div className="flex justify-between text-[11px] font-medium">
-                      <span className="text-slate-400 uppercase tracking-tighter">Current Liquidity</span>
+                      <span className="text-slate-400 uppercase tracking-tighter">Current Balance</span>
                       <span className="font-mono text-white">{formatCurrency(selectedAccount?.balance || 0, currency)}</span>
                     </div>
                     <div className="flex justify-between text-[11px] font-bold text-rose-500">
-                      <span className="uppercase tracking-tighter">Debit Volume</span>
+                      <span className="uppercase tracking-tighter">Debit Amount</span>
                       <span className="font-mono">-{formatCurrency(amountNum, currency)}</span>
                     </div>
                     <div className="h-px bg-white/5"></div>
                     <div className="flex justify-between text-xs font-black">
-                      <span className="text-slate-500 uppercase tracking-widest">Post-Debit Projection</span>
+                      <span className="text-slate-500 uppercase tracking-widest">New Balance</span>
                       <span className="text-blue-400 font-mono">
                         {formatCurrency((selectedAccount?.balance || 0) - amountNum, currency)}
                       </span>
@@ -413,7 +413,7 @@ export function FundAllocationDialog({
                   <div className="absolute top-0 right-0 p-2 opacity-10">
                     {destinationType === 'goal' ? <Sparkles className="w-8 h-8 text-emerald-500" /> : <Target className="w-8 h-8 text-blue-500" />}
                   </div>
-                  <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3 opacity-60">Credit Destination</p>
+                  <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3 opacity-60">To Account</p>
                   <div className="flex items-center gap-2 mb-4">
                     <span className="text-xl">{destinationType === 'goal' ? selectedGoal?.emoji : '🛡️'}</span>
                     <p className="font-black text-sm text-white tracking-tight">
@@ -430,12 +430,12 @@ export function FundAllocationDialog({
                       </span>
                     </div>
                     <div className="flex justify-between text-[11px] font-bold text-emerald-400">
-                      <span className="uppercase tracking-tighter">Credit Volume</span>
+                      <span className="uppercase tracking-tighter">Credit Amount</span>
                       <span className="font-mono">+{formatCurrency(amountNum, currency)}</span>
                     </div>
                     <div className="h-px bg-white/5"></div>
                     <div className="flex justify-between text-xs font-black">
-                      <span className="text-slate-500 uppercase tracking-widest">Post-Credit Value</span>
+                      <span className="text-slate-500 uppercase tracking-widest">New Goal Balance</span>
                       <span className="text-emerald-400 font-mono">
                         {formatCurrency(((destinationType === 'goal'
                           ? selectedGoal?.currentAmount
@@ -452,10 +452,10 @@ export function FundAllocationDialog({
                   <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                   <div className="text-[10px]">
                     <p className="font-black text-amber-400 uppercase tracking-widest mb-1">
-                      Node Equilibrium Warning
+                      Balance Warning
                     </p>
                     <p className="text-amber-500/70 font-bold leading-relaxed">
-                      Net Liquidity and {selectedAccount?.name} reserves will be reduced by {formatCurrency(amountNum, currency)} immediately. This action is final.
+                      Net Cash and {selectedAccount?.name} reserves will be reduced by {formatCurrency(amountNum, currency)} immediately. This action is final.
                     </p>
                   </div>
                 </div>
@@ -473,7 +473,7 @@ export function FundAllocationDialog({
                   onClick={handleConfirm}
                   className="flex-1 h-12 bg-emerald-600/20 text-emerald-400 border-emerald-500/30 font-black tracking-[0.2em] shadow-lg shadow-emerald-500/10"
                 >
-                  Execute Move
+                  Confirm Move
                 </CyberButton>
               </div>
             </div>

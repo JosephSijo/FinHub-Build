@@ -49,6 +49,7 @@ export interface DashboardProps {
   isOffline?: boolean;
   isSampleMode?: boolean;
   onNavigate?: (view: any) => void;
+  onOpenSetupWizard?: () => void;
   onAddTransaction?: (type: any) => void;
 }
 
@@ -111,6 +112,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
   isOffline = false,
   isSampleMode = false,
   onNavigate,
+  onOpenSetupWizard,
   onAddTransaction
 }) => {
 
@@ -359,8 +361,8 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
       color: 'text-rose-400',
       bg: 'bg-rose-500/10',
       border: 'border-rose-500/20',
-      advice: 'High-velocity detected. Spending is outpacing liquid nodes. Priority: Solidify safety buffer.',
-      suggestion: 'Consolidate spending and pause growth node transfers for 30 days.'
+      advice: 'High-velocity detected. Spending is outpacing available cash. Priority: Build your safety buffer.',
+      suggestion: 'Consolidate spending and pause savings transfers for 30 days.'
     };
     if (velocity < 0.3) return {
       status: 'Stagnant',
@@ -483,7 +485,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
                 <Wallet className="text-blue-400 w-7 h-7" />
               </motion.div>
               <div className="space-y-1">
-                <h3 className="text-label text-[11px] font-black tracking-[0.2em] text-blue-400/80 uppercase">Balance Board</h3>
+                <h3 className="text-label text-[11px] font-black tracking-[0.2em] text-blue-400/80 uppercase">Account Balance</h3>
                 <div className="flex items-center gap-2 justify-center">
                   <div className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border transition-colors ${foundationMetrics.isRestricted ? 'bg-orange-500/10 text-orange-300 border-orange-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}`}>
                     {foundationMetrics.isRestricted ? 'Restricted Limit' : 'Growth-Ready'}
@@ -500,7 +502,19 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
               <InteractiveFinancialValue value={m1Assets} currency={currency} />
             </motion.div>
 
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em] mt-4">Institutional Nodes Reconciled</p>
+            {displayAccounts.length === 0 ? (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={onOpenSetupWizard}
+                className="mt-6 px-8 py-3 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-xl shadow-blue-900/40 flex items-center gap-2 group transition-all hover:bg-blue-500"
+              >
+                Connect Your First Account
+                <ArrowRightLeft className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </motion.button>
+            ) : (
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em] mt-4">All Accounts Connected</p>
+            )}
           </div>
         </div>
 
@@ -519,7 +533,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
                       <div className="space-y-2 text-[10px] font-bold uppercase tracking-widest min-w-[200px]">
                         <p className="text-slate-500 mb-2 border-b border-white/5 pb-2">Daily Spending Limit Breakdown</p>
                         <div className="flex justify-between gap-4">
-                          <span className="text-slate-400">Total Liquidity</span>
+                          <span className="text-slate-400">Available Cash</span>
                           <span className="text-white">{formatCurrency(m1Assets, currency)}</span>
                         </div>
                         <div className="flex justify-between gap-4">
@@ -589,8 +603,8 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
 
 
           <CollapsibleSection
-            title="Liquidity Nodes"
-            subtitle="Institutional Reservoirs"
+            title="Accounts"
+            subtitle="Bank Accounts"
             icon={<Building2 className="w-4 h-4" />}
             value={formatCurrency(m1Assets, currency)}
             isOpen={activeCard === 'liquidity-group'}
@@ -604,7 +618,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
                     {acc.type === 'bank' ? <Building2 className="w-4 h-4 text-blue-400 flex-shrink-0" /> : <Wallet className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
                     <div className="min-w-0">
                       <p className="text-[11px] font-black text-slate-200 uppercase truncate leading-tight">{acc.name}</p>
-                      <p className="text-[9px] text-slate-600 uppercase font-bold tracking-widest truncate leading-tight">{acc.type === 'bank' ? 'Institutional Reservoir' : 'Physical Cash Node'}</p>
+                      <p className="text-[9px] text-slate-600 uppercase font-bold tracking-widest truncate leading-tight">{acc.type === 'bank' ? 'Bank Account' : 'Cash'}</p>
                     </div>
                   </div>
                   <span className="text-sm font-bold text-white tabular-nums flex-shrink-0 ml-2">{formatCurrency(acc.balance, currency)}</span>
@@ -638,7 +652,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
                         <Building2 className="w-4 h-4 text-slate-500" />
                         <div className="min-w-0">
                           <p className="text-[10px] font-black text-slate-200 uppercase truncate">{l.name}</p>
-                          <p className="text-[9px] text-slate-600 uppercase font-black tracking-widest">Loan Reservoir</p>
+                          <p className="text-[9px] text-slate-600 uppercase font-black tracking-widest">Loan Account</p>
                         </div>
                       </div>
                       <span className="text-sm font-bold text-rose-400 tabular-nums">

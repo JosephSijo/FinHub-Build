@@ -127,14 +127,19 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
     setPhotoURL(settings.photoURL || '');
   }, [settings]);
 
-  // Load exchange rates
-  useEffect(() => {
-    if (isOpen) {
-      loadExchangeRates();
+  // Move these up to fix hoisting lints
+  const convertCurrency = useCallback((value: string, rates?: Record<string, number>) => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && numValue > 0) {
+      const ratesToUse = rates || exchangeRates;
+      const rate = ratesToUse[toCurrency] || 1;
+      setConvertedAmount(numValue * rate);
+    } else {
+      setConvertedAmount(null);
     }
-  }, [isOpen, fromCurrency]);
+  }, [exchangeRates, toCurrency]);
 
-  const loadExchangeRates = async () => {
+  const loadExchangeRates = useCallback(async () => {
     try {
       const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`);
       const data = await response.json();
@@ -145,18 +150,14 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
     } catch (error) {
       console.error('Error loading exchange rates:', error);
     }
-  };
+  }, [fromCurrency, amount, convertCurrency]);
 
-  const convertCurrency = (value: string, rates?: Record<string, number>) => {
-    const numValue = parseFloat(value);
-    if (!isNaN(numValue) && numValue > 0) {
-      const ratesToUse = rates || exchangeRates;
-      const rate = ratesToUse[toCurrency] || 1;
-      setConvertedAmount(numValue * rate);
-    } else {
-      setConvertedAmount(null);
+  // Load exchange rates
+  useEffect(() => {
+    if (isOpen) {
+      loadExchangeRates();
     }
-  };
+  }, [isOpen, fromCurrency, loadExchangeRates]);
 
   const handleAmountChange = (value: string) => {
     setAmount(value);
@@ -171,7 +172,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
       setTheme('dark');
       onUpdateSettings({ theme: 'dark' });
     }
-  }, []);
+  }, [settings.theme, setTheme, onUpdateSettings]);
 
 
   const handleSaveProfile = () => {
@@ -260,7 +261,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
               <div className="w-1.5 h-8 bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)]" />
-              <h2 className="text-3xl font-black text-slate-100 tracking-tight leading-none text-white">System Config</h2>
+              <h2 className="text-3xl font-black text-slate-100 tracking-tight leading-none text-white">App Settings</h2>
             </div>
             <p className="text-slate-500 font-bold ml-4 text-sm">
               Customize your FinHub core experience.
@@ -281,7 +282,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                   onClick={() => setIsEditingProfile(!isEditingProfile)}
                   className="text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 hover:bg-white/5"
                 >
-                  {isEditingProfile ? 'Abort' : 'Refine'}
+                  {isEditingProfile ? 'Cancel' : 'Refine'}
                 </Button>
               </div>
 
@@ -329,14 +330,14 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                         />
                       </div>
                       <Button size="sm" onClick={handleSaveProfile} className="w-full h-12 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl">
-                        Commit Identity
+                        Save Profile
                       </Button>
                     </div>
                   ) : (
                     <>
                       <h4 className="text-2xl font-black text-slate-100 tracking-tight">{name || 'Guest User'}</h4>
                       <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">
-                        FinHub Node // 0x50.3
+                        FinHub Core
                       </p>
                     </>
                   )}
@@ -414,7 +415,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
             <div className="space-y-6">
               <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 flex items-center gap-2">
                 <ArrowRightLeft className="w-3.5 h-3.5" />
-                Foreign Exchange Probe
+                Currency Converter
               </Label>
 
               <div className="space-y-6 p-6 bg-slate-900/40 rounded-[32px] border border-white/5 relative overflow-hidden group">
@@ -468,18 +469,18 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
 
                 {convertedAmount !== null && (
                   <div className="p-6 bg-white/5 rounded-2xl border border-white/5 animate-in fade-in slide-in-from-top-2 relative z-10">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2">Calculated Projection</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2">Estimated Value</p>
                     <div className="flex items-baseline gap-2">
                       <p className="text-2xl font-black text-emerald-400 tabular-nums">
                         {CURRENCY_SYMBOLS[toCurrency]}{convertedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                       <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">
-                        ESTIMATED VALUATION
+                        ESTIMATED VALUE
                       </p>
                     </div>
                     {exchangeRates[toCurrency] && (
                       <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-700">Interest Rate</span>
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-700">Exchange Rate</span>
                         <span className="text-[10px] font-black text-slate-500 tabular-nums">
                           1 {fromCurrency} = {exchangeRates[toCurrency].toFixed(4)} {toCurrency}
                         </span>
@@ -494,7 +495,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
             <div className="space-y-6">
               <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 flex items-center gap-2">
                 <TrendingUp className="w-3.5 h-3.5 text-rose-500" />
-                Inflation Projection Node
+                Inflation Projection
               </Label>
 
               <div className="space-y-6 p-6 bg-slate-900/40 rounded-[32px] border border-white/5 relative overflow-hidden group">
@@ -545,8 +546,8 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
 
                   {infAmount && (
                     <div className="space-y-4">
-                      <div className="h-32 w-full bg-black/20 rounded-2xl p-2 border border-white/5 overflow-hidden">
-                        <ResponsiveContainer width="100%" height="100%" minHeight={128} minWidth={100}>
+                      <div className="h-[300px] w-full bg-black/20 rounded-2xl p-2 border border-white/5 overflow-hidden">
+                        <ResponsiveContainer width="100%" height="100%" minHeight={300}>
                           <AreaChart data={projectionData}>
                             <defs>
                               <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
@@ -700,7 +701,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                     <Button variant="ghost" className="w-full h-8 hover:bg-white/5 text-slate-500 hover:text-slate-300 text-[8px] font-bold uppercase tracking-widest group/trigger flex items-center justify-between px-2 rounded-lg">
                       <div className="flex items-center gap-2">
                         <Settings2 className="w-3 h-3 text-slate-600 group-hover/trigger:text-slate-400" />
-                        Alternative Nodes
+                        Backup Sources
                       </div>
                       <ChevronDown className="w-3 h-3 transition-transform duration-300 group-data-[state=open]/trigger:rotate-180" />
                     </Button>
@@ -761,7 +762,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
           <div className="space-y-4">
             <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 flex items-center gap-2">
               <AlertOctagon className="w-3.5 h-3.5 text-indigo-400" />
-              Data Optimization Node
+              Data Management
             </Label>
             <div className="p-6 bg-slate-900/40 rounded-[32px] border border-white/5 relative overflow-hidden">
               <div className="flex items-center justify-between">
@@ -798,9 +799,9 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                   onClick={async () => {
                     const toastId = toast.loading("Purging duplicates...");
                     try {
-                      const res = await cleanupDuplicates();
+                      await cleanupDuplicates();
                       toast.dismiss(toastId);
-                    } catch (e) {
+                    } catch {
                       toast.dismiss(toastId);
                       toast.error("Purge failed");
                     }
@@ -878,7 +879,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
 
           {/* Copyright System Footer */}
           <div className="text-center pt-8 space-y-2 opacity-40 hover:opacity-100 transition-opacity duration-700 pb-10">
-            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-100">Obsidian System Node</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-100">Obsidian System</p>
             <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">
               Architect: Sijo Joseph // BUILD 50.3.0 // QUANTUM CORE
             </p>
@@ -927,7 +928,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                   <AlertDialogDescription className="text-slate-400 font-medium leading-relaxed mt-4">
                     Your account will be <span className="text-white font-bold italic">deactivated immediately</span> and scheduled for permanent deletion in <span className="text-white font-bold">30 days</span>.
                     <br /><br />
-                    Log in anytime before then to cancel this request and restore your data node.
+                    Log in anytime before then to cancel this request and restore your data.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="mt-8 gap-3">

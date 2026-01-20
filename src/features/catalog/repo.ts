@@ -1,14 +1,5 @@
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { supabase } from '@/lib/supabase';
 import { CatalogEntity, CatalogKind } from './types';
-
-const SUPABASE_URL = `https://${projectId}.supabase.co`;
-const SUPABASE_REST = `${SUPABASE_URL}/rest/v1`;
-
-const headers = {
-    'Content-Type': 'application/json',
-    'apikey': publicAnonKey,
-    'Authorization': `Bearer ${publicAnonKey}`
-};
 
 export const catalogRepo = {
     /**
@@ -23,25 +14,23 @@ export const catalogRepo = {
             `country_code.eq.GLOBAL`
         ];
         if (region) orConditions.push(`region_code.eq.${region}`);
-
-        // Also include 'IN' as a safe fallback if specified in requirements
         if (country !== 'IN') orConditions.push(`country_code.eq.IN`);
 
-        const params = new URLSearchParams({
-            kind: `eq.${kind}`,
-            status: `eq.active`,
-            or: `(${orConditions.join(',')})`,
-            order: 'popularity_score.desc',
-            limit: limit.toString()
-        });
-
         try {
-            const response = await fetch(`${SUPABASE_REST}/catalog_entities?${params}`, { headers });
-            if (!response.ok) {
-                console.error('Catalog fetch failed:', await response.text());
+            const { data, error } = await supabase
+                .from('catalog_entities')
+                .select('*')
+                .eq('kind', kind)
+                .eq('status', 'active')
+                .or(orConditions.join(','))
+                .order('popularity_score', { ascending: false })
+                .limit(limit);
+
+            if (error) {
+                console.error('Catalog fetch failed:', error);
                 return [];
             }
-            return await response.json();
+            return data as CatalogEntity[];
         } catch (error) {
             console.error('Catalog fetch error:', error);
             return [];
@@ -62,30 +51,30 @@ export const catalogRepo = {
         region_code?: string;
         is_global?: boolean;
     }): Promise<string | null> {
+        console.log('Upserting to catalog:', data);
         try {
-            const response = await fetch(`${SUPABASE_REST}/rpc/upsert_catalog_entity`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    p_country_code: data.country_code,
-                    p_kind: data.kind,
-                    p_name: data.name,
-                    p_icon_key: data.icon_key,
-                    p_logo_url: data.logo_url,
-                    p_default_category_id: data.default_category_id,
-                    p_metadata: data.metadata || {},
-                    p_region_code: data.region_code,
-                    p_is_global: data.is_global
-                })
-            });
+            const params = {
+                p_country_code: data.country_code || 'IN',
+                p_kind: data.kind,
+                p_name: data.name,
+                p_icon_key: data.icon_key || null,
+                p_logo_url: data.logo_url || null,
+                p_default_category_id: data.default_category_id || null,
+                p_metadata: data.metadata || {},
+                p_region_code: data.region_code || null,
+                p_is_global: !!data.is_global
+            };
+            console.log('RPC Params:', params);
 
-            if (!response.ok) {
-                console.error('Upsert catalog failed:', await response.text());
+            const { data: result, error } = await supabase.rpc('upsert_catalog_entity', params);
+
+            if (error) {
+                console.error('Upsert catalog failed:', error);
                 return null;
             }
 
-            const result = await response.json();
-            return typeof result === 'string' ? result : result?.id || null;
+            // The RPC returns a UUID (string)
+            return typeof result === 'string' ? result : (result as any)?.id || null;
         } catch (error) {
             console.error('Upsert catalog error:', error);
             return null;
@@ -103,12 +92,17 @@ export const catalogRepo = {
         confidence?: number;
     }): Promise<boolean> {
         try {
-            const response = await fetch(`${SUPABASE_REST}/user_catalog_links`, {
-                method: 'POST',
-                headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
-                body: JSON.stringify(data)
-            });
-            return response.ok;
+            const { error } = await supabase
+                .from('user_catalog_links')
+                .upsert(data, {
+                    onConflict: 'user_id,catalog_id,entity_type,entity_id'
+                });
+
+            if (error) {
+                console.error('Link user entity failed:', error);
+                return false;
+            }
+            return true;
         } catch (error) {
             console.error('Link user entity error:', error);
             return false;

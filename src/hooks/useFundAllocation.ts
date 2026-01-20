@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
+import { api } from '../utils/api';
 
 export const useFundAllocation = (state: any, actions: any) => {
     const { accounts, goals, setEmergencyFundAmount } = state;
@@ -26,14 +27,17 @@ export const useFundAllocation = (state: any, actions: any) => {
         setIsFundAllocationOpen(false);
     }, []);
 
-    const deductFromAccount = useCallback(async (accountId: string, amount: number) => {
-        const { updateAccount } = actionsRef.current;
-        const { accounts: currentAccounts } = dataRef.current;
-        const account = currentAccounts.find((a: any) => a.id === accountId);
-        if (account) {
-            await updateAccount(accountId, { balance: account.balance - amount });
-        }
-    }, []);
+    const deductFromAccount = useCallback(async (accountId: string, amount: number, description: string) => {
+        // Create an expense to record the outflow for allocation
+        await api.createExpense(state.userId, {
+            accountId,
+            amount,
+            description,
+            date: new Date().toISOString(),
+            category: 'Allocations',
+            tags: ['allocation']
+        });
+    }, [state.userId]);
 
     const performFundAllocation = useCallback(async (data: {
         accountId: string;
@@ -43,7 +47,7 @@ export const useFundAllocation = (state: any, actions: any) => {
     }) => {
         try {
             const { updateGoal } = actionsRef.current;
-            await deductFromAccount(data.accountId, data.amount);
+            await deductFromAccount(data.accountId, data.amount, `Allocation to ${data.destinationType === 'goal' ? 'Goal' : 'Emergency Fund'}`);
             if (data.destinationType === 'goal') {
                 const { goals: currentGoals } = dataRef.current;
                 const goal = currentGoals.find((g: any) => g.id === data.destinationId);
@@ -63,20 +67,23 @@ export const useFundAllocation = (state: any, actions: any) => {
 
     const transferFunds = useCallback(async (sourceId: string, destinationId: string, amount: number) => {
         try {
-            const { updateAccount } = actionsRef.current;
-            const { accounts: currentAccounts } = dataRef.current;
-            const source = currentAccounts.find((a: any) => a.id === sourceId);
-            const destination = currentAccounts.find((a: any) => a.id === destinationId);
-            if (source && destination) {
-                await updateAccount(sourceId, { balance: source.balance - amount });
-                await updateAccount(destinationId, { balance: destination.balance + amount });
+            const { userId } = state;
+            const response = await api.createTransfer(userId, {
+                sourceId,
+                destinationId,
+                amount,
+                description: 'Inter-account transfer',
+                date: new Date().toISOString()
+            });
+
+            if (response.success) {
                 toast.success("Transfer complete");
             }
         } catch (e) {
             console.error("Transfer failed", e);
             toast.error("Transfer failed");
         }
-    }, []);
+    }, [state]);
 
     return useMemo(() => ({
         isFundAllocationOpen, fundAllocationType, openFundAllocation,

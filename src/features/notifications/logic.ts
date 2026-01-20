@@ -159,8 +159,8 @@ function checkOnboarding(context: NotificationContext): Notification | null {
         return {
             id: 'onboarding-no-accounts',
             type: 'ONBOARDING',
-            priority: 'MEDIUM',
-            message: 'Add an account to start tracking Safe-to-Spend.',
+            priority: 'CRITICAL',
+            message: 'Connect your first bank or cash account to enable Safe-to-Spend tracking and intelligence features.',
             action: {
                 label: 'Add Account',
                 route: '/accounts'

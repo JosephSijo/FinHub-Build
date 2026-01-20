@@ -26,7 +26,8 @@ export function RecurringTransactions() {
     deleteRecurringTransaction,
     processRecurringTransactions,
     createLiability,
-    updateLiability
+    updateLiability,
+    deleteLiability
   } = useFinance();
 
   const [viewMode, setViewMode] = useState<'list' | 'strategist' | 'debt'>('list');
@@ -70,10 +71,11 @@ export function RecurringTransactions() {
             </div>
             <div className="min-w-0">
               <h3 className="text-base font-bold text-slate-100 truncate flex items-center gap-2">
-                {rec.description || rec.source}
+                <span className="opacity-40 text-xs">🔄</span> {rec.description || rec.source}
               </h3>
               <p className="text-[10px] uppercase font-black tracking-widest text-slate-600 mt-1">
                 {getFrequencyLabel(rec.frequency)} {liability && '• Loan'}
+                {rec.endDate ? ` • Until ${new Date(rec.endDate).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}` : ' • Ongoing'}
               </p>
             </div>
           </div>
@@ -442,7 +444,7 @@ export function RecurringTransactions() {
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${viewMode === 'debt' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
           >
             <TrendingDown className="w-3.5 h-3.5" />
-            Debt Node
+            Bills & Debt
           </button>
         </div>
       </div>

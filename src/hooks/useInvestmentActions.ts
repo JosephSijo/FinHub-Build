@@ -23,12 +23,11 @@ export const useInvestmentActions = (state: any, actions: any) => {
                 setInvestments((prev: Investment[]) => [...prev, response.investment]);
 
                 if (sourceAccountId && sourceAccountId !== 'none') {
-                    const { updateAccount } = actionsRef.current;
                     const { accounts: currentAccounts } = dataRef.current;
                     const sourceAccount = currentAccounts.find((a: any) => a.id === sourceAccountId);
                     if (sourceAccount) {
                         const cost = data.buyPrice * data.quantity;
-                        await updateAccount(sourceAccountId, { balance: sourceAccount.balance - cost });
+                        // Manual balance update is now redundant as api.createExpense below triggers the ledger
                         const transferData = {
                             description: `Asset Purchase: ${data.symbol} (${data.quantity} units)`,
                             amount: cost, category: 'Transfer',
@@ -41,13 +40,13 @@ export const useInvestmentActions = (state: any, actions: any) => {
                     }
                 }
 
-                if (response.investment.type === 'sip') {
+                if (response.investment && response.investment.type === 'sip') {
                     const { createRecurringTransaction } = actionsRef.current;
                     await createRecurringTransaction({
                         type: 'expense', description: `SIP: ${response.investment.symbol} (${response.investment.name})`,
                         amount: response.investment.buyPrice * response.investment.quantity,
-                        category: 'Investment', accountId: sourceAccountId || 'none',
-                        frequency: 'monthly', startDate: response.investment.purchaseDate,
+                        category: 'Investment', accountId: (sourceAccountId as any) || 'none',
+                        frequency: 'monthly', startDate: (response.investment as any).purchaseDate || response.investment.startDate,
                         tags: ['sip', 'investment', response.investment.symbol.toLowerCase()],
                         investmentId: response.investment.id
                     });
@@ -67,21 +66,21 @@ export const useInvestmentActions = (state: any, actions: any) => {
             if (response.success) {
                 const { investments: currentI, recurringTransactions: currentRT } = dataRef.current;
                 const oldInv = currentI.find((inv: Investment) => inv.id === id);
-                if (oldInv) {
+                if (oldInv && response.investment) {
                     const { updateRecurringTransaction, createRecurringTransaction, deleteRecurringTransaction } = actionsRef.current;
                     if (response.investment.type === 'sip') {
                         const existingRec = currentRT.find((rt: any) => rt.investmentId === id);
-                        if (existingRec) {
+                        if (existingRec && response.investment) {
                             await updateRecurringTransaction(existingRec.id, {
                                 amount: response.investment.buyPrice * response.investment.quantity,
                                 description: `SIP: ${response.investment.symbol} (${response.investment.name})`
                             });
-                        } else {
+                        } else if (response.investment) {
                             await createRecurringTransaction({
                                 type: 'expense', description: `SIP: ${response.investment.symbol} (${response.investment.name})`,
                                 amount: response.investment.buyPrice * response.investment.quantity,
-                                category: 'Investment', accountId: response.investment.accountId || 'none',
-                                frequency: 'monthly', startDate: response.investment.purchaseDate,
+                                category: 'Investment', accountId: (response.investment as any).accountId || 'none',
+                                frequency: 'monthly', startDate: (response.investment as any).purchaseDate || response.investment.startDate,
                                 tags: ['sip', 'investment', response.investment.symbol.toLowerCase()],
                                 investmentId: response.investment.id
                             });
