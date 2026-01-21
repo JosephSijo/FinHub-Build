@@ -88,8 +88,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     useEffect(() => {
         if (auth.authStatus === 'authenticated') {
             loader.loadInitialData();
+        } else if (auth.authStatus === 'guest') {
+            // Critical Fix: If we are a guest, we are NOT loading data.
+            // This prevents the app from getting stuck on the loading screen.
+            financeData.setIsLoading(false);
         }
-    }, [auth.authStatus, loader]);
+    }, [auth.authStatus, loader, financeData]);
 
     useEffect(() => {
         const interval = setInterval(() => {
