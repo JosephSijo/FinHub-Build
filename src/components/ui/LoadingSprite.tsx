@@ -7,7 +7,7 @@ interface LoadingSpriteProps {
 }
 
 export const LoadingSprite: React.FC<LoadingSpriteProps> = ({
-    message = "Secure Node Handshake",
+    message = "Establishing Secure Connection",
     subMessage = "Re-encrypting local session..."
 }) => {
     return (

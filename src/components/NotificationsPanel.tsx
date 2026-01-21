@@ -109,7 +109,7 @@ export function NotificationsPanel({
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-4">
                 <h2 className="text-3xl font-black text-slate-100 tracking-tighter leading-none flex items-center gap-4">
-                  Pulse
+                  Activity
                   {unreadCount > 0 && (
                     <span className="flex items-center justify-center min-w-[24px] h-6 px-2 text-[10px] font-black bg-indigo-600 text-white sq-full shadow-[0_0_15px_rgba(79,70,229,0.4)]">
                       {unreadCount}
@@ -118,7 +118,7 @@ export function NotificationsPanel({
                 </h2>
               </div>
               <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] leading-none ml-0.5">
-                System Intelligence Stack
+                Activity Feed
               </p>
             </div>
 
@@ -165,7 +165,7 @@ export function NotificationsPanel({
                   <div className="absolute inset-0 bg-indigo-500/5 blur-2xl sq-full group-hover:bg-indigo-500/10 transition-colors" />
                   <Bell className="w-10 h-10 relative z-10" />
                 </div>
-                <h4 className="text-2xl font-black text-slate-100 mb-3 tracking-tight">Signal Silence</h4>
+                <h4 className="text-2xl font-black text-slate-100 mb-3 tracking-tight">All Clear</h4>
                 <p className="text-[10px] text-slate-600 font-black uppercase tracking-[0.3em] max-w-[260px] leading-relaxed">
                   No new notifications. We will alert you when there are updates.
                 </p>
@@ -259,7 +259,7 @@ export function NotificationsPanel({
                                   <div className="mt-4 flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 bg-red-400 sq-full animate-ping" />
                                     <span className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em]">
-                                      Critical Stability Alert
+                                      Action Required
                                     </span>
                                   </div>
                                 )}

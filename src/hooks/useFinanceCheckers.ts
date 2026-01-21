@@ -60,7 +60,7 @@ export const useFinanceCheckers = (state: any, actions: any) => {
                 addNotifications({
                     id: `smart_due_liquidity_${today.toISOString().split('T')[0]}`,
                     type: 'alert', priority: 'high', category: 'reminders',
-                    title: 'Liquidity Warning',
+                    title: 'Cash Warning',
                     message: `You have ₹${totalDueSoon.toLocaleString()} in dues within 10 days, but only ₹${availableLiquidity.toLocaleString()} available.`,
                     timestamp: new Date(), read: false
                 });

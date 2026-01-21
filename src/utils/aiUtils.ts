@@ -120,11 +120,11 @@ export const formatGuruContext = (context: AIContext): string => {
             frequent_tags: topTags
         },
         portfolio_analysis: {
-            aggregation_rule: "Source Independence (Calculated on 'investment' accounts only)",
+            aggregation_rule: "Analysis of investment accounts only",
             growth_formula: "((Sum Current Values / Sum Principals) - 1) * 100",
             total_investments: context.investments.length,
-            linked_nodes: context.investments.filter(i => i.accountId).length,
-            rule_based_metrics: {
+            linked_accounts: context.investments.filter(i => i.accountId).length,
+            investment_metrics: {
                 total_principal: context.investments
                     .filter(inv => {
                         const acc = context.accounts.find(a => a.id === inv.accountId);
@@ -150,11 +150,11 @@ export const formatGuruContext = (context: AIContext): string => {
  */
 export const generateBrainSummary = (context: AIContext, currency: string, currentView?: string): string => {
     // 1. Context: Based on current UI view
-    const viewName = currentView === 'dashboard' ? 'Balance Board' :
-        currentView === 'investments' ? 'Investment' :
-            currentView === 'liability' ? 'Liability' :
-                currentView === 'goals' ? 'Goal' : 'Financial';
-    const contextStr = `Context: "The user is looking at the ${viewName} Stack."`;
+    const viewName = currentView === 'dashboard' ? 'Accounts' :
+        currentView === 'investments' ? 'Investments' :
+            currentView === 'liability' ? 'Bills' :
+                currentView === 'goals' ? 'Goals' : 'Financial';
+    const contextStr = `Context: "The user is looking at the ${viewName} screen."`;
 
     // 2. Insight: Financial Status Analysis
     const totalAssets = context.accounts.reduce((sum, a) => sum + (a.balance || 0), 0);
@@ -176,16 +176,16 @@ export const generateBrainSummary = (context: AIContext, currency: string, curre
 
     const insightStr = `Insight: "Net worth is ${formatValue(netWorth)}, showing a ${growthTrend} growth trend."`;
 
-    // 3. Action: Strategic Recommendation
+    // 3. Action: Smart Suggestion
     let actionStr = "";
     if (context.investments.length > 0 && currentView !== 'investments') {
-        actionStr = `Action: "Suggest a 2x2 Grid update for the 'Investment' category."`;
+        actionStr = `Action: "Suggest an update for the 'Investment' category."`;
     } else if (context.activeDebts > 0) {
-        actionStr = `Action: "Propose a tactical recovery plan for pending liabilities."`;
+        actionStr = `Action: "Propose a recovery plan for unpaid bills."`;
     } else if (context.savingsRate < 0.2) {
-        actionStr = `Action: "Suggest optimizing the spending body to increase savings velocity."`;
+        actionStr = `Action: "Suggest optimizing spending habits to increase savings."`;
     } else {
-        actionStr = `Action: "Maintain current protocol and monitor the Wealth Builder Stack."`;
+        actionStr = `Action: "Keep going and monitor the Wealth Builder."`;
     }
 
     return `${contextStr}\n\n${insightStr}\n\n${actionStr}`;

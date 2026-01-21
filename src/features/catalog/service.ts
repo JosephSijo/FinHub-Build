@@ -1,13 +1,7 @@
 import { catalogRepo } from './repo';
 import { CatalogEntity, CatalogKind } from './types';
 import { sortByFallbackPriority } from './logic';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
-
-const SUPABASE_REST = `https://${projectId}.supabase.co/rest/v1`;
-const headers = {
-    'apikey': publicAnonKey,
-    'Authorization': `Bearer ${publicAnonKey}`
-};
+import { supabase } from '@/lib/supabase';
 
 export const catalogService = {
     /**
@@ -15,10 +9,14 @@ export const catalogService = {
      */
     async getTemplatesForUser(userId: string, kind: CatalogKind): Promise<CatalogEntity[]> {
         try {
-            // 1. Get user profile for location info
-            const profileResponse = await fetch(`${SUPABASE_REST}/user_profile?user_id=eq.${userId}`, { headers });
-            const profileData = await profileResponse.json();
-            const profile = profileData?.[0] || {};
+            // 1. Get user profile for location info using supabase client
+            const { data: profiles, error: profileError } = await supabase
+                .from('user_profile')
+                .select('user_country_code, region_code')
+                .eq('user_id', userId);
+
+            if (profileError) throw profileError;
+            const profile = profiles?.[0] || {};
 
             const userCountry = profile.user_country_code || 'IN';
             const userRegion = profile.region_code || null;
@@ -47,9 +45,14 @@ export const catalogService = {
         metadata: any = {}
     ): Promise<string | null> {
         try {
-            // 1. Get user profile for country context
-            const profileResponse = await fetch(`${SUPABASE_REST}/user_profile?user_id=eq.${userId}`, { headers });
-            const profile = (await profileResponse.json())?.[0] || { user_country_code: 'IN' };
+            // 1. Get user profile for country context using supabase client
+            const { data: profiles, error: profileError } = await supabase
+                .from('user_profile')
+                .select('user_country_code, region_code')
+                .eq('user_id', userId);
+
+            if (profileError) throw profileError;
+            const profile = profiles?.[0] || { user_country_code: 'IN' };
 
             // 2. Upsert to global catalog (increments popularity)
             const catalogId = await catalogRepo.upsertCatalogEntity({

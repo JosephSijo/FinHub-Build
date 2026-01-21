@@ -87,7 +87,7 @@ export function LiabilityTab({ currency, expenses = [], accounts = [], debts = [
       if (editingLiability) {
         await updateLiability(editingLiability.id, liabilityData);
       } else {
-        await createLiability(liabilityData);
+        await createLiability({ ...liabilityData, createdAt: new Date().toISOString() });
       }
       resetForm();
       setIsAddDialogOpen(false);
@@ -368,7 +368,7 @@ export function LiabilityTab({ currency, expenses = [], accounts = [], debts = [
             </div>
             <div className="text-center">
               <h3 className="text-slate-200 font-black text-xs uppercase tracking-[0.2em]">No {activeCategory !== 'all' ? activeCategory : ''} Entries</h3>
-              <p className="text-[9px] text-slate-500 uppercase tracking-widest mt-2 font-bold opacity-60">Initialize strategic debt analysis node</p>
+              <p className="text-[9px] text-slate-500 uppercase tracking-widest mt-2 font-bold opacity-60">Add your first debt account</p>
             </div>
           </div>
         ) : (
@@ -626,7 +626,7 @@ export function LiabilityTab({ currency, expenses = [], accounts = [], debts = [
 
             {accounts.length > 0 && (
               <div>
-                <Label htmlFor="liability-account" className="text-label text-[10px] mb-3 block">Linked Liquidity Node (Optional)</Label>
+                <Label htmlFor="liability-account" className="text-label text-[10px] mb-3 block">Linked Account (Optional)</Label>
                 <Select value={formData.accountId} onValueChange={(value) => setFormData({ ...formData, accountId: value })}>
                   <SelectTrigger id="liability-account" name="accountId" className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white">
                     <SelectValue placeholder="Select account" />

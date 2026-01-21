@@ -43,15 +43,15 @@ export function TransactionOverview({
                             <ListFilter className="w-5 h-5 text-cyan-400" />
                         </div>
                         <div>
-                            <h3 className="text-slate-100 font-bold text-xs uppercase tracking-widest font-mono">System stream</h3>
+                            <h3 className="text-slate-100 font-bold text-xs uppercase tracking-widest font-mono">Financial Flow</h3>
                             <p className="text-[10px] text-slate-500 uppercase tracking-tighter">
-                                Active Cycle Analysis
+                                This Month's Summary
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="hidden sm:block text-right mr-2">
-                            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-extrabold font-mono">Total Liquidity</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-extrabold font-mono">Available Cash</p>
                             <p className="text-sm font-black text-white tabular-nums font-mono">
                                 {formatCurrency(totalLiquidity, currency)}
                             </p>
@@ -90,7 +90,7 @@ export function TransactionOverview({
                                         </p>
                                     </div>
                                     <div className="bg-slate-800/50 border border-white/5 p-3 rounded-2xl">
-                                        <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Total Burn</p>
+                                        <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Total Spending</p>
                                         <p className="text-base sm:text-lg font-bold text-rose-400 truncate">
                                             {formatCurrency(totalMoneyOut, currency)}
                                         </p>

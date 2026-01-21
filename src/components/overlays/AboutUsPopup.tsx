@@ -49,8 +49,8 @@ export const AboutUsPopup: React.FC<AboutUsPopupProps> = ({ isOpen, onClose }) =
                                         <Cpu className="w-8 h-8 text-white" />
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-black text-white tracking-tight uppercase">FinHub Core</h2>
-                                        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.3em]">Quantum Fabric v50.3</p>
+                                        <h2 className="text-2xl font-black text-white tracking-tight uppercase">FinHub</h2>
+                                        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.3em]">Advanced Edition v5.3</p>
                                     </div>
                                 </div>
 
@@ -62,9 +62,9 @@ export const AboutUsPopup: React.FC<AboutUsPopupProps> = ({ isOpen, onClose }) =
                                             Our Vision
                                         </h3>
                                         <p className="text-sm text-slate-300 leading-relaxed font-medium">
-                                            FinHub is designed to be the central nervous system of your personal economy.
-                                            We merge neural-inspired data models with high-precision tracking to navigate
-                                            complex wealth landscapes.
+                                            FinHub is designed to be the central command center for your finances.
+                                            We use intelligent data tracking to help you navigate
+                                            your financial journey.
                                         </p>
                                     </section>
 
@@ -75,12 +75,12 @@ export const AboutUsPopup: React.FC<AboutUsPopupProps> = ({ isOpen, onClose }) =
                                         </h3>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="bg-white/5 p-3 rounded-2xl border border-white/5">
-                                                <span className="block text-[8px] font-black text-indigo-400 uppercase mb-1">Localization</span>
-                                                <span className="text-[10px] text-slate-400 leading-tight">Sovereign identity via node storage.</span>
+                                                <span className="block text-[8px] font-black text-indigo-400 uppercase mb-1">Local First</span>
+                                                <span className="text-[10px] text-slate-400 leading-tight">Your data is stored securely on your device.</span>
                                             </div>
                                             <div className="bg-white/5 p-3 rounded-2xl border border-white/5">
-                                                <span className="block text-[8px] font-black text-indigo-400 uppercase mb-1">Clamping Logic</span>
-                                                <span className="text-[10px] text-slate-400 leading-tight">Mathematical stability in all simulations.</span>
+                                                <span className="block text-[8px] font-black text-indigo-400 uppercase mb-1">Smart Math</span>
+                                                <span className="text-[10px] text-slate-400 leading-tight">Ensuring your financial plans stay accurate.</span>
                                             </div>
                                         </div>
                                     </section>
@@ -88,7 +88,7 @@ export const AboutUsPopup: React.FC<AboutUsPopupProps> = ({ isOpen, onClose }) =
                                     {/* Footer */}
                                     <div className="pt-6 border-t border-white/5 flex flex-col items-center gap-2">
                                         <p className="text-[8px] font-bold text-slate-600 uppercase tracking-widest">Architect: Sijo Joseph</p>
-                                        <p className="text-[10px] font-black text-slate-800 uppercase tracking-[0.2em]">© 2025 Neural FinHub Fabric</p>
+                                        <p className="text-[10px] font-black text-slate-800 uppercase tracking-[0.2em]">© 2025 FinHub App</p>
                                     </div>
                                 </div>
                             </div>

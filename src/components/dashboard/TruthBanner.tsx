@@ -23,9 +23,9 @@ export const TruthBanner: React.FC<TruthBannerProps> = React.memo(({ message, lo
                     className="text-sm tracking-tight text-slate-300 font-bold italic leading-relaxed"
                 >
                     {loading ? (
-                        <span className="animate-pulse text-indigo-400">Initializing Intelligence Nodes...</span>
+                        <span className="animate-pulse text-indigo-400">Analyzing your financial data...</span>
                     ) : (
-                        message || "Intelligence Node Active. Analyzing Cash Flow Velocity and Expenditure Entropy..."
+                        message || "Insights Active. Analyzing your cash flow and spending habits..."
                     )}
                 </div>
             </div>

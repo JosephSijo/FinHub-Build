@@ -35,11 +35,11 @@ export function TransferForm({
 
     const handlePreview = () => {
         if (!sourceId) {
-            toast.error('Please select source reservoir');
+            toast.error('Please select from account');
             return;
         }
         if (!destinationId) {
-            toast.error('Please select destination reservoir');
+            toast.error('Please select to account');
             return;
         }
         if (sourceId === destinationId) {
@@ -51,7 +51,7 @@ export function TransferForm({
             return;
         }
         if (sourceAccount && amountNum > sourceAccount.balance) {
-            toast.error('Insufficient funds in source reservoir');
+            toast.error('Insufficient funds in source account');
             return;
         }
         setShowPreview(true);
@@ -82,7 +82,7 @@ export function TransferForm({
                             Capital Migration
                         </DialogTitle>
                         <DialogDescription className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em] mt-1">
-                            Transfer between core liquidity reservoirs
+                            Transfer between accounts
                         </DialogDescription>
                     </DialogHeader>
                 </div>
@@ -92,9 +92,9 @@ export function TransferForm({
                         <div className="space-y-6">
                             {/* Source Reservoir */}
                             <div className="space-y-3">
-                                <Label htmlFor="source-reservoir" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Source Reservoir</Label>
+                                <Label htmlFor="source-account" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">From Account</Label>
                                 <Select value={sourceId} onValueChange={setSourceId}>
-                                    <SelectTrigger id="source-reservoir" className="h-14 bg-slate-900 border-white/5 rounded-2xl focus:ring-1 focus:ring-indigo-500/50 text-slate-200 font-bold">
+                                    <SelectTrigger id="source-account" className="h-14 bg-slate-900 border-white/5 rounded-2xl focus:ring-1 focus:ring-indigo-500/50 text-slate-200 font-bold">
                                         <SelectValue placeholder="Select source" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-slate-900 border-white/5 max-h-[40vh]">
@@ -117,9 +117,9 @@ export function TransferForm({
 
                             {/* Destination Reservoir */}
                             <div className="space-y-3">
-                                <Label htmlFor="dest-reservoir" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Destination Reservoir</Label>
+                                <Label htmlFor="dest-account" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">To Account</Label>
                                 <Select value={destinationId} onValueChange={setDestinationId}>
-                                    <SelectTrigger id="dest-reservoir" className="h-14 bg-slate-900 border-white/5 rounded-2xl focus:ring-1 focus:ring-indigo-500/50 text-slate-200 font-bold">
+                                    <SelectTrigger id="dest-account" className="h-14 bg-slate-900 border-white/5 rounded-2xl focus:ring-1 focus:ring-indigo-500/50 text-slate-200 font-bold">
                                         <SelectValue placeholder="Select destination" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-slate-900 border-white/5 max-h-[40vh]">
@@ -160,7 +160,7 @@ export function TransferForm({
                                 {sourceAccount && amountNum > sourceAccount.balance && (
                                     <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-rose-400 ml-1 animate-in slide-in-from-top-1">
                                         <AlertCircle className="w-3 h-3" />
-                                        <span>Insufficient stability in source reservoir</span>
+                                        <span>Insufficient balance in source account</span>
                                     </div>
                                 )}
                             </div>

@@ -15,9 +15,51 @@ export const useFinanceLoad = (state: any, actions: any) => {
         actionsRef.current = actions;
     }, [actions]);
 
+    const migrateLegacyPrefixes = useCallback(() => {
+
+        // Map of legacy keys to new keys
+        const keyMap: Record<string, string> = {
+            'finbase_settings': 'finhub_settings',
+            'finbase_expenses': 'finhub_expenses',
+            'finbase_incomes': 'finhub_incomes',
+            'finbase_debts': 'finhub_debts',
+            'finbase_goals': 'finhub_goals',
+            'finbase_accounts': 'finhub_accounts',
+            'finbase_investments': 'finhub_investments',
+            'finbase_liabilities': 'finhub_liabilities',
+            'finbase_notifications': 'finhub_notifications',
+            'finbase_emergency_fund': 'finhub_emergency_fund',
+            'finbase_recurring': 'finhub_recurring',
+            'finbase_auth': 'finhub_auth',
+            'finbase_remembered_mobile': 'finhub_remembered_mobile',
+            'finbase_deletion_schedule': 'finhub_deletion_schedule'
+        };
+
+        let migratedCount = 0;
+        Object.entries(keyMap).forEach(([oldKey, newKey]) => {
+            const oldData = localStorage.getItem(oldKey);
+            const newData = localStorage.getItem(newKey);
+
+            // Only migrate if old data exists and new data doesn't (or is empty)
+            if (oldData && (!newData || newData === '[]' || newData === '{}')) {
+                localStorage.setItem(newKey, oldData);
+                migratedCount++;
+                console.log(`Migrated ${oldKey} to ${newKey}`);
+            }
+        });
+
+        if (migratedCount > 0) {
+            console.log(`Successfully migrated ${migratedCount} legacy storage keys.`);
+        }
+    }, []);
+
     const loadInitialData = useCallback(async () => {
         const { applyTheme, fetchFromApi, purgeAllData, runCategorizationMigration } = actionsRef.current;
         setIsLoading(true);
+
+        // Migrate legacy prefixes before loading
+        migrateLegacyPrefixes();
+
         try {
             const storedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
             if (storedSettings) {
@@ -87,7 +129,7 @@ export const useFinanceLoad = (state: any, actions: any) => {
         }
 
         setIsLoading(false);
-    }, [userId, setSettings, setExpenses, setIncomes, setDebts, setGoals, setAccounts, setInvestments, setLiabilities, setNotifications, setEmergencyFundAmount, setRecurringTransactions, setRememberedMobile, setPendingMobile, setIsRememberedUser, setDeletionDate, setIsLoading]);
+    }, [userId, setSettings, setExpenses, setIncomes, setDebts, setGoals, setAccounts, setInvestments, setLiabilities, setNotifications, setEmergencyFundAmount, setRecurringTransactions, setRememberedMobile, setPendingMobile, setIsRememberedUser, setDeletionDate, setIsLoading, migrateLegacyPrefixes]);
 
     return useMemo(() => ({ loadInitialData }), [loadInitialData]);
 };

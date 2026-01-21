@@ -9,19 +9,19 @@ const DEMO_USERS = [
     {
         mobile: '9656885833',
         pin: '03ac674216f3e15c1d717fd11ea91000ad7d6596b12c87b7efcb6835a75225d3', // 1234
-        name: 'Joseph FinHub Node // 0x50.3',
+        name: "Joseph's FinHub",
         userId: 'josephsijo-prod-001'
     },
     {
         mobile: '1234567890',
         pin: 'a991b9f69792078652e8964893796d13bd0195e7912d08a9cb528cc29f0f971c', // 4321
-        name: 'Demo FinHub Node // 0x50.3',
+        name: "Demo's FinHub",
         userId: 'demo-prod-001'
     },
     {
         mobile: '9447147230',
         pin: '899b9a314067a23557b5db9b87d3e599e2f3200bd69b6cdc6dcf08f8b8e40e2e', // 2255
-        name: 'tin2mon FinHub Node // 0x50.3',
+        name: "tin2mon's FinHub",
         userId: 'tin2mon-prod-001'
     }
 ];
@@ -98,7 +98,7 @@ export const useAuth = () => {
     }, []);
 
     const login = useCallback(async (pin: string, rememberMe: boolean = false) => {
-        setAuthMessage({ message: "Validating PIN", subMessage: "Verifying secure node access..." });
+        setAuthMessage({ message: "Validating PIN", subMessage: "Verifying secure account access..." });
         setAuthStatus('authenticating');
 
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -131,7 +131,7 @@ export const useAuth = () => {
         if (authenticatedUser) {
             setCurrentUser(authenticatedUser);
             localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(authenticatedUser));
-            setAuthMessage({ message: "Handshake Success", subMessage: "Synchronizing decrypted ledger..." });
+            setAuthMessage({ message: "Login Success", subMessage: "Loading your financial data..." });
             setAuthStatus('authenticated');
             setIsAwaitingPin(false);
 
@@ -192,7 +192,7 @@ export const useAuth = () => {
     }, []);
 
     const signup = useCallback(async (mobile: string, pin: string, name: string, rememberMe: boolean = false) => {
-        setAuthMessage({ message: "Creating Node", subMessage: "Initializing secure identity protocols..." });
+        setAuthMessage({ message: "Creating Account", subMessage: "Setting up your secure profile..." });
         setAuthStatus('authenticating');
         await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -203,7 +203,7 @@ export const useAuth = () => {
         const authUser: AuthUser = { id: newUser.id, mobile: newUser.mobile, name: newUser.name };
         setCurrentUser(authUser);
         localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(authUser));
-        setAuthMessage({ message: "Handshake Success", subMessage: "Synchronizing decrypted ledger..." });
+        setAuthMessage({ message: "Signup Success", subMessage: "Linking your financial data..." });
         setAuthStatus('authenticated');
         setIsAwaitingPin(false);
 

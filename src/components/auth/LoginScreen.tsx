@@ -9,8 +9,10 @@ type AuthPhase = "identity" | "verify" | "otp_verify" | "create_name" | "create_
 
 export const LoginScreen = () => {
     const { checkIdentity, login, signup, sendOtp, verifyOtp, resetPin, isRememberedUser, rememberedMobile, pendingMobile, clearPendingSession } = useFinance();
-    const [phase, setPhase] = useState<AuthPhase>("identity");
-    const [mobile, setMobile] = useState("");
+    const [phase, setPhase] = useState<AuthPhase>(
+        (isRememberedUser && rememberedMobile) || pendingMobile ? "verify" : "identity"
+    );
+    const [mobile, setMobile] = useState((isRememberedUser && rememberedMobile) || pendingMobile || "");
     const [pin, setPin] = useState("");
     const [name, setName] = useState("");
     const [otp, setOtp] = useState("");
@@ -32,7 +34,7 @@ export const LoginScreen = () => {
             setIsBiometricActive(true);
 
             await NativeBiometric.verifyIdentity({
-                reason: "Authenticate to access your private node",
+                reason: "Login to access your secure account",
                 title: "Login to FinHub",
                 subtitle: "Use biometrics to login",
                 description: "Touch the sensor to verify identity",
@@ -54,15 +56,22 @@ export const LoginScreen = () => {
     }, [login]);
 
     useEffect(() => {
-        if (isRememberedUser && rememberedMobile) {
-            setMobile(rememberedMobile);
-            setPhase("verify");
-            triggerBiometrics();
-        } else if (pendingMobile) {
-            setMobile(pendingMobile);
-            setPhase("verify");
+        if (isRememberedUser && rememberedMobile && phase === "verify") {
+            // Use microtask to break the synchronous render cycle and avoid lint error
+            queueMicrotask(() => {
+                triggerBiometrics();
+            });
         }
-    }, [isRememberedUser, rememberedMobile, pendingMobile, triggerBiometrics]);
+    }, [isRememberedUser, rememberedMobile, phase, triggerBiometrics]);
+
+    const triggerError = React.useCallback(() => {
+        setError(true);
+        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+        setTimeout(() => setError(false), 500);
+        setOtp("");
+        setPin("");
+        setConfirmPin("");
+    }, []);
 
 
 
@@ -77,12 +86,6 @@ export const LoginScreen = () => {
         setPin("");
     }, [mobile, checkIdentity]);
 
-    // Auto-proceed logic
-    useEffect(() => {
-        if (phase === "identity" && mobile.length === 10) {
-            handleMobileSubmit();
-        }
-    }, [mobile, phase, handleMobileSubmit]);
 
     const handlePinSubmit = React.useCallback(async () => {
         if (phase === "verify") {
@@ -115,13 +118,8 @@ export const LoginScreen = () => {
                 triggerError();
             }
         }
-    }, [phase, login, pin, rememberMe, signup, mobile, name, resetPin, newPin, confirmPin, isRememberedUser]);
+    }, [phase, login, pin, rememberMe, signup, mobile, name, resetPin, newPin, confirmPin, isRememberedUser, triggerError]);
 
-    useEffect(() => {
-        if (phase === "verify" && pin.length === 4) {
-            handlePinSubmit();
-        }
-    }, [pin, phase, handlePinSubmit]);
 
     useEffect(() => {
         if (inputRef.current) {
@@ -164,14 +162,6 @@ export const LoginScreen = () => {
 
 
 
-    const triggerError = () => {
-        setError(true);
-        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-        setTimeout(() => setError(false), 500);
-        setOtp("");
-        setPin("");
-        setConfirmPin("");
-    };
 
     const isButtonDisabled = () => {
         if (phase === "identity") return mobile.length !== 10;
@@ -241,7 +231,17 @@ export const LoginScreen = () => {
                             </div>
                             <div className="group relative rounded-2xl bg-[#1C1C1E] p-4 ring-1 ring-white/10 transition-all focus-within:ring-sky-500/50">
                                 <label className="text-xs font-medium uppercase tracking-wider text-white/40">Mobile Number</label>
-                                <input ref={inputRef} type="text" inputMode="numeric" maxLength={10} value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))} onKeyDown={handleKeyDown} className="mt-1 w-full bg-transparent text-xl font-medium text-white placeholder-white/20 outline-none" placeholder="999 999 9999" />
+                                <input ref={inputRef} type="text" inputMode="numeric" maxLength={10} value={mobile} onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, "");
+                                    setMobile(val);
+                                    if (val.length === 10) {
+                                        checkIdentity(val).then(exists => {
+                                            if (exists) setPhase("verify");
+                                            else setPhase("create_name");
+                                            setPin("");
+                                        });
+                                    }
+                                }} onKeyDown={handleKeyDown} className="mt-1 w-full bg-transparent text-xl font-medium text-white placeholder-white/20 outline-none" placeholder="999 999 9999" />
                             </div>
                             <div onClick={() => { setRememberMe(!rememberMe); if (navigator.vibrate) navigator.vibrate(5); }} className="flex items-center gap-3 cursor-pointer self-center">
                                 <div className={`h-5 w-5 rounded-md border transition-all flex items-center justify-center ${rememberMe ? 'bg-sky-500 border-sky-500' : 'border-white/20 bg-white/5'}`}>
@@ -256,7 +256,7 @@ export const LoginScreen = () => {
                         <motion.div key="create_name" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="flex flex-col gap-6">
                             <div className="text-center">
                                 <h2 className="text-2xl font-semibold text-white">Who are you?</h2>
-                                <p className="text-white/50 text-sm mt-2">Personalize your node experience</p>
+                                <p className="text-white/50 text-sm mt-2">Set up your profile</p>
                             </div>
                             <div className="group relative rounded-2xl bg-[#1C1C1E] p-4 ring-1 ring-white/10 transition-all focus-within:ring-sky-500/50">
                                 <label className="text-xs font-medium uppercase tracking-wider text-white/40">Full Name</label>
@@ -273,7 +273,7 @@ export const LoginScreen = () => {
                                         <MessageSquare className="h-8 w-8 text-sky-400" />
                                     </div>
                                 </div>
-                                <h2 className="text-2xl font-semibold text-white">Verify Node</h2>
+                                <h2 className="text-2xl font-semibold text-white">Verify Account</h2>
                                 <p className="text-white/40 text-sm mt-2">Enter the 4-digit code sent to<br /><span className="text-white/70">{mobile}</span></p>
                             </div>
                             <div className="group relative flex flex-col items-center justify-center rounded-[32px] bg-white/5 p-10 ring-1 ring-white/10 backdrop-blur-md">
@@ -331,7 +331,25 @@ export const LoginScreen = () => {
                                         <motion.div key={i} animate={{ scale: i < pin.length ? 1.2 : 1, backgroundColor: i < pin.length ? "#fff" : "rgba(255,255,255,0.1)" }} transition={{ duration: 0.1 }} className="h-3.5 w-3.5 rounded-full" />
                                     ))}
                                 </div>
-                                <input ref={inputRef} type="password" inputMode="numeric" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} onKeyDown={handleKeyDown} className="absolute inset-0 opacity-0 cursor-default" aria-label="Access PIN" placeholder="PIN" />
+                                <input ref={inputRef} type="password" inputMode="numeric" maxLength={4} value={pin} onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, "");
+                                    setPin(val);
+                                    if (val.length === 4) {
+                                        // Trigger handlePinSubmit logic but adapted for direct use
+                                        if (phase === "verify") {
+                                            login(val, rememberMe).then(success => {
+                                                if (success) {
+                                                    if (navigator.vibrate) navigator.vibrate([10]);
+                                                    if (!rememberMe && !isRememberedUser) setShowSmartPrompt(true);
+                                                } else triggerError();
+                                            });
+                                        } else if (phase === "create_pin") {
+                                            signup(mobile, val, name, rememberMe).then(success => {
+                                                if (!success) triggerError();
+                                            });
+                                        }
+                                    }
+                                }} onKeyDown={handleKeyDown} className="absolute inset-0 opacity-0 cursor-default" aria-label="Access PIN" placeholder="PIN" />
                             </div>
                             {phase === "verify" && (
                                 <div className="flex flex-col items-center gap-4">
@@ -385,7 +403,7 @@ export const LoginScreen = () => {
                                 </div>
                             </div>
                             <h3 className="text-lg font-medium text-white">Scanning Biometrics</h3>
-                            <p className="mt-2 text-sm text-white/40 italic">Verifying your node identity...</p>
+                            <p className="mt-2 text-sm text-white/40 italic">Verifying your identity...</p>
                             <button onClick={() => setIsBiometricActive(false)} className="mt-12 text-xs font-medium uppercase tracking-widest text-white/20 hover:text-white/40">Cancel & use PIN</button>
                         </motion.div>
                     </motion.div>

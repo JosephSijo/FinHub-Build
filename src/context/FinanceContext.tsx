@@ -104,11 +104,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     useEffect(() => {
         if (auth.authStatus === 'authenticated') {
             const timer = setTimeout(() => {
-                recurringService.backfillAll(userId).catch(console.error);
+                recurringService.backfillAll(userId)
+                    .then(res => {
+                        if (res.transactionsCreated > 0) {
+                            syncActions.refreshData();
+                        }
+                    })
+                    .catch(console.error);
             }, 5000);
             return () => clearTimeout(timer);
         }
-    }, [auth.authStatus, userId]);
+    }, [auth.authStatus, userId, syncActions]);
 
     // Handle session inactivity
     useEffect(() => {
@@ -144,7 +150,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         currency: financeData.settings.currency,
         clearAllData: syncActions.purgeAllData,
         createRecurring: recurringActions.createRecurringTransaction,
-        processRecurringTransactions: async () => { await recurringService.backfillAll(userId); }
+        processRecurringTransactions: async () => {
+            await recurringService.backfillAll(userId);
+            await syncActions.refreshData();
+        },
+        executeBackfill: async () => {
+            await recurringActions.executeBackfill();
+            await syncActions.refreshData();
+        }
     }), [financeData, auth, fullActionsBundle, syncActions, fundAllocation, checkers, loader, userId, recurringActions]);
 
     return (

@@ -45,7 +45,7 @@ import { LoginScreen } from "./components/auth/LoginScreen";
 import { LoadingSprite } from "./components/ui/LoadingSprite";
 import { motion, AnimatePresence } from "framer-motion";
 import { AboutUsPopup } from "./components/overlays/AboutUsPopup";
-import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
+import { SetupWizard } from "./components/SetupWizard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +57,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { calculateBalanceMetrics, mapContextToBalanceBoardData } from "./features/balanceBoard";
+import { BudgetsScreen } from "./features/budgets";
 
 // Lazy Load Heavy Components
 const Dashboard = lazy(() => import("./components/Dashboard").then(module => ({ default: module.Dashboard })));
@@ -65,7 +66,7 @@ const GoalsTracker = lazy(() => import("./components/GoalsTracker").then(module 
 const EmergencyFundsTab = lazy(() => import("./components/EmergencyFundsTab").then(module => ({ default: module.EmergencyFundsTab })));
 const InvestmentsTab = lazy(() => import("./components/InvestmentsTab").then(module => ({ default: module.InvestmentsTab })));
 
-type View = "dashboard" | "transactions" | "goals" | "investments" | "accounts" | "emergency" | "more" | "recurring";
+type View = "dashboard" | "transactions" | "goals" | "investments" | "accounts" | "emergency" | "more" | "recurring" | "budgets";
 type TransactionType = "expense" | "income" | "debt";
 
 export default function App() {
@@ -137,6 +138,7 @@ export default function App() {
 
   // Round-Up State
   const [isRoundUpOpen, setIsRoundUpOpen] = useState(false);
+  const [isSetupWizardOpen, setIsSetupWizardOpen] = useState(false);
   const [roundUpData] = useState<{
     expenseAmount: number;
     roundedAmount: number;
@@ -411,8 +413,14 @@ export default function App() {
     const account = accounts.find(a => a.id === targetAccountId);
 
     if (account) {
-      await updateAccount(account.id, {
-        balance: account.balance - diff
+      // Record the round-up as an expense (OUT) from the account
+      await createExpense({
+        accountId: account.id,
+        amount: diff,
+        description: `Round-up to ${destinationType === 'goal' ? 'Goal' : 'Emergency Fund'}`,
+        date: new Date().toISOString(),
+        category: 'Savings',
+        tags: ['round-up']
       });
     }
 
@@ -505,11 +513,7 @@ export default function App() {
       </AnimatePresence>
 
       <AnimatePresence mode="wait">
-        {authStatus === 'authenticated' && (!settings.onboardingPhase || settings.onboardingPhase < 3) && !settings.isSampleMode && (
-          <OnboardingFlow />
-        )}
-
-        {authStatus === 'authenticated' && ((settings.onboardingPhase ?? 0) >= 3 || settings.isSampleMode) && (
+        {authStatus === 'authenticated' && (
           <motion.div
             key="main-app"
             className="relative z-10"
@@ -558,8 +562,20 @@ export default function App() {
                             userName={settings.name}
                             isOffline={isOffline}
                             isSampleMode={settings.isSampleMode}
-                            onResumeOnboarding={() => updateSettings({ isSampleMode: false })}
+                            recurringTransactions={recurringTransactions}
+                            onNavigate={(view) => setView(view)}
+                            onOpenSetupWizard={() => setIsSetupWizardOpen(true)}
+                            onAddTransaction={(type) => {
+                              setTransactionFormType(type);
+                              setIsTransactionFormOpen(true);
+                            }}
                           />
+                        </div>
+                      )}
+
+                      {view === "budgets" && (
+                        <div className="px-4 py-6">
+                          <BudgetsScreen />
                         </div>
                       )}
 
@@ -647,6 +663,11 @@ export default function App() {
                   </ErrorBoundary>
                 </PullToRefresh>
               </ScrollAwareLayout>
+
+              <SetupWizard
+                isOpen={isSetupWizardOpen}
+                onClose={() => setIsSetupWizardOpen(false)}
+              />
 
               {/* Modals */}
               {isTransactionFormOpen && (

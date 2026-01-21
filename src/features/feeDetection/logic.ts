@@ -5,7 +5,11 @@ import { FeeRule, TransactionInput, FeeAlert } from './types';
  */
 function containsKeyword(text: string | undefined, keywords: string[] | undefined): boolean {
     if (!text || !keywords || keywords.length === 0) return false;
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> Antigravity
     const lowerText = text.toLowerCase();
     return keywords.some(keyword => lowerText.includes(keyword.toLowerCase()));
 }
@@ -42,7 +46,11 @@ function formatFeeMessage(
 ): string {
     const service = transaction.merchant_name || transaction.external_service || 'this service';
     const feeAmount = `${currency}${Math.round(estimatedFee)}`;
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> Antigravity
     return `Possible extra charges for this card transaction via ${service}. Estimated fee ~${feeAmount}. Consider UPI/bank transfer.`;
 }
 

@@ -12,22 +12,22 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
         setDebts, setGoals, setLiabilities, setInvestments,
         setRecurringTransactions, setNotifications, setEmergencyFundAmount,
         setIsOffline, setApiStatus, backfillRequest, setBackfillRequest,
-        expenses, incomes, goals, accounts, liabilities, recurringTransactions,
+        expenses, incomes, goals, accounts, liabilities, recurringTransactions, debts, investments,
         setIsRefreshing // Destructure these directly
     } = state;
 
     // Use a ref to store the latest data to keep action functions stable
     const dataRef = useRef({
-        expenses, incomes, goals, accounts, liabilities, recurringTransactions, settings
+        expenses, incomes, goals, accounts, liabilities, recurringTransactions, settings, debts, investments
     });
 
     useEffect(() => {
         dataRef.current = {
-            expenses, incomes, goals, accounts, liabilities, recurringTransactions, settings
+            expenses, incomes, goals, accounts, liabilities, recurringTransactions, settings, debts, investments
         };
-    }, [expenses, incomes, goals, accounts, liabilities, recurringTransactions, settings]);
+    }, [expenses, incomes, goals, accounts, liabilities, recurringTransactions, settings, debts, investments]);
 
-    const { updateAccount, createRecurringTransaction, deleteExpense,
+    const { createRecurringTransaction, deleteExpense,
         deleteIncome, applyTheme } = actions;
 
     const updateSettings = useCallback(async (updates: Partial<UserSettings>) => {
@@ -46,13 +46,19 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
                     apiKeys: { ...prev.apiKeys, ...response.settings.apiKeys }
                 }));
             } else {
-                throw new Error(response.error);
+                throw new Error("Failed to update settings");
             }
         } catch (error) {
             console.error("Failed to sync settings", error);
             toast.error("Settings saved locally only");
         }
     }, [userId, setSettings, applyTheme]);
+
+    const mergeOfflineData = useCallback((serverData: any[], localData: any[]) => {
+        const offlineItems = localData.filter(item => item.id?.toString().startsWith('temp_'));
+        // Return server data with offline items prepended
+        return [...offlineItems, ...serverData];
+    }, []);
 
     const fetchFromApi = useCallback(async () => {
         try {
@@ -85,14 +91,18 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
                 }));
                 applyTheme(settingsRes.settings.theme);
             }
-            if (accountsRes.success) setAccounts(accountsRes.accounts || []);
-            if (expensesRes.success) setExpenses(expensesRes.expenses || []);
-            if (incomesRes.success) setIncomes(incomesRes.incomes || []);
-            if (debtsRes.success) setDebts(debtsRes.debts || []);
-            if (goalsRes.success) setGoals(goalsRes.goals || []);
-            if (liabilitiesRes.success) setLiabilities(liabilitiesRes.liabilities || []);
-            if (investmentsRes.success) setInvestments(investmentsRes.investments || []);
-            if (recurringRes.success) setRecurringTransactions(recurringRes.recurring || []);
+
+            // Get current local data from dataRef to avoid stale closures
+            const local = dataRef.current;
+
+            if (accountsRes.success) setAccounts(mergeOfflineData(accountsRes.accounts || [], local.accounts));
+            if (expensesRes.success) setExpenses(mergeOfflineData(expensesRes.expenses || [], local.expenses));
+            if (incomesRes.success) setIncomes(mergeOfflineData(incomesRes.incomes || [], local.incomes));
+            if (debtsRes.success) setDebts(mergeOfflineData(debtsRes.debts || [], local.debts));
+            if (goalsRes.success) setGoals(mergeOfflineData(goalsRes.goals || [], local.goals));
+            if (liabilitiesRes.success) setLiabilities(mergeOfflineData(liabilitiesRes.liabilities || [], local.liabilities));
+            if (investmentsRes.success) setInvestments(mergeOfflineData(investmentsRes.investments || [], local.investments));
+            if (recurringRes.success) setRecurringTransactions(mergeOfflineData(recurringRes.recurring || [], local.recurringTransactions));
 
             // 2. Generate Smart Suggestions
             suggestionsService.generateForUser(userId).catch(e => console.error("Suggestions update failed", e));
@@ -103,7 +113,7 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
             setIsOffline(true);
             setApiStatus('offline');
         }
-    }, [userId, setSettings, setAccounts, setExpenses, setIncomes, setDebts, setGoals, setLiabilities, setInvestments, setRecurringTransactions, setIsOffline, setApiStatus, applyTheme]);
+    }, [userId, setSettings, setAccounts, setExpenses, setIncomes, setDebts, setGoals, setLiabilities, setInvestments, setRecurringTransactions, setIsOffline, setApiStatus, applyTheme, mergeOfflineData]);
 
     const refreshData = useCallback(async () => {
         setIsRefreshing(true);
@@ -114,15 +124,13 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
     const executeBackfill = useCallback(async () => {
         if (!backfillRequest) return;
         const { count, dates, recurring: newRec } = backfillRequest;
-        const { accounts: currentAccounts, goals: currentGoals, liabilities: currentLiabilities } = dataRef.current;
+        const { goals: currentGoals, liabilities: currentLiabilities } = dataRef.current;
 
         setBackfillRequest(null);
 
         const toastId = toast.loading(`Generating ${count} entries...`);
         const createdIncomes: any[] = [];
         const createdExpenses: any[] = [];
-        let balanceChange = 0;
-        const targetAccount = currentAccounts.find((a: any) => a.id === newRec.accountId);
 
         const goalChanges: Record<string, number> = {};
         const liabilityChanges: Record<string, number> = {};
@@ -141,7 +149,6 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
                     const res = await api.createExpense(userId, txData);
                     if (res.success) {
                         createdExpenses.push(res.expense);
-                        if (targetAccount) balanceChange += (targetAccount.type === 'credit_card' ? res.expense.amount : -res.expense.amount);
                         if (newRec.goalId) goalChanges[newRec.goalId] = (goalChanges[newRec.goalId] || 0) + res.expense.amount;
                         if (newRec.liabilityId) liabilityChanges[newRec.liabilityId] = (liabilityChanges[newRec.liabilityId] || 0) + res.expense.amount;
                     }
@@ -149,7 +156,6 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
                     const res = await api.createIncome(userId, txData);
                     if (res.success) {
                         createdIncomes.push(res.income);
-                        if (targetAccount) balanceChange += (targetAccount.type === 'credit_card' ? -res.income.amount : res.income.amount);
                     }
                 }
                 await new Promise(r => setTimeout(r, 30));
@@ -174,15 +180,12 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
                     setLiabilities((prev: any[]) => prev.map(l => l.id === lid ? { ...l, outstanding: newOutstanding } : l));
                 }
             }
-            if (targetAccount && balanceChange !== 0) {
-                await updateAccount(targetAccount.id, { balance: targetAccount.balance + balanceChange });
-            }
             toast.success("Backfill complete", { id: toastId });
         } catch (error) {
             console.error("Backfill failed", error);
             toast.error("Backfill partial failure", { id: toastId });
         }
-    }, [userId, backfillRequest, setIncomes, setExpenses, setGoals, setLiabilities, updateAccount, setBackfillRequest]);
+    }, [userId, backfillRequest, setIncomes, setExpenses, setGoals, setLiabilities, setBackfillRequest]);
 
     const migrateSubscriptions = useCallback(async (): Promise<{ count: number }> => {
         let updateCount = 0;

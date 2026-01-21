@@ -3,6 +3,7 @@ import { RecurringTransaction } from '../../types';
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
 
 export interface RecurringRule extends RecurringTransaction {
+    name?: string;         // Support for explicit name field
     interval?: number;     // e.g., 1 (default), 2 (every 2 weeks)
     dayOfMonth?: number;   // 1-31 (clamped)
     weekday?: number;      // 0-6 (Sunday-Saturday)

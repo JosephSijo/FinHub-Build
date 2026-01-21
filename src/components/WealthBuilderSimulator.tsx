@@ -289,10 +289,10 @@ export function WealthBuilderSimulator() {
                         {avgDebtRate > expectedReturn && (
                             <div className="pt-3 border-t border-rose-500/20">
                                 <p className="text-[10px] text-rose-400 font-bold uppercase tracking-widest flex items-center justify-center gap-2">
-                                    <AlertTriangle className="w-3" /> Priority Alert: Opportunity Leakage
+                                    <AlertTriangle className="w-3" /> Priority Alert: High Interest Cost
                                 </p>
                                 <p className="text-[9px] text-slate-500 mt-1">
-                                    Your current debt (Avg. ~{avgDebtRate.toFixed(1)}%) is higher than this return. Priority should be clearing liabilities first.
+                                    Your current debt (Avg. ~{avgDebtRate.toFixed(1)}%) is costing you more than you're earning here. Consider paying off debts first.
                                 </p>
                             </div>
                         )}

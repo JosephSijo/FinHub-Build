@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 export type NotificationType = 
+=======
+export type NotificationType =
+>>>>>>> Antigravity
     | 'PAYMENT_RISK'
     | 'BUDGET_OVERRUN'
     | 'IOU_OVERDUE'
@@ -32,7 +36,11 @@ export interface NotificationContext {
     hasIncome: boolean;
     transactionCount: number;
     accountAge: number; // days since first account created
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> Antigravity
     // Financial data
     scheduledPayments: Array<{
         id: string;
@@ -40,13 +48,21 @@ export interface NotificationContext {
         dueDate: string;
         accountBalance: number;
     }>;
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> Antigravity
     budgetGaps: Array<{
         category: string;
         gap: number;
         cutPerDay: number;
     }>;
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> Antigravity
     overdueIOUs: Array<{
         id: string;
         person: string;
@@ -54,7 +70,11 @@ export interface NotificationContext {
         daysOverdue: number;
         direction: 'LENT' | 'BORROWED';
     }>;
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> Antigravity
     missedEMIs: Array<{
         id: string;
         person: string;
@@ -62,12 +82,20 @@ export interface NotificationContext {
         sequenceNo: number;
         daysOverdue: number;
     }>;
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> Antigravity
     feeAlerts: Array<{
         estimatedFee: number;
         merchant: string;
     }>;
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> Antigravity
     // Data accuracy
     daysSinceLastExpense: number;
     safeToSpend: number;

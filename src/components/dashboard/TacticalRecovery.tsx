@@ -36,7 +36,7 @@ export const TacticalRecovery: React.FC<TacticalRecoveryProps> = React.memo(({ l
                     <div>
                         <h3 className="text-white text-xs font-black uppercase tracking-[0.4em]">Your Payoff Path</h3>
                         <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest mt-1">
-                            Node: {strategy === 'avalanche' ? 'High Interest (Avalanche)' : 'Smallest Balance (Snowball)'}
+                            Method: {strategy === 'avalanche' ? 'High Interest (Avalanche)' : 'Smallest Balance (Snowball)'}
                         </p>
                     </div>
                 </div>
@@ -47,17 +47,17 @@ export const TacticalRecovery: React.FC<TacticalRecoveryProps> = React.memo(({ l
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div className="space-y-8">
                         <p className="text-sm text-slate-300 leading-relaxed font-light italic">
-                            "Prioritizing your <span className="text-blue-400 font-bold">{targetLoan?.name}</span> {strategy === 'avalanche' ? 'rate' : 'balance'} node first will reclaim approximately <span className="text-emerald-400 font-bold">₹{estimatedSavings.toLocaleString()}</span> in future money supply."
+                            "Prioritizing your <span className="text-blue-400 font-bold">{targetLoan?.name}</span> {strategy === 'avalanche' ? 'rate' : 'balance'} first will save you approximately <span className="text-emerald-400 font-bold">₹{estimatedSavings.toLocaleString()}</span> in future interest."
                         </p>
 
                         {targetLoan && (
                             <div className="p-6 bg-slate-800 rounded-2xl border border-blue-500/20 relative overflow-hidden">
-                                <span className="text-[8px] font-black text-slate-500 uppercase block mb-3 tracking-widest">Target Node</span>
+                                <span className="text-[8px] font-black text-slate-500 uppercase block mb-3 tracking-widest">Active Target</span>
                                 <div className="flex justify-between items-end">
                                     <div>
                                         <span className="text-xl font-bold block text-white">{targetLoan.name}</span>
                                         <span className="text-[10px] text-red-400 font-black uppercase mt-1">
-                                            {targetLoan.interestRate}% APR • {strategy === 'avalanche' ? 'Burn Heavy' : 'Low Friction'}
+                                            {targetLoan.interestRate}% APR • {strategy === 'avalanche' ? 'Save Interest' : 'Easy Win'}
                                         </span>
                                     </div>
                                     <CyberButton variant="blue" className="w-full sm:w-auto h-12">
@@ -78,10 +78,10 @@ export const TacticalRecovery: React.FC<TacticalRecoveryProps> = React.memo(({ l
                             </div>
                             <div>
                                 <span className="text-xs font-bold text-slate-200 block">
-                                    {strategy === 'avalanche' ? 'Switch to Snowball Node' : 'Switch to Avalanche Node'}
+                                    {strategy === 'avalanche' ? 'Switch to Snowball' : 'Switch to Avalanche'}
                                 </span>
                                 <span className="text-[9px] text-slate-600 uppercase font-black tracking-tighter">
-                                    {strategy === 'avalanche' ? 'Prioritize small balances for morale gains' : 'Prioritize high rates to minimize interest burn'}
+                                    {strategy === 'avalanche' ? 'Prioritize small balances for morale gains' : 'Prioritize high rates to minimize interest costs'}
                                 </span>
                             </div>
                         </div>
@@ -90,7 +90,7 @@ export const TacticalRecovery: React.FC<TacticalRecoveryProps> = React.memo(({ l
                                 <FlaskConical className="w-4 h-4 text-slate-600" />
                             </div>
                             <div>
-                                <span className="text-xs font-bold text-slate-200 block">Simulation Sub-Routine</span>
+                                <span className="text-xs font-bold text-slate-200 block">Payoff Simulator</span>
                                 <span className="text-[9px] text-slate-600 uppercase font-black tracking-tighter">Automated Debt Payoff Projections (Coming Soon)</span>
                             </div>
                         </div>

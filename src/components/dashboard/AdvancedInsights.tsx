@@ -170,12 +170,12 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
 
             return {
                 month: MONTH_NAMES[m],
-                Fuel: mIncome,
-                Burn: mBurn
+                Income: mIncome,
+                Spending: mBurn
             };
         });
 
-        const localTrendData = localFlowData.map(f => ({ month: f.month, value: f.Burn }));
+        const localTrendData = localFlowData.map(f => ({ month: f.month, value: f.Spending }));
 
         // 2. Scoring Logic (Centralized Normalization)
 
@@ -206,7 +206,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
         }
 
         // Consistency Scoring
-        const historicalBurn = localFlowData.map(f => f.Burn).filter(b => b > 0);
+        const historicalBurn = localFlowData.map(f => f.Spending).filter(b => b > 0);
         let scoreConsistency = 50;
         if (historicalBurn.length > 1) {
             const avgBurn = historicalBurn.reduce((a, b) => a + b, 0) / historicalBurn.length;
@@ -289,7 +289,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
                             else if (hex === '#A855F7') colorClass = "text-[#BF5AF2]";
                             else if (hex === '#F59E0B') colorClass = "text-[#FF9F0A]";
                             else if (hex === '#10B981') colorClass = "text-[#30D158]";
-                            else if (p.name === 'Burn') colorClass = "text-slate-400";
+                            else if (p.name === 'Spending') colorClass = "text-slate-400";
 
                             return (
                                 <div key={idx} className="flex items-center justify-between gap-4">
@@ -313,7 +313,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
             <div className="flex flex-col items-center gap-4 mb-10">
                 <div className="flex items-center gap-6 w-full">
                     <div className="h-px bg-white/5 flex-1"></div>
-                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.5em]">{COPY.dashboard.planTitle}</span>
+                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.5em]">Your Insights</span>
                     <div className="h-px bg-white/5 flex-1"></div>
                 </div>
 
@@ -375,8 +375,8 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
                                 <div className="h-full bg-emerald-400/50 w-[20%]" />
                             </div>
                             <div className="flex justify-between text-[8px] font-black uppercase tracking-tighter">
-                                <span className="text-blue-400">80% Priority: {analysis.priority === 0 ? 'DEBT' : analysis.priority === 1 ? 'SECURITY' : analysis.priority === 2 ? 'SAVINGS' : 'WEALTH'}</span>
-                                <span className="text-emerald-400">20% Spend: FUN MONEY</span>
+                                <span className="text-blue-400">80% Priority: {analysis.priority === 0 ? 'DEBTS' : analysis.priority === 1 ? 'SECURITY' : analysis.priority === 2 ? 'SAVINGS' : 'WEALTH'}</span>
+                                <span className="text-emerald-400">20% Spend: FLEX MONEY</span>
                             </div>
 
                             {/* Real Freedom Honesty Check */}
@@ -563,7 +563,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
             <div className="flex flex-col items-center gap-6 mb-10">
                 <div className="flex items-center gap-6 w-full">
                     <div className="h-px bg-white/5 flex-1"></div>
-                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.5em]">Intelligence Center</span>
+                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.5em]">Analytics Center</span>
                     <div className="h-px bg-white/5 flex-1"></div>
                 </div>
 
@@ -606,7 +606,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
                                         <Bot className="w-6 h-6 text-slate-400" />
                                     </div>
                                     <div>
-                                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">{COPY.dashboard.protocolInterpretation}</h4>
+                                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">AI Analysis</h4>
                                         <p className="text-xl font-medium text-slate-100 italic leading-relaxed tracking-tight">
                                             "{analysis.summarySentence}"
                                         </p>
@@ -788,8 +788,8 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
                                                 cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                                 content={<CustomTooltip />}
                                             />
-                                            <Bar dataKey="Fuel" fill="#30D158" radius={[4, 4, 0, 0]} barSize={12} name={COPY.dashboard.income} />
-                                            <Bar dataKey="Burn" fill="#2C2C2E" radius={[4, 4, 0, 0]} barSize={12} name={COPY.dashboard.expenses} />
+                                            <Bar dataKey="Income" fill="#30D158" radius={[4, 4, 0, 0]} barSize={12} name={COPY.dashboard.income} />
+                                            <Bar dataKey="Spending" fill="#2C2C2E" radius={[4, 4, 0, 0]} barSize={12} name={COPY.dashboard.expenses} />
                                         </BarChart>
                                     </ResponsiveContainer>
                                 </div>

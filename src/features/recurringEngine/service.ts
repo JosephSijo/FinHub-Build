@@ -6,21 +6,19 @@ export const recurringService = {
     /**
      * Gets a preview of transactions that would be generated for a rule.
      */
-    async getBackfillPreview(rule: RecurringRule): Promise<{ count: number; dates: Date[] }> {
+    async getBackfillPreview(rule: RecurringRule): Promise<{ count: number; occurrences: { date: Date; index: number }[] }> {
         const startDate = new Date(rule.lastGeneratedDate || rule.startDate);
 
-        // If we have a lastGeneratedDate, we start from the next day to avoid overlap
-        if (rule.lastGeneratedDate) {
-            startDate.setDate(startDate.getDate() + 1);
-        }
+        // Always start from the next day to avoid duplication of the manual entry or last generated entry
+        startDate.setDate(startDate.getDate() + 1);
 
         const today = new Date();
         today.setHours(23, 59, 59, 999);
 
-        const occurrenceDates = generateOccurrences(rule, startDate, today);
+        const occurrences = generateOccurrences(rule, startDate, today);
         return {
-            count: occurrenceDates.length,
-            dates: occurrenceDates
+            count: occurrences.length,
+            occurrences
         };
     },
 
@@ -29,17 +27,30 @@ export const recurringService = {
      */
     async backfillRule(userId: string, rule: RecurringRule): Promise<number> {
         const preview = await this.getBackfillPreview(rule);
-        const occurrenceDates = preview.dates;
+        const occurrences = preview.occurrences;
         let createdCount = 0;
 
-        for (const date of occurrenceDates) {
-            const dateStr = date.toISOString().split('T')[0];
+        const formatDateSuffix = (date: Date) => {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const mmm = months[date.getMonth()];
+            const yy = date.getFullYear().toString().slice(-2);
+            return `${mmm}-${yy}`;
+        };
+
+        for (const occ of occurrences) {
+            const dateStr = occ.date.toISOString().split('T')[0];
+            const baseDescription = rule.description || rule.source || rule.name || 'Recurring Transaction';
+
+            // For backfilled entries, we add the month-year suffix
+            // We only add it if it's not the very first day of the rule (which should be the manual entry)
+            // But getBackfillPreview already skips the start date, so all these are "subsequent"
+            const description = `${baseDescription} ${formatDateSuffix(occ.date)}`;
 
             const occurrence: GeneratedOccurrence = {
                 recurringId: rule.id,
                 date: dateStr,
                 amount: rule.amount,
-                description: rule.description || rule.source || 'Recurring Transaction',
+                description,
                 category: rule.category || 'Other',
                 accountId: rule.accountId,
                 type: rule.type,
@@ -55,8 +66,8 @@ export const recurringService = {
             }
         }
 
-        if (occurrenceDates.length > 0) {
-            const lastDate = occurrenceDates[occurrenceDates.length - 1].toISOString().split('T')[0];
+        if (occurrences.length > 0) {
+            const lastDate = occurrences[occurrences.length - 1].date.toISOString().split('T')[0];
             await recurringRepo.updateRuleMetadata(userId, rule.id, { lastGeneratedDate: lastDate });
         }
 

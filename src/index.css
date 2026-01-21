@@ -1,14 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 @import './styles/theme.css';
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@theme {
+  /* Quantum Core Colors */
+  --color-q-primary: var(--q-obsidian);
+  --color-q-glass: var(--q-glass);
+  --color-q-sapphire: var(--q-sapphire);
+  --color-q-amethyst: var(--q-amethyst);
+  --color-q-emerald: var(--q-emerald);
+  --color-q-ruby: var(--q-ruby);
+  --color-q-gold: var(--q-gold);
 
-/* Define a font face that only covers digits using JetBrains Mono */
-@font-face {
-  font-family: 'JetBrains Mono Digits';
-  src: url('https://fonts.gstatic.com/s/jetbrainsmono/v18/t64vA4q6z7_696H966mP1O6OC6Of.woff2') format('woff2');
-  unicode-range: U+0030-0039;
+  /* Legacy Shims */
+  --color-bg-primary: var(--q-obsidian);
+  --color-bg-secondary: var(--q-obsidian);
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: var(--q-slate);
+
+  /* Typography */
+  --font-sans: var(--q-font-ui), Inter, Outfit, sans-serif;
+  --font-mono: var(--q-font-data), JetBrains Mono, Roboto Mono, monospace;
+
+  /* Border Radius */
+  --radius-2xl: var(--q-radius-2xl);
+  --radius-xl: var(--q-radius-xl);
+  --radius-lg: var(--q-radius-lg);
+  --radius-md: var(--q-radius-md);
+  --radius-sm: var(--q-radius-sm);
+
+  /* Spacing */
+  --spacing-xs: var(--space-xs);
+  --spacing-sm: var(--space-sm);
+  --spacing-md: var(--space-md);
+  --spacing-lg: var(--space-lg);
+
+  /* Animations */
+  --timing-quantum: cubic-bezier(0.2, 1, 0.3, 1);
+}
+
+@plugin "tailwindcss-animate";
+
+/* Typography fallbacks and shims */
+:root {
+  --q-font-ui: 'Inter', system-ui, sans-serif;
+  --q-font-data: 'JetBrains Mono', monospace;
 }
 
 @layer base {

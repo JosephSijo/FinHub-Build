@@ -93,7 +93,6 @@ export interface UserSettings {
   photoURL: string;
   notificationsEnabled: boolean;
   roundUpEnabled: boolean;
-  onboardingPhase?: number; // 0: Not started, 1: Shield done, 2: Leaks done, 3: Completion
   passiveIncomeTarget?: number;
   isSampleMode?: boolean;
   apiKeys?: {
@@ -223,6 +222,9 @@ export interface RecurringTransaction {
   goalId?: string;
   investmentId?: string;
   liabilityId?: string;
+  kind?: 'subscription' | 'bill' | 'income';
+  reminderEnabled?: boolean;
+  dueDay?: number;
   createdAt: string;
 }
 
@@ -262,6 +264,9 @@ export interface Liability {
   min_payment?: number;
   penalty_applied?: boolean;
   next_due_date?: string;
+  kind?: 'subscription' | 'bill' | 'income';
+  reminderEnabled?: boolean;
+  dueDay?: number;
   createdAt: string;
 }
 

@@ -44,7 +44,7 @@ export const useExpenseActions = (state: any, actions: any) => {
 
     const createExpense = useCallback(async (data: any) => {
         const { accounts: currentAccounts, goals: currentGoals, emergencyFundAmount: currentEF, liabilities: currentL } = dataRef.current;
-        const { updateAccount, updateGoal, updateLiability, createRecurringTransaction } = actionsRef.current;
+        const { updateGoal, updateLiability, createRecurringTransaction } = actionsRef.current;
 
         try {
             // 1. Calculate Available to Spend (Global Check)
@@ -177,9 +177,8 @@ export const useExpenseActions = (state: any, actions: any) => {
                 ).catch(e => console.error("Catalog link failed", e));
 
                 if (targetAccount) {
-                    const balanceChange = data.amount + (processedData.serviceChargeAmount || 0);
-                    const newBalance = targetAccount.type === 'credit_card' ? targetAccount.balance + balanceChange : targetAccount.balance - balanceChange;
-                    await updateAccount(targetAccount.id, { balance: newBalance });
+                    // Balance update is now handled by DB trigger on ledger_entries
+                    // await updateAccount(targetAccount.id, { balance: newBalance });
                 }
                 if (processedData.liabilityId) {
                     const targetLiability = currentL.find((l: any) => l.id === processedData.liabilityId);
@@ -219,7 +218,6 @@ export const useExpenseActions = (state: any, actions: any) => {
 
     const updateExpense = useCallback(async (id: string, data: any) => {
         const { expenses: currentExpenses, accounts: currentAccounts } = dataRef.current;
-        const { updateAccount } = actionsRef.current;
         try {
             const response = await api.updateExpense(userId, id, data);
             if (response.success) {
@@ -227,16 +225,12 @@ export const useExpenseActions = (state: any, actions: any) => {
                 if (oldExpense) {
                     const oldAccount = currentAccounts.find((a: any) => a.id === oldExpense.accountId);
                     if (oldAccount) {
-                        const balanceChange = oldExpense.amount + (oldExpense.serviceChargeAmount || 0);
-                        const oldBalance = oldAccount.type === 'credit_card' ? oldAccount.balance - balanceChange : oldAccount.balance + balanceChange;
-                        await updateAccount(oldAccount.id, { balance: oldBalance });
+                        // DB trigger handles balance reversal
                     }
                     const newExpense = response.expense;
                     const newAccount = currentAccounts.find((a: any) => a.id === newExpense.accountId);
                     if (newAccount) {
-                        const balanceChange = newExpense.amount + (newExpense.serviceChargeAmount || 0);
-                        const newBalance = newAccount.type === 'credit_card' ? newAccount.balance + balanceChange : newAccount.balance - balanceChange;
-                        await updateAccount(newAccount.id, { balance: newBalance });
+                        // DB trigger handles balance update
                     }
                 }
                 setExpenses((prev: any[]) => prev.map(e => e.id === id ? response.expense : e));
@@ -250,7 +244,6 @@ export const useExpenseActions = (state: any, actions: any) => {
 
     const deleteExpense = useCallback(async (id: string) => {
         const { expenses: currentExpenses, accounts: currentAccounts } = dataRef.current;
-        const { updateAccount } = actionsRef.current;
         try {
             const response = await api.deleteExpense(userId, id);
             if (response.success) {
@@ -258,9 +251,7 @@ export const useExpenseActions = (state: any, actions: any) => {
                 if (expense) {
                     const targetAccount = currentAccounts.find((a: any) => a.id === expense.accountId);
                     if (targetAccount) {
-                        const balanceChange = expense.amount + (expense.serviceChargeAmount || 0);
-                        const newBalance = targetAccount.type === 'credit_card' ? targetAccount.balance - balanceChange : targetAccount.balance + balanceChange;
-                        await updateAccount(targetAccount.id, { balance: newBalance });
+                        // DB trigger handles balance reversal on delete
                     }
                 }
                 setExpenses((prev: any[]) => prev.filter(e => e.id !== id));

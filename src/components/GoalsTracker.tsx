@@ -200,7 +200,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = React.memo(({
                 <Target className="w-6 h-6 text-emerald-400" />
               </div>
               <div className="min-w-0">
-                <h3 className="text-white font-black text-xs uppercase tracking-[0.3em]">Victory Node</h3>
+                <h3 className="text-white font-black text-xs uppercase tracking-[0.3em]">Savings Goal</h3>
                 <p className="text-[10px] text-emerald-500/60 font-bold uppercase tracking-widest mt-1">
                   Capital Accumulation Drive
                 </p>
@@ -261,7 +261,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = React.memo(({
               className="w-full h-10 text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 flex items-center justify-center transition-all bg-emerald-500/5 sq-md border border-emerald-500/10"
             >
               <Wallet className="w-3.5 h-3.5 mr-2" />
-              Inject Surplus Liquidity
+              Add Money
             </Button>
           </div>
         </div>
@@ -356,7 +356,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = React.memo(({
             </div>
 
             <div className="pt-4 border-t border-white/5">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#34D399] mb-4">Automation Node (Optional)</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#34D399] mb-4">Automation (Optional)</h4>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -388,7 +388,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = React.memo(({
 
               {accounts.length > 0 && (
                 <div className="mt-4">
-                  <Label htmlFor="goal-account" className="text-label text-[10px] mb-3 block">Source Liquidity Node</Label>
+                  <Label htmlFor="goal-account" className="text-label text-[10px] mb-3 block">From Account</Label>
                   <Select
                     value={formData.accountId}
                     onValueChange={(value: string) => setFormData({ ...formData, accountId: value })}
@@ -460,7 +460,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = React.memo(({
                         <span className="text-2xl">{goal.emoji}</span>
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-black text-xs uppercase tracking-tight text-white truncate">{goal.name || 'UNNAMED NODE'}</h4>
+                        <h4 className="font-black text-xs uppercase tracking-tight text-white truncate">{goal.name || 'UNNAMED GOAL'}</h4>
                         {isCompleted ? (
                           <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-1 flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
@@ -514,7 +514,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = React.memo(({
                     className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 hover:border-emerald-500/40 sq-md font-black text-[10px] uppercase tracking-widest py-6 transition-all shadow-[0_0_20px_rgba(16,185,129,0.1)]"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Inject Capital
+                    Add Money
                   </Button>
                 </div>
               </div>
@@ -570,7 +570,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = React.memo(({
                   />
                   <Label htmlFor="deduct" className="text-xs font-bold text-slate-200 cursor-pointer flex items-center gap-2">
                     <Wallet className="w-4 h-4 text-slate-500" />
-                    Deduct from Liquidity Node
+                    Withdraw From Account
                   </Label>
                 </div>
 
@@ -599,7 +599,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = React.memo(({
                     </Select>
                     {fundsData.accountId && (
                       <p className="text-[10px] text-slate-500 mt-2 italic px-1">
-                        Available Liquidity: {formatCurrency(accounts.find(a => a.id === fundsData.accountId)?.balance || 0, currency)}
+                        Available Cash: {formatCurrency(accounts.find(a => a.id === fundsData.accountId)?.balance || 0, currency)}
                       </p>
                     )}
                   </div>

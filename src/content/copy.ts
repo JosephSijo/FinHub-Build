@@ -76,12 +76,12 @@ export const COPY = {
         safeToSpend: "Safe to Spend",
         reservedFunds: "Reserved for Goals",
         totalBalance: "Total Balance",
-        protocolInterpretation: "Analysis",
+        protocolInterpretation: "Status Analysis",
         safeZoneHealth: "Safe Zone Health",
-        actionFlow: "Action Flow",
-        actionFlowEfficiency: "Action Flow Efficiency",
-        burnTrend: "Burn Trend",
-        highPowerNode: "High Power Node identified",
+        actionFlow: "Money Flow",
+        actionFlowEfficiency: "Efficiency Score",
+        burnTrend: "Spending Trend",
+        highPowerNode: "Unusual activity identified",
         dslBreakdown: "Daily Spending Limit Breakdown",
     },
     goals: {
@@ -98,7 +98,7 @@ export const COPY = {
     },
     aiAdvisor: {
         title: "AI Advisor",
-        strategyTitle: "Strategic Recommendation",
+        strategyTitle: "Smart Suggestion",
         statusRecovery: "RECOVERY",
         statusGrowth: "GROWTH",
         nextMilestone: "Next Milestone",
@@ -146,8 +146,5 @@ export const COPY = {
     insurance: {
         safetyFeatures: "safety features",
         safetyPlans: "financial safety plans",
-    },
-    onboarding: {
-        freedomScore: "Financial Freedom Score",
     }
 };

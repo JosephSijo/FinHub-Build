@@ -57,10 +57,10 @@ export const RoundUpDialog: React.FC<RoundUpDialogProps> = ({
                     <DialogHeader className="relative z-10">
                         <DialogTitle className="flex items-center gap-3 text-2xl font-black tracking-tighter text-slate-100">
                             <PiggyBank className="w-7 h-7 text-emerald-500" />
-                            Wealth Multiplier
+                            Round-Up Savings
                         </DialogTitle>
                         <DialogDescription className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em] mt-1">
-                            System detected idle capital in transaction
+                            Save your spare change from this transaction
                         </DialogDescription>
                     </DialogHeader>
                 </div>
@@ -69,12 +69,12 @@ export const RoundUpDialog: React.FC<RoundUpDialogProps> = ({
                     <div className="space-y-4">
                         <p className="text-sm font-bold text-slate-300 leading-relaxed text-center px-4">
                             Transaction of <span className="text-slate-100">{formatCurrency(expenseAmount, currency)}</span> processed.
-                            Initialize round-up to <span className="text-emerald-400">{formatCurrency(roundedAmount, currency)}</span>?
+                            Round up to <span className="text-emerald-400">{formatCurrency(roundedAmount, currency)}</span>?
                         </p>
 
                         <div className="flex flex-col items-center justify-center py-8 bg-slate-900 border border-white/5 rounded-[32px] relative overflow-hidden group">
                             <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 mb-1">Leftover Cash</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 mb-1">Spare Change</p>
                             <p className="text-5xl font-black text-white tracking-tighter">
                                 {formatCurrency(diff, currency)}
                             </p>
@@ -82,7 +82,7 @@ export const RoundUpDialog: React.FC<RoundUpDialogProps> = ({
                     </div>
 
                     <div className="space-y-4">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Asset Allocation Target</Label>
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Save to</Label>
                         <div className="grid grid-cols-2 gap-4">
                             <button
                                 type="button"
@@ -93,7 +93,7 @@ export const RoundUpDialog: React.FC<RoundUpDialogProps> = ({
                                     }`}
                             >
                                 <ShieldCheck className={`w-6 h-6 ${destinationType === 'emergency' ? 'text-white' : 'text-slate-500'}`} />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Stability</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest">Emergency Fund</span>
                             </button>
 
                             <button
@@ -110,7 +110,7 @@ export const RoundUpDialog: React.FC<RoundUpDialogProps> = ({
                                     }`}
                             >
                                 <Timer className={`w-6 h-6 ${destinationType === 'goal' ? 'text-white' : 'text-slate-500'}`} />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Growth</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest">Savings Goal</span>
                             </button>
                         </div>
 
@@ -118,7 +118,7 @@ export const RoundUpDialog: React.FC<RoundUpDialogProps> = ({
                             <div className="mt-4 animate-in slide-in-from-top-2 duration-300">
                                 <Select value={selectedGoalId} onValueChange={setSelectedGoalId}>
                                     <SelectTrigger id="round-up-goal-select" name="goalId" className="h-12 bg-slate-900 border-white/5 rounded-2xl text-slate-200 font-bold focus:ring-1 focus:ring-white/10">
-                                        <SelectValue placeholder="Select Growth Target" />
+                                        <SelectValue placeholder="Select Savings Goal" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-slate-900 border-white/5">
                                         {goals.map(goal => (
@@ -133,19 +133,19 @@ export const RoundUpDialog: React.FC<RoundUpDialogProps> = ({
 
                         {destinationType === 'goal' && goals.length === 0 && (
                             <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-amber-400 text-center">
-                                No active targets. Defaulting to General Reservoirs.
+                                No active goals. Defaulting to Emergency Fund.
                             </div>
                         )}
                     </div>
 
                     <div className="pt-2 space-y-4">
                         <Button onClick={handleConfirm} className="w-full text-[10px] font-black uppercase tracking-widest h-14 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl shadow-xl shadow-emerald-900/20 active:scale-[0.98] transition-all">
-                            Initialize Savings Event
+                            Save Spare Change
                         </Button>
 
                         <div className="flex items-center justify-between gap-4">
                             <Button variant="ghost" size="sm" onClick={onClose} className="h-10 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-white/5">
-                                Abort
+                                Cancel
                             </Button>
 
                             <div className="flex-1">
