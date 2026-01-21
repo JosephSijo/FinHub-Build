@@ -29,10 +29,11 @@ import { formatCurrency, formatFinancialValue } from '@/utils/numberFormat';
 import { MeshBackground } from './ui/MeshBackground';
 import { CategoryBackdrop } from './ui/CategoryBackdrop';
 import { isTransfer } from '@/utils/isTransfer';
-import { Expense, Income, Account, Debt, AIContext, Goal, Liability } from '@/types';
+import { Expense, Income, Account, Debt, AIContext, Goal, Liability, RecurringTransaction } from '@/types';
 import { calculateFoundationMetrics } from '@/utils/architect';
 import { ActionInsightCard, actionInsightsLogic } from '../features/actionInsights';
 import { NotificationCard, notificationsLogic, NotificationContext } from '../features/notifications';
+import { FinancialHealthClarity } from './dashboard/FinancialHealthClarity';
 
 export interface DashboardProps {
   expenses: Expense[];
@@ -48,6 +49,7 @@ export interface DashboardProps {
   userName?: string;
   isOffline?: boolean;
   isSampleMode?: boolean;
+  recurringTransactions?: RecurringTransaction[];
   onNavigate?: (view: any) => void;
   onOpenSetupWizard?: () => void;
   onAddTransaction?: (type: any) => void;
@@ -111,6 +113,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
   userName = "User",
   isOffline = false,
   isSampleMode = false,
+  recurringTransactions = [],
   onNavigate,
   onOpenSetupWizard,
   onAddTransaction
@@ -217,7 +220,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
       .filter(acc => acc.type === 'bank' || acc.type === 'cash')
       .reduce((sum, acc) => sum + acc.balance, 0);
 
-    const grossIncome = reconciledIncomes.filter(i => !i.isInternalTransfer).reduce((sum: number, i: Income) => sum + i.amount, 0) || 42500;
+    const grossIncome = reconciledIncomes.filter(i => !i.isInternalTransfer).reduce((sum: number, i: Income) => sum + i.amount, 0) || 0;
     const grossBurn = currentMonthExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
     const lastMonthBurn = lastMonthExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
 
@@ -351,6 +354,34 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
     dtiRatio
   } = stats;
 
+  // commitment Metrics for Clarity Board
+  const { commitmentIncome, commitmentOutflow } = useMemo(() => {
+    const calcMonthly = (r: RecurringTransaction) => {
+      const amt = r.amount || 0;
+      if (r.frequency === 'monthly') return amt;
+      if (r.frequency === 'yearly') return amt / 12;
+      if (r.frequency === 'weekly') return amt * 4;
+      return amt * 30; // daily
+    };
+
+    const incomes = recurringTransactions.filter(r => r.type === 'income' || r.kind === 'income');
+    const outflows = recurringTransactions.filter(r => r.type === 'expense');
+
+    // Filter outflows that are "Fixed" (Subscriptions, Bills, EMIs)
+    const fixedOutflows = outflows.filter(r =>
+      r.kind === 'subscription' ||
+      r.kind === 'bill' ||
+      r.category === 'EMI' ||
+      r.category === 'Loan' ||
+      !!r.liabilityId
+    );
+
+    return {
+      commitmentIncome: (incomes.length > 0 ? incomes.reduce((sum, r) => sum + calcMonthly(r), 0) : grossIncome) || 0,
+      commitmentOutflow: fixedOutflows.reduce((sum, r) => sum + calcMonthly(r), 0)
+    };
+  }, [recurringTransactions, grossIncome]);
+
   const toggleCard = (cardId: string) => {
     setActiveCard(activeCard === cardId ? null : cardId);
   };
@@ -461,6 +492,13 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
       <TruthBanner
         message={`Assessment: ${foundationMetrics.isRestricted ? 'Restricted' : 'Growth'} mode active. Foundation-adjusted limit is ${formatCurrency(safeDailyLimit, currency, true)} for the next ${foundationMetrics.remainingDays} days.`}
         icon={foundationMetrics.isRestricted ? <Zap className="w-4 h-4 text-orange-400" /> : <ShieldCheck className="w-4 h-4 text-blue-400" />}
+      />
+
+      {/* Financial Health Clarity Dashboard */}
+      <FinancialHealthClarity
+        income={commitmentIncome}
+        fixedCosts={commitmentOutflow}
+        currency={currency}
       />
 
       {/* 1. COLLAPSIBLE BALANCE BOARD - SAFE ZONE */}

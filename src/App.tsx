@@ -562,6 +562,7 @@ export default function App() {
                             userName={settings.name}
                             isOffline={isOffline}
                             isSampleMode={settings.isSampleMode}
+                            recurringTransactions={recurringTransactions}
                             onNavigate={(view) => setView(view)}
                             onOpenSetupWizard={() => setIsSetupWizardOpen(true)}
                             onAddTransaction={(type) => {

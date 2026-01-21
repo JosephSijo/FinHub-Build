@@ -707,6 +707,8 @@ export const api = {
       lastGeneratedDate: s.last_generated_date,
       tags: s.tags || [],
       dueDay: s.due_day,
+      kind: s.kind,
+      reminderEnabled: s.reminder_enabled,
       categoryId: s.category_id,
       isMandateSuggested: s.is_mandate_suggested,
       mandateStatus: s.mandate_status,
@@ -731,6 +733,8 @@ export const api = {
       interval: data.interval || 1,
       tags: data.tags || [],
       category_id: data.categoryId,
+      kind: data.kind || (data.type === 'income' ? 'income' : 'subscription'),
+      reminder_enabled: data.reminderEnabled ?? true,
       is_mandate_suggested: data.isMandateSuggested,
       mandate_status: data.mandateStatus || 'offered'
     };
@@ -757,6 +761,8 @@ export const api = {
       lastGeneratedDate: sub.last_generated_date,
       tags: sub.tags || [],
       dueDay: sub.due_day,
+      kind: sub.kind,
+      reminderEnabled: sub.reminder_enabled,
       categoryId: sub.category_id,
       isMandateSuggested: sub.is_mandate_suggested,
       mandateStatus: sub.mandate_status
@@ -782,6 +788,8 @@ export const api = {
     if (updates.tags) dbUpdates.tags = updates.tags;
     if (updates.dueDay) dbUpdates.due_day = updates.dueDay;
     if (updates.categoryId) dbUpdates.category_id = updates.categoryId;
+    if (updates.kind) dbUpdates.kind = updates.kind;
+    if (updates.reminderEnabled !== undefined) dbUpdates.reminder_enabled = updates.reminderEnabled;
     if (updates.isMandateSuggested !== undefined) dbUpdates.is_mandate_suggested = updates.isMandateSuggested;
     if (updates.mandateStatus) dbUpdates.mandate_status = updates.mandateStatus;
 
@@ -807,6 +815,8 @@ export const api = {
       lastGeneratedDate: sub.last_generated_date,
       tags: sub.tags || [],
       dueDay: sub.due_day,
+      kind: sub.kind,
+      reminderEnabled: sub.reminder_enabled,
       categoryId: sub.category_id,
       isMandateSuggested: sub.is_mandate_suggested,
       mandateStatus: sub.mandate_status

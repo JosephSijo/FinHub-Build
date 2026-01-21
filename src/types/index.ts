@@ -222,6 +222,9 @@ export interface RecurringTransaction {
   goalId?: string;
   investmentId?: string;
   liabilityId?: string;
+  kind?: 'subscription' | 'bill' | 'income';
+  reminderEnabled?: boolean;
+  dueDay?: number;
   createdAt: string;
 }
 
@@ -261,6 +264,9 @@ export interface Liability {
   min_payment?: number;
   penalty_applied?: boolean;
   next_due_date?: string;
+  kind?: 'subscription' | 'bill' | 'income';
+  reminderEnabled?: boolean;
+  dueDay?: number;
   createdAt: string;
 }
 

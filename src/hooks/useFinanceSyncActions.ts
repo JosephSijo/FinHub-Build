@@ -12,20 +12,20 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
         setDebts, setGoals, setLiabilities, setInvestments,
         setRecurringTransactions, setNotifications, setEmergencyFundAmount,
         setIsOffline, setApiStatus, backfillRequest, setBackfillRequest,
-        expenses, incomes, goals, accounts, liabilities, recurringTransactions,
+        expenses, incomes, goals, accounts, liabilities, recurringTransactions, debts, investments,
         setIsRefreshing // Destructure these directly
     } = state;
 
     // Use a ref to store the latest data to keep action functions stable
     const dataRef = useRef({
-        expenses, incomes, goals, accounts, liabilities, recurringTransactions, settings
+        expenses, incomes, goals, accounts, liabilities, recurringTransactions, settings, debts, investments
     });
 
     useEffect(() => {
         dataRef.current = {
-            expenses, incomes, goals, accounts, liabilities, recurringTransactions, settings
+            expenses, incomes, goals, accounts, liabilities, recurringTransactions, settings, debts, investments
         };
-    }, [expenses, incomes, goals, accounts, liabilities, recurringTransactions, settings]);
+    }, [expenses, incomes, goals, accounts, liabilities, recurringTransactions, settings, debts, investments]);
 
     const { createRecurringTransaction, deleteExpense,
         deleteIncome, applyTheme } = actions;
@@ -53,6 +53,12 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
             toast.error("Settings saved locally only");
         }
     }, [userId, setSettings, applyTheme]);
+
+    const mergeOfflineData = useCallback((serverData: any[], localData: any[]) => {
+        const offlineItems = localData.filter(item => item.id?.toString().startsWith('temp_'));
+        // Return server data with offline items prepended
+        return [...offlineItems, ...serverData];
+    }, []);
 
     const fetchFromApi = useCallback(async () => {
         try {
@@ -85,14 +91,18 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
                 }));
                 applyTheme(settingsRes.settings.theme);
             }
-            if (accountsRes.success) setAccounts(accountsRes.accounts || []);
-            if (expensesRes.success) setExpenses(expensesRes.expenses || []);
-            if (incomesRes.success) setIncomes(incomesRes.incomes || []);
-            if (debtsRes.success) setDebts(debtsRes.debts || []);
-            if (goalsRes.success) setGoals(goalsRes.goals || []);
-            if (liabilitiesRes.success) setLiabilities(liabilitiesRes.liabilities || []);
-            if (investmentsRes.success) setInvestments(investmentsRes.investments || []);
-            if (recurringRes.success) setRecurringTransactions(recurringRes.recurring || []);
+
+            // Get current local data from dataRef to avoid stale closures
+            const local = dataRef.current;
+
+            if (accountsRes.success) setAccounts(mergeOfflineData(accountsRes.accounts || [], local.accounts));
+            if (expensesRes.success) setExpenses(mergeOfflineData(expensesRes.expenses || [], local.expenses));
+            if (incomesRes.success) setIncomes(mergeOfflineData(incomesRes.incomes || [], local.incomes));
+            if (debtsRes.success) setDebts(mergeOfflineData(debtsRes.debts || [], local.debts));
+            if (goalsRes.success) setGoals(mergeOfflineData(goalsRes.goals || [], local.goals));
+            if (liabilitiesRes.success) setLiabilities(mergeOfflineData(liabilitiesRes.liabilities || [], local.liabilities));
+            if (investmentsRes.success) setInvestments(mergeOfflineData(investmentsRes.investments || [], local.investments));
+            if (recurringRes.success) setRecurringTransactions(mergeOfflineData(recurringRes.recurring || [], local.recurringTransactions));
 
             // 2. Generate Smart Suggestions
             suggestionsService.generateForUser(userId).catch(e => console.error("Suggestions update failed", e));
@@ -103,7 +113,7 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
             setIsOffline(true);
             setApiStatus('offline');
         }
-    }, [userId, setSettings, setAccounts, setExpenses, setIncomes, setDebts, setGoals, setLiabilities, setInvestments, setRecurringTransactions, setIsOffline, setApiStatus, applyTheme]);
+    }, [userId, setSettings, setAccounts, setExpenses, setIncomes, setDebts, setGoals, setLiabilities, setInvestments, setRecurringTransactions, setIsOffline, setApiStatus, applyTheme, mergeOfflineData]);
 
     const refreshData = useCallback(async () => {
         setIsRefreshing(true);
