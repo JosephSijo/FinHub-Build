@@ -1,74 +1,94 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { AuthUser } from '../types';
 import { STORAGE_KEYS } from '../utils/constants';
-import { hashPin } from '../utils/security';
 import { toast } from 'sonner';
+import { supabase } from '../lib/supabase';
 
-// Pre-defined users for Beta/Demo
-const DEMO_USERS = [
-    {
-        mobile: '9656885833',
-        pin: '03ac674216f3e15c1d717fd11ea91000ad7d6596b12c87b7efcb6835a75225d3', // 1234
-        name: "Joseph's FinHub",
-        userId: 'josephsijo-prod-001'
-    },
-    {
-        mobile: '1234567890',
-        pin: 'a991b9f69792078652e8964893796d13bd0195e7912d08a9cb528cc29f0f971c', // 4321
-        name: "Demo's FinHub",
-        userId: 'demo-prod-001'
-    },
-    {
-        mobile: '9447147230',
-        pin: '899b9a314067a23557b5db9b87d3e599e2f3200bd69b6cdc6dcf08f8b8e40e2e', // 2255
-        name: "tin2mon's FinHub",
-        userId: 'tin2mon-prod-001'
-    }
-];
+// Helper to format email from mobile
+const getEmail = (mobile: string) => `${mobile}@finbase.app`;
+// Helper to satisfy min password length (Supabase requires 6 chars usually)
+const getPassword = (pin: string) => `${pin}#finbase`;
 
 export const useAuth = () => {
-    const [authStatus, setAuthStatus] = useState<'guest' | 'authenticating' | 'authenticated'>(() => {
-        const storedAuth = localStorage.getItem(STORAGE_KEYS.AUTH);
-        return storedAuth ? 'authenticated' : 'guest';
-    });
-    const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
-        const storedAuth = localStorage.getItem(STORAGE_KEYS.AUTH);
-        if (storedAuth) {
-            try {
-                return JSON.parse(storedAuth);
-            } catch (error) {
-                console.error('Failed to restore auth session:', error);
-                localStorage.removeItem(STORAGE_KEYS.AUTH);
-            }
-        }
-        return null;
-    });
+    const [authStatus, setAuthStatus] = useState<'guest' | 'authenticating' | 'authenticated'>('authenticating');
+    const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
     const [isAwaitingPin, setIsAwaitingPin] = useState(false);
     const [pendingMobile, setPendingMobile] = useState(() => localStorage.getItem(STORAGE_KEYS.REMEMBERED_MOBILE) || '');
     const [isRememberedUser, setIsRememberedUser] = useState(() => !!localStorage.getItem(STORAGE_KEYS.REMEMBERED_MOBILE));
     const [rememberedMobile, setRememberedMobile] = useState(() => localStorage.getItem(STORAGE_KEYS.REMEMBERED_MOBILE) || '');
     const [deletionDate, setDeletionDate] = useState<string | null>(() => localStorage.getItem(STORAGE_KEYS.DELETION_SCHEDULE));
-    const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
     const [authMessage, setAuthMessage] = useState<{ message: string, subMessage?: string } | undefined>();
+    const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
 
-    const clearPendingSession = useCallback(() => {
+    // Initial Session Check
+    useEffect(() => {
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                const mobile = session.user.email?.split('@')[0] || '';
+                setCurrentUser({
+                    id: session.user.id,
+                    mobile: mobile,
+                    name: session.user.user_metadata?.name || 'User'
+                });
+                setAuthStatus('authenticated');
+
+                // Sync remember me state
+                if (mobile) {
+                    localStorage.setItem(STORAGE_KEYS.REMEMBERED_MOBILE, mobile);
+                    setRememberedMobile(mobile);
+                    setIsRememberedUser(true);
+                }
+            } else {
+                setAuthStatus('guest');
+                setCurrentUser(null);
+            }
+        };
+        checkSession();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (session?.user) {
+                const mobile = session.user.email?.split('@')[0] || '';
+                setCurrentUser({
+                    id: session.user.id,
+                    mobile: mobile,
+                    name: session.user.user_metadata?.name || 'User'
+                });
+                setAuthStatus('authenticated');
+            } else {
+                setAuthStatus('guest');
+                setCurrentUser(null);
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    const clearPendingSession = useCallback(async () => {
+        await supabase.auth.signOut();
         setAuthStatus('guest');
         setCurrentUser(null);
         setPendingMobile('');
         setGeneratedOtp(null);
-        localStorage.removeItem(STORAGE_KEYS.AUTH);
+        localStorage.removeItem(STORAGE_KEYS.AUTH); // Legacy cleanup
         localStorage.removeItem(STORAGE_KEYS.REMEMBERED_MOBILE);
         setRememberedMobile('');
         setIsRememberedUser(false);
     }, []);
 
-    const logout = useCallback(() => {
-        setAuthStatus('guest');
-        setCurrentUser(null);
-        setGeneratedOtp(null);
-        localStorage.removeItem(STORAGE_KEYS.AUTH);
-        if (!isRememberedUser) {
-            setPendingMobile('');
+    const logout = useCallback(async () => {
+        try {
+            await supabase.auth.signOut();
+            setAuthStatus('guest');
+            setCurrentUser(null);
+            if (!isRememberedUser) {
+                setPendingMobile('');
+            }
+        } catch (error) {
+            console.error("Logout failed", error);
+            // Force local cleanup anyway
+            setAuthStatus('guest');
+            setCurrentUser(null);
         }
     }, [isRememberedUser]);
 
@@ -91,65 +111,64 @@ export const useAuth = () => {
 
     const checkIdentity = useCallback(async (mobile: string) => {
         setPendingMobile(mobile);
-        const isExistingUser = DEMO_USERS.some(u => u.mobile === mobile) ||
-            localStorage.getItem(`finhub_user_${mobile}`) !== null;
+        // We can't easily check if user exists without trying to login or using an integrity API
+        // For this UI flow, we assume we proceed to PIN entry.
+        // If they assume they have an account but don't, login will fail, and we can guide them?
+        // Or we can just let them try to login.
         setIsAwaitingPin(true);
-        return isExistingUser;
+        return true;
     }, []);
 
     const login = useCallback(async (pin: string, rememberMe: boolean = false) => {
-        setAuthMessage({ message: "Validating PIN", subMessage: "Verifying secure account access..." });
+        setAuthMessage({ message: "Authenticating", subMessage: "Connecting to secure node..." });
         setAuthStatus('authenticating');
 
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            const email = getEmail(pendingMobile);
+            const password = getPassword(pin);
 
-        const hashedPin = await hashPin(pin);
-        const demoUser = DEMO_USERS.find(u => u.mobile === pendingMobile && u.pin === hashedPin);
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
 
-        let authenticatedUser: AuthUser | null = null;
+            if (error) throw error;
 
-        if (demoUser) {
-            authenticatedUser = {
-                id: demoUser.userId,
-                mobile: demoUser.mobile,
-                name: demoUser.name
-            };
-        } else {
-            const storedUser = localStorage.getItem(`finhub_user_${pendingMobile}`);
-            if (storedUser) {
-                const parsed = JSON.parse(storedUser);
-                if (parsed.pin === hashedPin || parsed.pin === pin) {
-                    authenticatedUser = {
-                        id: parsed.userId,
-                        mobile: parsed.mobile,
-                        name: parsed.name
-                    };
+            if (data.session) {
+                const user = data.session.user;
+                const authUser: AuthUser = {
+                    id: user.id,
+                    mobile: pendingMobile,
+                    name: user.user_metadata?.name || 'User'
+                };
+
+                setCurrentUser(authUser);
+                setAuthMessage({ message: "Login Success", subMessage: "Syncing financial data..." });
+                setAuthStatus('authenticated');
+                setIsAwaitingPin(false);
+
+                if (deletionDate) {
+                    await cancelAccountDeletion();
+                    toast.success('Account deletion request canceled.');
                 }
+
+                if (rememberMe) {
+                    localStorage.setItem(STORAGE_KEYS.REMEMBERED_MOBILE, pendingMobile);
+                    setRememberedMobile(pendingMobile);
+                    setIsRememberedUser(true);
+                }
+                return true;
             }
-        }
-
-        if (authenticatedUser) {
-            setCurrentUser(authenticatedUser);
-            localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(authenticatedUser));
-            setAuthMessage({ message: "Login Success", subMessage: "Loading your financial data..." });
-            setAuthStatus('authenticated');
-            setIsAwaitingPin(false);
-
-            if (deletionDate) {
-                await cancelAccountDeletion();
-                toast.success('Your account deletion request has been canceled. Welcome back!');
-            }
-
-            if (rememberMe) {
-                localStorage.setItem(STORAGE_KEYS.REMEMBERED_MOBILE, pendingMobile);
-                setRememberedMobile(pendingMobile);
-                setIsRememberedUser(true);
-            }
-
-            return true;
-        } else {
+            return false;
+        } catch (error: any) {
+            console.error("Login Error:", error);
             setAuthMessage(undefined);
             setAuthStatus('guest');
+            if (error.message === 'Invalid login credentials') {
+                toast.error("Invalid credentials. If this is a new account, please Sign Up.");
+            } else {
+                toast.error(`Login failed: ${error.message}`);
+            }
             return false;
         }
     }, [pendingMobile, deletionDate, cancelAccountDeletion]);
@@ -171,52 +190,74 @@ export const useAuth = () => {
         return false;
     }, [generatedOtp]);
 
-    const resetPin = useCallback(async (mobile: string, newPin: string) => {
-        const hashedPin = await hashPin(newPin);
-        const storedUser = localStorage.getItem(`finhub_user_${mobile}`);
-        if (storedUser) {
-            const parsed = JSON.parse(storedUser);
-            parsed.pin = hashedPin;
-            localStorage.setItem(`finhub_user_${mobile}`, JSON.stringify(parsed));
-            toast.success("PIN reset successfully");
-            return true;
-        }
-        const demoUserIndex = DEMO_USERS.findIndex(u => u.mobile === mobile);
-        if (demoUserIndex !== -1) {
-            const shadowedUser = { ...DEMO_USERS[demoUserIndex], pin: hashedPin };
-            localStorage.setItem(`finhub_user_${mobile}`, JSON.stringify(shadowedUser));
-            toast.success("Demo user PIN updated locally");
-            return true;
-        }
+    const resetPin = useCallback(async (_mobile: string, _newPin: string) => {
+        // With Supabase, 'Reset PIN' is effectively 'Update Password'
+        // BUT we need to be logged in to update password, OR use the reset password email flow.
+        // Since we use fake emails, we can't do email reset.
+        // PROPOSAL: Allow "Reset" only if they can prove identity via OTP (which we simulate).
+        // Then we call supabase.auth.updateUser() - REQUIRES LOGGED IN SESSION.
+        // CATCH-22: Can't login if forgot PIN.
+        // SOLUTION FOR NOW: This implementation assumes we are doing a 'fresh' signup override or we need admin privileges.
+        // REALISTICALLY: Admin function needed.
+        // FOR THIS FIX: We will just warn them.
+        toast.error("Password reset requires email access. Please contact support.");
         return false;
     }, []);
 
     const signup = useCallback(async (mobile: string, pin: string, name: string, rememberMe: boolean = false) => {
-        setAuthMessage({ message: "Creating Account", subMessage: "Setting up your secure profile..." });
+        setAuthMessage({ message: "Creating Account", subMessage: "Provisioning secure database..." });
         setAuthStatus('authenticating');
-        await new Promise(resolve => setTimeout(resolve, 2000));
 
-        const hashedPin = await hashPin(pin);
-        const newUser = { id: `user_${Date.now()}`, mobile, name, pin: hashedPin };
+        try {
+            const email = getEmail(mobile);
+            const password = getPassword(pin);
 
-        localStorage.setItem(`finhub_user_${mobile}`, JSON.stringify(newUser));
-        const authUser: AuthUser = { id: newUser.id, mobile: newUser.mobile, name: newUser.name };
-        setCurrentUser(authUser);
-        localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(authUser));
-        setAuthMessage({ message: "Signup Success", subMessage: "Linking your financial data..." });
-        setAuthStatus('authenticated');
-        setIsAwaitingPin(false);
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: { name, mobile }
+                }
+            });
 
-        if (rememberMe) {
-            localStorage.setItem(STORAGE_KEYS.REMEMBERED_MOBILE, mobile);
-            setRememberedMobile(mobile);
-            setIsRememberedUser(true);
+            if (error) throw error;
+
+            if (data.session) {
+                const user = data.session.user;
+                const authUser: AuthUser = {
+                    id: user.id,
+                    mobile: mobile,
+                    name: name
+                };
+
+                setCurrentUser(authUser);
+                setAuthMessage({ message: "Signup Success", subMessage: "Initializing Ledger..." });
+                setAuthStatus('authenticated');
+                setIsAwaitingPin(false);
+
+                if (rememberMe) {
+                    localStorage.setItem(STORAGE_KEYS.REMEMBERED_MOBILE, mobile);
+                    setRememberedMobile(mobile);
+                    setIsRememberedUser(true);
+                }
+                return true;
+            } else if (data.user && !data.session) {
+                // Auto confirm logic might be needed if email confirmation is on
+                toast.success("Account created! Please sign in.");
+                setAuthStatus('guest');
+                setIsAwaitingPin(true); // Go back to login
+                return true;
+            }
+            return false;
+
+        } catch (error: any) {
+            console.error("Signup Error:", error);
+            setAuthMessage(undefined);
+            setAuthStatus('guest');
+            toast.error(`Signup failed: ${error.message}`);
+            return false;
         }
-
-        return true;
     }, []);
-
-    // Auth state is now initialized via lazy initialization in useState above
 
     return useMemo(() => ({
         authStatus,

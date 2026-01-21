@@ -1,38 +1,129 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Shield, Target, CheckCircle2, MessageSquare, KeyRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, Target, Smartphone, CheckCircle2 } from "lucide-react";
 import { useFinance } from "../../context/FinanceContext";
 import { NativeBiometric } from "@capgo/capacitor-native-biometric";
 import { Capacitor } from "@capacitor/core";
 
-type AuthPhase = "identity" | "verify" | "otp_verify" | "create_name" | "create_pin" | "otp_reset" | "reset_pin";
+// Types
+type AuthMode = 'login' | 'signup';
+type AuthStep = 'mobile' | 'pin' | 'confirm_pin';
 
 export const LoginScreen = () => {
-    const { checkIdentity, login, signup, sendOtp, verifyOtp, resetPin, isRememberedUser, rememberedMobile, pendingMobile, clearPendingSession } = useFinance();
-    const [phase, setPhase] = useState<AuthPhase>(
-        (isRememberedUser && rememberedMobile) || pendingMobile ? "verify" : "identity"
-    );
-    const [mobile, setMobile] = useState((isRememberedUser && rememberedMobile) || pendingMobile || "");
+    const { login, signup, isRememberedUser, rememberedMobile, pendingMobile, clearPendingSession } = useFinance();
+
+    // State - Initialize based on context
+    const [mode, setMode] = useState<AuthMode>('login');
+    const [step, setStep] = useState<AuthStep>(() => {
+        if (isRememberedUser && rememberedMobile) return 'pin';
+        return 'mobile';
+    });
+
+    // Data State
+    const [mobile, setMobile] = useState(() => (isRememberedUser && rememberedMobile) || pendingMobile || "");
     const [pin, setPin] = useState("");
-    const [name, setName] = useState("");
-    const [otp, setOtp] = useState("");
-    const [newPin, setNewPin] = useState("");
     const [confirmPin, setConfirmPin] = useState("");
 
+    // UI State
     const [error, setError] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
-    const [showSmartPrompt, setShowSmartPrompt] = useState(false);
     const [isBiometricActive, setIsBiometricActive] = useState(false);
-    const inputRef = useRef<HTMLInputElement>(null);
-    const triggerBiometrics = React.useCallback(async () => {
-        if (!Capacitor.isNativePlatform()) return;
 
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // Initial Biometric Trigger
+    useEffect(() => {
+        if (isRememberedUser && rememberedMobile) {
+            // Optional: Trigger biometrics automatically if desired
+            // triggerBiometrics();
+        }
+    }, [isRememberedUser, rememberedMobile]);
+
+    // Focus Management
+    useEffect(() => {
+        if (inputRef.current) {
+            // Small delay to ensure render is complete before focus
+            setTimeout(() => {
+                inputRef.current?.focus();
+            }, 100);
+        }
+    }, [step, mode]);
+
+    // Helpers
+    const triggerError = React.useCallback(() => {
+        setError(true);
+        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+        setTimeout(() => setError(false), 500);
+        // Clear sensitive fields on error
+        if (step === 'pin') setPin("");
+        if (step === 'confirm_pin') setConfirmPin("");
+    }, [step]);
+
+    const resetState = () => {
+        setStep('mobile');
+        setPin("");
+        setConfirmPin("");
+        setError(false);
+    };
+
+    // Actions
+    const handleNext = async (valueOverride?: string) => {
+        if (step === 'mobile') {
+            // Validate Mobile
+            const val = valueOverride || mobile;
+            const cleaned = val.replace(/\D/g, "");
+            if (cleaned.length < 10 || cleaned.length > 11) {
+                triggerError();
+                return;
+            }
+            setStep('pin');
+        } else if (step === 'pin') {
+            const val = valueOverride || pin;
+            if (val.length !== 4) {
+                triggerError();
+                return;
+            }
+
+            if (mode === 'login') {
+                // Perform Login
+                setIsLoading(true);
+                const success = await login(val, rememberMe);
+                setIsLoading(false);
+                if (!success) triggerError();
+            } else {
+                // Signup: Go to Confirm PIN
+                setStep('confirm_pin');
+            }
+        } else if (step === 'confirm_pin') {
+            const val = valueOverride || confirmPin;
+            if (val.length !== 4) {
+                triggerError();
+                return;
+            }
+            const originalPin = pin; // This is fine as pin is stable from prev step
+            if (val !== originalPin) {
+                triggerError();
+                return;
+            }
+
+            // Perform Signup
+            setIsLoading(true);
+            // Use mobile as name for now, or could add a name step later
+            const success = await signup(mobile, originalPin, mobile, rememberMe);
+            setIsLoading(false);
+            if (!success) triggerError();
+        }
+    };
+
+    // Biometrics
+    const triggerBiometrics = async () => {
+        if (!Capacitor.isNativePlatform()) return;
         try {
             const result = await NativeBiometric.isAvailable();
             if (!result.isAvailable) return;
 
             setIsBiometricActive(true);
-
             await NativeBiometric.verifyIdentity({
                 reason: "Login to access your secure account",
                 title: "Login to FinHub",
@@ -41,378 +132,256 @@ export const LoginScreen = () => {
                 negativeButtonText: "Cancel",
             });
 
-            // If it doesn't throw, assume success
-            // If remembered user, use the demo PIN for now since we don't store actual secrets yet
-            // In a real app, we'd use getCredentials
+            // Demo biometric bypass
             const loginSuccess = await login("2255", true);
-            if (!loginSuccess) {
-                setIsBiometricActive(false);
-            }
+            if (!loginSuccess) setIsBiometricActive(false);
         } catch (err) {
             console.error('Biometric error:', err);
             setIsBiometricActive(false);
-            if (navigator.vibrate) navigator.vibrate([50, 50]);
-        }
-    }, [login]);
-
-    useEffect(() => {
-        if (isRememberedUser && rememberedMobile && phase === "verify") {
-            // Use microtask to break the synchronous render cycle and avoid lint error
-            queueMicrotask(() => {
-                triggerBiometrics();
-            });
-        }
-    }, [isRememberedUser, rememberedMobile, phase, triggerBiometrics]);
-
-    const triggerError = React.useCallback(() => {
-        setError(true);
-        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-        setTimeout(() => setError(false), 500);
-        setOtp("");
-        setPin("");
-        setConfirmPin("");
-    }, []);
-
-
-
-    const handleMobileSubmit = React.useCallback(async () => {
-        if (mobile.length !== 10) return;
-        const exists = await checkIdentity(mobile);
-        if (exists) {
-            setPhase("verify");
-        } else {
-            setPhase("create_name");
-        }
-        setPin("");
-    }, [mobile, checkIdentity]);
-
-
-    const handlePinSubmit = React.useCallback(async () => {
-        if (phase === "verify") {
-            const success = await login(pin, rememberMe);
-            if (success) {
-                if (navigator.vibrate) navigator.vibrate([10]);
-                if (!rememberMe && !isRememberedUser) {
-                    setShowSmartPrompt(true);
-                }
-            } else {
-                triggerError();
-            }
-        } else if (phase === "create_pin") {
-            if (pin.length === 4) {
-                const success = await signup(mobile, pin, name, rememberMe);
-                if (!success) triggerError();
-            }
-        } else if (phase === "reset_pin") {
-            if (newPin === confirmPin && newPin.length === 4) {
-                const success = await resetPin(mobile, newPin);
-                if (success) {
-                    setPhase("verify");
-                    setPin("");
-                    setNewPin("");
-                    setConfirmPin("");
-                } else {
-                    triggerError();
-                }
-            } else {
-                triggerError();
-            }
-        }
-    }, [phase, login, pin, rememberMe, signup, mobile, name, resetPin, newPin, confirmPin, isRememberedUser, triggerError]);
-
-
-    useEffect(() => {
-        if (inputRef.current) {
-            inputRef.current.focus();
-            if (inputRef.current.type !== "hidden") {
-                inputRef.current.select();
-            }
-        }
-    }, [phase]);
-
-
-
-    const handleForgotPin = async () => {
-        const success = await sendOtp(mobile);
-        if (success) {
-            setPhase("otp_reset");
         }
     };
 
-    const handleNameSubmit = async () => {
-        if (name.trim().length < 2) return;
-        const success = await sendOtp(mobile);
-        if (success) {
-            setPhase("otp_verify");
+    // Mode Switching
+    const switchMode = (newMode: AuthMode) => {
+        setMode(newMode);
+        resetState();
+        // Clear mobile if switching to signup to avoid confusion, or keep it?
+        // User asked: "Sign up screen must show login options"
+        // Let's keep mobile if it's there to be nice, unless it was remembered login
+        if (isRememberedUser && newMode === 'signup') {
+            setMobile("");
         }
     };
 
-    const handleOtpSubmit = async () => {
-        const success = await verifyOtp(mobile, otp);
-        if (success) {
-            if (phase === "otp_verify") {
-                setPhase("create_pin");
-            } else {
-                setPhase("reset_pin");
+    const handleBack = () => {
+        if (step === 'confirm_pin') setStep('pin');
+        else if (step === 'pin') {
+            if (isRememberedUser && mode === 'login') {
+                // allow clearing remembered user?
+                clearPendingSession();
+                setMobile("");
             }
-        } else {
-            triggerError();
+            setStep('mobile');
         }
     };
 
+    // Render Helpers
+    const getHeader = () => {
+        if (mode === 'login') return { title: "Welcome Back", subtitle: "Login to your account" };
+        return { title: "Create Account", subtitle: "Join FinHub today" };
+    };
 
+    const getInstruction = () => {
+        if (step === 'mobile') return "Enter your mobile number";
+        if (step === 'pin') return mode === 'login' ? "Enter your 4-digit PIN" : "Create a 4-digit PIN";
+        if (step === 'confirm_pin') return "Confirm your PIN";
+        return "";
+    };
 
-
-    const isButtonDisabled = () => {
-        if (phase === "identity") return mobile.length !== 10;
-        if (phase === "verify") return pin.length !== 4;
-        if (phase === "otp_verify" || phase === "otp_reset") return otp.length !== 4;
-        if (phase === "create_name") return name.trim().length < 2;
-        if (phase === "create_pin") return pin.length !== 4;
-        if (phase === "reset_pin") return newPin.length !== 4 || confirmPin.length !== 4;
+    const isDisabled = () => {
+        if (step === 'mobile') return mobile.length < 10 || mobile.length > 11;
+        if (step === 'pin') return pin.length !== 4;
+        if (step === 'confirm_pin') return confirmPin.length !== 4;
         return false;
     };
 
-    const handleSwitchAccount = () => {
-        clearPendingSession();
-        setPhase("identity");
-        setMobile("");
-        setPin("");
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === "Enter" && !isButtonDisabled()) {
-            getPrimaryAction()();
-        }
-    };
-
-    const getPrimaryAction = () => {
-        switch (phase) {
-            case "identity": return handleMobileSubmit;
-            case "otp_verify":
-            case "otp_reset": return handleOtpSubmit;
-            case "create_name": return handleNameSubmit;
-            case "verify":
-            case "create_pin":
-            case "reset_pin": return handlePinSubmit;
-            default: return () => { };
-        }
-    };
-
-    const getButtonLabel = () => {
-        switch (phase) {
-            case "identity": return "Continue";
-            case "otp_verify":
-            case "otp_reset": return "Verify OTP";
-            case "create_name": return "Next";
-            case "verify": return "Login";
-            case "create_pin": return "Create Account";
-            case "reset_pin": return "Reset PIN";
-            default: return "Continue";
-        }
-    };
-
     return (
-        <div className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden font-sans auth-mesh-gradient z-[9999999]">
+        <div className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden font-sans bg-[#000000] text-white">
+            {/* Background Effects */}
             <div className="absolute inset-0 z-0 bg-[url('/mesh-grid.svg')] opacity-20" />
+            <div className="absolute top-[-20%] right-[-20%] w-[500px] h-[500px] bg-sky-500/10 rounded-full blur-[100px]" />
+            <div className="absolute bottom-[-20%] left-[-20%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[100px]" />
 
+            {/* Header / Logo */}
             <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="absolute top-12 z-10 flex flex-col items-center gap-2">
-                <img src="/images/logo-dark.png" alt="FinHub" className="h-12 w-auto" />
-                <span className="text-xs font-medium text-white/40 tracking-widest uppercase">v0.1 Beta</span>
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-400 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                        <span className="font-bold text-white text-lg">F</span>
+                    </div>
+                    <span className="font-bold text-xl tracking-tight">FinHub</span>
+                </div>
             </motion.div>
 
-            <div className="z-10 w-full max-w-sm px-8">
+            {/* Main Card */}
+            <div className="z-10 w-full max-w-sm px-6 relative">
+                {/* Back Button */}
+                {step !== 'mobile' && (
+                    <motion.button
+                        initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                        onClick={handleBack}
+                        className="absolute -top-12 left-6 text-white/40 hover:text-white transition-colors"
+                    >
+                        <ArrowLeft className="w-6 h-6" />
+                    </motion.button>
+                )}
+
                 <AnimatePresence mode="wait">
-                    {phase === "identity" && (
-                        <motion.div key="identity" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="flex flex-col gap-6">
-                            <div className="text-center">
-                                <h2 className="text-2xl font-semibold text-white">Welcome</h2>
-                                <p className="text-white/50 text-sm mt-2">Enter your mobile number to continue</p>
-                            </div>
-                            <div className="group relative rounded-2xl bg-[#1C1C1E] p-4 ring-1 ring-white/10 transition-all focus-within:ring-sky-500/50">
-                                <label className="text-xs font-medium uppercase tracking-wider text-white/40">Mobile Number</label>
-                                <input ref={inputRef} type="text" inputMode="numeric" maxLength={10} value={mobile} onChange={(e) => {
-                                    const val = e.target.value.replace(/\D/g, "");
-                                    setMobile(val);
-                                    if (val.length === 10) {
-                                        checkIdentity(val).then(exists => {
-                                            if (exists) setPhase("verify");
-                                            else setPhase("create_name");
-                                            setPin("");
-                                        });
-                                    }
-                                }} onKeyDown={handleKeyDown} className="mt-1 w-full bg-transparent text-xl font-medium text-white placeholder-white/20 outline-none" placeholder="999 999 9999" />
-                            </div>
-                            <div onClick={() => { setRememberMe(!rememberMe); if (navigator.vibrate) navigator.vibrate(5); }} className="flex items-center gap-3 cursor-pointer self-center">
-                                <div className={`h-5 w-5 rounded-md border transition-all flex items-center justify-center ${rememberMe ? 'bg-sky-500 border-sky-500' : 'border-white/20 bg-white/5'}`}>
-                                    {rememberMe && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
-                                </div>
-                                <span className="text-sm text-white/60 font-medium">Remember me for 30 days</span>
-                            </div>
-                        </motion.div>
-                    )}
+                    <motion.div
+                        key={step + mode}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: error ? [0, -10, 10, -10, 10, 0] : 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        className="flex flex-col gap-8"
+                    >
+                        {/* Text Header */}
+                        <div className="text-center space-y-2">
+                            <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
+                                {getHeader().title}
+                            </h2>
+                            <p className="text-white/40 text-sm font-medium">
+                                {getInstruction()}
+                            </p>
+                        </div>
 
-                    {phase === "create_name" && (
-                        <motion.div key="create_name" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="flex flex-col gap-6">
-                            <div className="text-center">
-                                <h2 className="text-2xl font-semibold text-white">Who are you?</h2>
-                                <p className="text-white/50 text-sm mt-2">Set up your profile</p>
-                            </div>
-                            <div className="group relative rounded-2xl bg-[#1C1C1E] p-4 ring-1 ring-white/10 transition-all focus-within:ring-sky-500/50">
-                                <label className="text-xs font-medium uppercase tracking-wider text-white/40">Full Name</label>
-                                <input ref={inputRef} type="text" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={handleKeyDown} className="mt-1 w-full bg-transparent text-xl font-medium text-white placeholder-white/20 outline-none" placeholder="Joe Doe" />
-                            </div>
-                        </motion.div>
-                    )}
+                        {/* Input Area */}
+                        <div className="bg-white/5 backdrop-blur-xl rounded-[32px] p-8 ring-1 ring-white/10 shadow-2xl">
 
-                    {(phase === "otp_verify" || phase === "otp_reset") && (
-                        <motion.div key="otp" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1, x: error ? [0, -10, 10, -10, 10, 0] : 0 }} exit={{ scale: 1.1, opacity: 0 }} className="relative flex flex-col gap-8 items-center">
-                            <div className="text-center">
-                                <div className="mb-4 flex justify-center">
-                                    <div className="p-4 rounded-full bg-white/5 ring-1 ring-white/10">
-                                        <MessageSquare className="h-8 w-8 text-sky-400" />
+                            {/* Mobile Input */}
+                            {step === 'mobile' && (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-black/20 ring-1 ring-white/5 focus-within:ring-sky-500/50 transition-all">
+                                        <Smartphone className="w-5 h-5 text-white/40" />
+                                        <div className="flex-1">
+                                            <input
+                                                ref={inputRef}
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={mobile}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.replace(/\D/g, "");
+                                                    if (val.length <= 11) setMobile(val);
+                                                }}
+                                                className="w-full bg-transparent text-xl font-medium outline-none placeholder:text-white/20"
+                                                placeholder="Mobile Number"
+                                            />
+                                        </div>
                                     </div>
-                                </div>
-                                <h2 className="text-2xl font-semibold text-white">Verify Account</h2>
-                                <p className="text-white/40 text-sm mt-2">Enter the 4-digit code sent to<br /><span className="text-white/70">{mobile}</span></p>
-                            </div>
-                            <div className="group relative flex flex-col items-center justify-center rounded-[32px] bg-white/5 p-10 ring-1 ring-white/10 backdrop-blur-md">
-                                <div className="flex gap-5">
-                                    {/* Removing transition-all duration-200 to fix lag */}
-                                    {[0, 1, 2, 3].map((i) => (
-                                        <motion.div key={i} animate={{ scale: i < otp.length ? 1.2 : 1, backgroundColor: i < otp.length ? "#fff" : "rgba(255,255,255,0.1)" }} transition={{ duration: 0.1 }} className="h-3.5 w-3.5 rounded-full" />
-                                    ))}
-                                </div>
-                                <input ref={inputRef} type="password" inputMode="numeric" maxLength={4} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} onKeyDown={handleKeyDown} className="absolute inset-0 opacity-0 cursor-default" aria-label="One-time Password" placeholder="OTP" />
-                            </div>
-                        </motion.div>
-                    )}
 
-                    {phase === "reset_pin" && (
-                        <motion.div key="reset_pin" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1, x: error ? [0, -10, 10, -10, 10, 0] : 0 }} exit={{ scale: 1.1, opacity: 0 }} className="relative flex flex-col gap-8 items-center">
-                            <div className="text-center">
-                                <div className="mb-4 flex justify-center">
-                                    <div className="p-4 rounded-full bg-white/5 ring-1 ring-white/10">
-                                        <KeyRound className="h-8 w-8 text-amber-400" />
+                                    {/* Remember Me Checkbox */}
+                                    <div
+                                        onClick={() => setRememberMe(!rememberMe)}
+                                        className="flex items-center gap-3 cursor-pointer select-none px-2"
+                                    >
+                                        <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-colors ${rememberMe ? 'bg-sky-500 border-sky-500' : 'border-white/20 bg-white/5'}`}>
+                                            {rememberMe && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                                        </div>
+                                        <span className="text-sm text-white/50">Remember me</span>
                                     </div>
-                                </div>
-                                <h2 className="text-2xl font-semibold text-white">Reset PIN</h2>
-                                <p className="text-white/40 text-sm mt-2">Choose a new secure 4-digit access code</p>
-                            </div>
-                            <div className="space-y-4 w-full">
-                                <div className="group relative rounded-2xl bg-[#1C1C1E] p-4 ring-1 ring-white/10 transition-all focus-within:ring-amber-500/50">
-                                    <label className="text-xs font-medium uppercase tracking-wider text-white/40">New PIN</label>
-                                    <input type="password" inputMode="numeric" maxLength={4} value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))} onKeyDown={handleKeyDown} className="mt-1 w-full bg-transparent text-xl font-medium text-white placeholder-white/20 outline-none" placeholder="****" />
-                                </div>
-                                <div className="group relative rounded-2xl bg-[#1C1C1E] p-4 ring-1 ring-white/10 transition-all focus-within:ring-amber-500/50">
-                                    <label className="text-xs font-medium uppercase tracking-wider text-white/40">Confirm PIN</label>
-                                    <input type="password" inputMode="numeric" maxLength={4} value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))} onKeyDown={handleKeyDown} className="mt-1 w-full bg-transparent text-xl font-medium text-white placeholder-white/20 outline-none" placeholder="****" />
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {(phase === "verify" || phase === "create_pin") && (
-                        <motion.div key="pin" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1, x: error ? [0, -10, 10, -10, 10, 0] : 0 }} exit={{ scale: 1.1, opacity: 0 }} className="relative flex flex-col gap-8 items-center">
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[-1] bg-black/80 backdrop-blur-xl" />
-                            <div className="text-center">
-                                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="mb-4 flex justify-center">
-                                    <div className="p-4 rounded-full bg-white/5 ring-1 ring-white/10">
-                                        <Shield className="h-8 w-8 text-sky-400" />
-                                    </div>
-                                </motion.div>
-                                <h2 className="text-2xl font-semibold text-white">{phase === "verify" ? "Private Access" : "Secure Setup"}</h2>
-                                <p className="text-white/40 text-sm mt-2">{phase === "verify" ? "Encrypted PIN required" : "Create your master PIN"}</p>
-                            </div>
-                            <div className="group relative flex flex-col items-center justify-center rounded-[32px] bg-white/5 p-10 ring-1 ring-white/10 backdrop-blur-md">
-                                <div className="flex gap-5">
-                                    {/* Removing transition-all duration-200 to fix lag */}
-                                    {[0, 1, 2, 3].map((i) => (
-                                        <motion.div key={i} animate={{ scale: i < pin.length ? 1.2 : 1, backgroundColor: i < pin.length ? "#fff" : "rgba(255,255,255,0.1)" }} transition={{ duration: 0.1 }} className="h-3.5 w-3.5 rounded-full" />
-                                    ))}
-                                </div>
-                                <input ref={inputRef} type="password" inputMode="numeric" maxLength={4} value={pin} onChange={(e) => {
-                                    const val = e.target.value.replace(/\D/g, "");
-                                    setPin(val);
-                                    if (val.length === 4) {
-                                        // Trigger handlePinSubmit logic but adapted for direct use
-                                        if (phase === "verify") {
-                                            login(val, rememberMe).then(success => {
-                                                if (success) {
-                                                    if (navigator.vibrate) navigator.vibrate([10]);
-                                                    if (!rememberMe && !isRememberedUser) setShowSmartPrompt(true);
-                                                } else triggerError();
-                                            });
-                                        } else if (phase === "create_pin") {
-                                            signup(mobile, val, name, rememberMe).then(success => {
-                                                if (!success) triggerError();
-                                            });
-                                        }
-                                    }
-                                }} onKeyDown={handleKeyDown} className="absolute inset-0 opacity-0 cursor-default" aria-label="Access PIN" placeholder="PIN" />
-                            </div>
-                            {phase === "verify" && (
-                                <div className="flex flex-col items-center gap-4">
-                                    <button onClick={triggerBiometrics} className="flex items-center gap-2 text-sky-400 text-sm font-medium">
-                                        <Target className="h-5 w-5" /> Use Biometrics
-                                    </button>
-                                    <button onClick={handleForgotPin} className="text-white/30 text-xs hover:text-white/50 transition-colors">
-                                        Forgot PIN? Reset via SMS
-                                    </button>
-                                    <button onClick={handleSwitchAccount} className="text-sky-500/50 text-[10px] font-bold uppercase tracking-widest hover:text-sky-400/80 transition-colors mt-2">
-                                        Login with another account
-                                    </button>
                                 </div>
                             )}
-                        </motion.div>
-                    )}
+
+                            {/* PIN Input */}
+                            {(step === 'pin' || step === 'confirm_pin') && (
+                                <div className="flex flex-col items-center gap-6">
+                                    {/* PIN Circles */}
+                                    <div className="flex gap-4">
+                                        {[0, 1, 2, 3].map((i) => {
+                                            const val = step === 'pin' ? pin : confirmPin;
+                                            const filled = i < val.length;
+                                            return (
+                                                <motion.div
+                                                    key={i}
+                                                    animate={{
+                                                        scale: filled ? 1 : 0.8,
+                                                        backgroundColor: filled ? "#fff" : "rgba(255,255,255,0.1)",
+                                                        boxShadow: filled ? "0 0 20px rgba(255,255,255,0.3)" : "none"
+                                                    }}
+                                                    className="w-4 h-4 rounded-full"
+                                                />
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Visible (Hidden) Input */}
+                                    <input
+                                        ref={inputRef}
+                                        type="password"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        maxLength={4}
+                                        value={step === 'pin' ? pin : confirmPin}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, "");
+                                            if (step === 'pin') {
+                                                setPin(val);
+                                                if (val.length === 4) handleNext(); // Auto submit? Maybe distinct action is better for UX or check debounce
+                                            } else {
+                                                setConfirmPin(val);
+                                                if (val.length === 4) handleNext();
+                                            }
+                                        }}
+                                        className="absolute opacity-0 inset-0 h-full cursor-pointer"
+                                        aria-label={step === 'pin' ? "Enter PIN" : "Confirm PIN"}
+                                    />
+
+                                    {/* Biometric Button (Only Login + PIN step) */}
+                                    {mode === 'login' && step === 'pin' && (
+                                        <button onClick={triggerBiometrics} className="flex items-center gap-2 text-sky-400 text-sm font-medium hover:text-sky-300 transition-colors">
+                                            <Target className="w-4 h-4" /> Use FaceID / TouchID
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+
+                        </div>
+
+                        {/* Primary Action Button */}
+                        <button
+                            onClick={() => handleNext()}
+                            disabled={isDisabled() || isLoading}
+                            className={`w-full py-4 rounded-[20px] font-bold text-lg shadow-xl shadow-sky-500/20 active:scale-95 transition-all flex items-center justify-center gap-2
+                                ${isDisabled() ? 'bg-white/10 text-white/20 cursor-not-allowed' : 'bg-gradient-to-r from-sky-500 to-blue-600 text-white hover:shadow-sky-500/40'}
+                            `}
+                        >
+                            {isLoading ? (
+                                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <>
+                                    {step === 'confirm_pin' ? 'Create Account' : mode === 'login' && step === 'pin' ? 'Login' : 'Continue'}
+                                    <ArrowRight className="w-5 h-5" />
+                                </>
+                            )}
+                        </button>
+                    </motion.div>
                 </AnimatePresence>
 
-                <motion.button onClick={getPrimaryAction()} disabled={isButtonDisabled()} className={`mt-8 flex w-full items-center justify-center gap-2 rounded-[22px] py-4 text-base font-semibold text-white shadow-lg transition-all ${isButtonDisabled() ? "cursor-not-allowed bg-[#3A3A3C] opacity-50" : "bg-gradient-to-r from-[#0A84FF] to-[#0047AB] shadow-sky-500/20 active:scale-95"}`} whileTap={{ scale: 0.98 }}>
-                    {getButtonLabel()}
-                    {!isButtonDisabled() && <ArrowRight className="h-4 w-4" />}
-                </motion.button>
+                {/* Footer Mode Switch */}
+                <div className="mt-8 text-center space-y-4">
+                    {mode === 'login' ? (
+                        <p className="text-white/40 text-sm">
+                            New to FinHub? {' '}
+                            <button onClick={() => switchMode('signup')} className="text-sky-400 font-bold hover:text-sky-300 hover:underline transition-all">
+                                Create Account
+                            </button>
+                        </p>
+                    ) : (
+                        <p className="text-white/40 text-sm">
+                            Already have an account? {' '}
+                            <button onClick={() => switchMode('login')} className="text-sky-400 font-bold hover:text-sky-300 hover:underline transition-all">
+                                Login Here
+                            </button>
+                        </p>
+                    )}
+                </div>
             </div>
 
-            <AnimatePresence>
-                {showSmartPrompt && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-6 backdrop-blur-sm">
-                        <motion.div initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }} className="w-full max-w-sm rounded-[32px] bg-[#1C1C1E] p-8 text-center ring-1 ring-white/10 shadow-2xl">
-                            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-sky-500/20 text-sky-400">
-                                <CheckCircle2 className="h-8 w-8" />
-                            </div>
-                            <h3 className="text-xl font-bold text-white">Speed up your next login?</h3>
-                            <p className="mt-2 text-sm text-white/50">We can securely remember your ID so you can skip the mobile entry next time.</p>
-                            <div className="mt-8 flex flex-col gap-3">
-                                <button onClick={() => { localStorage.setItem('finhub_remembered_mobile', mobile); setShowSmartPrompt(false); }} className="w-full rounded-2xl bg-sky-500 py-4 font-semibold text-white active:scale-95 transition-all">Enable Smart Login</button>
-                                <button onClick={() => setShowSmartPrompt(false)} className="w-full py-2 text-sm font-medium text-white/30 active:text-white/50">Maybe later</button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
+            {/* Biometric Overlay */}
             <AnimatePresence>
                 {isBiometricActive && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-black/40 backdrop-blur-md">
-                        <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="flex flex-col items-center">
-                            <div className="relative mb-6">
-                                <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 2, repeat: Infinity }} className="absolute inset-0 rounded-full bg-sky-500/30 blur-2xl" />
-                                <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/20">
-                                    <Target className="h-12 w-12 text-sky-400" />
-                                </div>
-                            </div>
-                            <h3 className="text-lg font-medium text-white">Scanning Biometrics</h3>
-                            <p className="mt-2 text-sm text-white/40 italic">Verifying your identity...</p>
-                            <button onClick={() => setIsBiometricActive(false)} className="mt-12 text-xs font-medium uppercase tracking-widest text-white/20 hover:text-white/40">Cancel & use PIN</button>
-                        </motion.div>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-black/80 backdrop-blur-xl">
+                        <div className="relative">
+                            <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 2, repeat: Infinity }} className="absolute inset-0 rounded-full bg-sky-500/30 blur-2xl" />
+                            <Target className="w-20 h-20 text-sky-400 relative z-10" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mt-8">Verifying Identity</h3>
+                        <p className="text-white/40 mt-2">Please authenticate to continue</p>
+                        <button onClick={() => setIsBiometricActive(false)} className="mt-8 px-6 py-2 rounded-full border border-white/10 text-white/40 hover:text-white transition-colors text-sm uppercase tracking-wider">
+                            Cancel
+                        </button>
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            <div className="absolute bottom-8 text-center text-[10px] text-white/20">
-                <p>Protected by FinHub Security. Data is localized and encrypted.</p>
-            </div>
         </div>
     );
 };

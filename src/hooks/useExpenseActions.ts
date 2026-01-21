@@ -209,10 +209,12 @@ export const useExpenseActions = (state: any, actions: any) => {
                         } as any);
                     }
                 }
+            } else {
+                throw response.error || new Error("API failed");
             }
-        } catch {
+        } catch (error) {
             setExpenses((prev: any[]) => [...prev, { id: `temp_${Date.now()}`, ...data, createdAt: new Date().toISOString() }]);
-            toast.warning("Added in offline mode");
+            toast.warning(`Added in offline mode: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }, [userId, addNotifications, setEmergencyFundAmount, setExpenses]);
 
@@ -235,10 +237,12 @@ export const useExpenseActions = (state: any, actions: any) => {
                 }
                 setExpenses((prev: any[]) => prev.map(e => e.id === id ? response.expense : e));
                 toast.success("Expense updated");
+            } else {
+                throw response.error || new Error("API failed");
             }
-        } catch {
+        } catch (error) {
             setExpenses((prev: any[]) => prev.map(e => e.id === id ? { ...e, ...data } : e));
-            toast.warning("Updated in offline mode");
+            toast.warning(`Updated in offline mode: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }, [userId, setExpenses]);
 
@@ -254,12 +258,15 @@ export const useExpenseActions = (state: any, actions: any) => {
                         // DB trigger handles balance reversal on delete
                     }
                 }
+                // logic above
                 setExpenses((prev: any[]) => prev.filter(e => e.id !== id));
                 toast.success("Expense deleted");
+            } else {
+                throw response.error || new Error("API failed");
             }
-        } catch {
+        } catch (error) {
             setExpenses((prev: any[]) => prev.filter(e => e.id !== id));
-            toast.warning("Deleted in offline mode");
+            toast.warning(`Deleted in offline mode: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }, [userId, setExpenses]);
 

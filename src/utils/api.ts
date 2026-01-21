@@ -124,8 +124,6 @@ export const api = {
       account_id: data.accountId,
       category_id: categoryId,
       tags: data.tags || [],
-      payment_method: data.paymentMethod || 'UPI',
-      merchant_name: data.merchantName,
       entity_kind: data.liabilityId ? 'loan' : (data.investmentId ? 'investment' : (data.recurringId ? 'subscription' : null)),
       entity_id: data.liabilityId || data.investmentId || data.recurringId || null
     };
@@ -140,6 +138,7 @@ export const api = {
 
     return {
       success: !error,
+      error,
       expense: txn ? {
         ...data,
         id: txn.id,
@@ -161,8 +160,6 @@ export const api = {
       updates.fx_date = data.date;
     }
     if (data.tags) updates.tags = data.tags;
-    if (data.paymentMethod) updates.payment_method = data.paymentMethod;
-    if (data.merchantName) updates.merchant_name = data.merchantName;
     if (data.category) {
       updates.category_id = await getCategoryId(userId, data.category, 'expense');
     }
@@ -173,7 +170,7 @@ export const api = {
       .eq('user_id', userId)
       .select().single();
 
-    return { success: !error, expense: txn ? { ...data, id: txn.id, createdAt: txn.created_at } : null };
+    return { success: !error, error, expense: txn ? { ...data, id: txn.id, createdAt: txn.created_at } : null };
   },
 
   async deleteExpense(userId: string, expenseId: string) {
@@ -181,7 +178,7 @@ export const api = {
       .delete()
       .eq('id', expenseId)
       .eq('user_id', userId);
-    return { success: !error };
+    return { success: !error, error };
   },
 
   // --- Incomes (transactions type='income') ---
@@ -228,7 +225,6 @@ export const api = {
       account_id: data.accountId,
       category_id: categoryId,
       tags: data.tags || [],
-      payment_method: data.paymentMethod || 'UPI',
       entity_kind: data.recurringId ? 'subscription' : null,
       entity_id: data.recurringId || null
     };
@@ -243,6 +239,7 @@ export const api = {
 
     return {
       success: !error,
+      error,
       income: txn ? {
         ...data,
         id: txn.id,
@@ -276,7 +273,7 @@ export const api = {
       .eq('user_id', userId)
       .select().single();
 
-    return { success: !error, income: txn ? { ...data, id: txn.id, createdAt: txn.created_at } : null };
+    return { success: !error, error, income: txn ? { ...data, id: txn.id, createdAt: txn.created_at } : null };
   },
 
   async deleteIncome(userId: string, incomeId: string) {
@@ -284,7 +281,7 @@ export const api = {
       .delete()
       .eq('id', incomeId)
       .eq('user_id', userId);
-    return { success: !error };
+    return { success: !error, error };
   },
 
   // --- Accounts (accounts table) ---

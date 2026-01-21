@@ -48,11 +48,13 @@ export const useIncomeActions = (state: any, actions: any) => {
                 } else {
                     toast.success("Income added!");
                 }
+            } else {
+                throw response.error || new Error("API failed");
             }
         } catch (error) {
             console.error('Error creating income:', error);
             setIncomes((prev: any[]) => [...prev, { id: `temp_${Date.now()}`, ...data, createdAt: new Date().toISOString() }]);
-            toast.warning("Added in offline mode");
+            toast.warning(`Added in offline mode: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }, [userId, setIncomes]);
 
@@ -75,10 +77,12 @@ export const useIncomeActions = (state: any, actions: any) => {
                 }
                 setIncomes((prev: any[]) => prev.map(i => i.id === id ? response.income : i));
                 toast.success("Income updated");
+            } else {
+                throw response.error || new Error("API failed");
             }
-        } catch {
+        } catch (error) {
             setIncomes((prev: any[]) => prev.map(i => i.id === id ? { ...i, ...data } : i));
-            toast.warning("Updated in offline mode");
+            toast.warning(`Updated in offline mode: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }, [userId, setIncomes]);
 
@@ -96,10 +100,12 @@ export const useIncomeActions = (state: any, actions: any) => {
                 }
                 setIncomes((prev: any[]) => prev.filter(i => i.id !== id));
                 toast.success("Income deleted");
+            } else {
+                throw response.error || new Error("API failed");
             }
-        } catch {
+        } catch (error) {
             setIncomes((prev: any[]) => prev.filter(i => i.id !== id));
-            toast.warning("Deleted in offline mode");
+            toast.warning(`Deleted in offline mode: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }, [userId, setIncomes]);
 
