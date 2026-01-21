@@ -1,5 +1,4 @@
-# FinHub v0.1(Beta) – Quantum Core
-
+# FinHub v0.1(Beta)
 ## ✨ Our Manifesto: Financial Freedom, the Way It Was Meant to Be
 
 Using FinHub, you’re going to change the way you think about money.
