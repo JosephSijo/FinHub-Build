@@ -32,9 +32,6 @@ import { isTransfer } from '@/utils/isTransfer';
 import { Expense, Income, Account, Debt, AIContext, Goal, Liability, RecurringTransaction } from '@/types';
 import { calculateFoundationMetrics } from '@/utils/architect';
 import { ActionInsightCard, actionInsightsLogic } from '../features/actionInsights';
-<<<<<<< HEAD
-import { NotificationCard, notificationsLogic, NotificationContext } from '../features/notifications';
-=======
 import { NotificationCard, notificationsLogic, NotificationContext } from '../features/notifications';
 import { FinancialHealthClarity } from './dashboard/FinancialHealthClarity';
 
@@ -1118,4 +1115,3 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
     </div>
   );
 });
->>>>>>> Antigravity
