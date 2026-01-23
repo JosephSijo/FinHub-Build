@@ -15,11 +15,8 @@ function checkPaymentRisk(context: NotificationContext, currency: string = '₹'
         const dueDate = new Date(p.dueDate);
         const today = new Date();
         const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-<<<<<<< HEAD
-        
-=======
 
->>>>>>> Antigravity
+
         return daysUntilDue <= 7 && daysUntilDue >= 0 && p.accountBalance < p.amount;
     });
 
@@ -113,11 +110,8 @@ function checkEMIMissed(context: NotificationContext, currency: string = '₹'):
  */
 function checkFeeLeakage(context: NotificationContext, currency: string = '₹', threshold: number = 100): Notification | null {
     const highFees = context.feeAlerts.filter(f => f.estimatedFee > threshold);
-<<<<<<< HEAD
-    
-=======
 
->>>>>>> Antigravity
+
     if (highFees.length === 0) return null;
 
     const topFee = highFees.sort((a, b) => b.estimatedFee - a.estimatedFee)[0];
@@ -167,13 +161,9 @@ function checkOnboarding(context: NotificationContext): Notification | null {
         return {
             id: 'onboarding-no-accounts',
             type: 'ONBOARDING',
-<<<<<<< HEAD
-            priority: 'MEDIUM',
-            message: 'Add an account to start tracking Safe-to-Spend.',
-=======
             priority: 'CRITICAL',
             message: 'Connect your first bank or cash account to enable Safe-to-Spend tracking and intelligence features.',
->>>>>>> Antigravity
+
             action: {
                 label: 'Add Account',
                 route: '/accounts'

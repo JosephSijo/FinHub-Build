@@ -48,14 +48,13 @@ export const api = {
   async updateSettings(userId: string, updates: any) {
     // Check existing to preserve values
     const { data: existing } = await supabase.from('user_profile')
-      .select('base_currency_code, name, settings')
+      .select('base_currency_code, name, settings, theme')
       .eq('user_id', userId)
       .maybeSingle();
 
     const payload: any = {
       user_id: userId,
-      settings: { ...(existing?.settings || {}), ...updates },
-      theme: updates.theme || existing?.settings?.theme || 'system',
+      settings: { ...((existing?.settings as object) || {}), ...updates, theme: updates.theme || existing?.theme || 'system' },
       updated_at: new Date().toISOString()
     };
 

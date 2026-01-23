@@ -1,20 +1,13 @@
-<<<<<<< HEAD
-import { supabase } from '../../lib/supabase';
-=======
 import { fromTable, DB_TABLES } from '../../repositories/supa';
->>>>>>> Antigravity
+
 import { FeeRule } from './types';
 
 /**
  * Fetch active fee rules for the current user (including global rules)
  */
 export async function fetchFeeRules(userId: string): Promise<FeeRule[]> {
-<<<<<<< HEAD
-    const { data, error } = await supabase
-        .from('fee_rules')
-=======
     const { data, error } = await fromTable(DB_TABLES.FEE_RULES)
->>>>>>> Antigravity
+
         .select('*')
         .eq('is_active', true)
         .or(`user_id.is.null,user_id.eq.${userId}`)
@@ -32,12 +25,8 @@ export async function fetchFeeRules(userId: string): Promise<FeeRule[]> {
  * Create a custom fee rule for a user
  */
 export async function createFeeRule(userId: string, rule: Omit<FeeRule, 'id' | 'user_id' | 'created_at'>): Promise<FeeRule> {
-<<<<<<< HEAD
-    const { data, error } = await supabase
-        .from('fee_rules')
-=======
     const { data, error } = await fromTable(DB_TABLES.FEE_RULES)
->>>>>>> Antigravity
+
         .insert([{
             ...rule,
             user_id: userId
@@ -57,12 +46,8 @@ export async function createFeeRule(userId: string, rule: Omit<FeeRule, 'id' | '
  * Update a fee rule
  */
 export async function updateFeeRule(userId: string, ruleId: string, updates: Partial<FeeRule>): Promise<void> {
-<<<<<<< HEAD
-    const { error } = await supabase
-        .from('fee_rules')
-=======
     const { error } = await fromTable(DB_TABLES.FEE_RULES)
->>>>>>> Antigravity
+
         .update(updates)
         .eq('id', ruleId)
         .eq('user_id', userId);
@@ -77,12 +62,8 @@ export async function updateFeeRule(userId: string, ruleId: string, updates: Par
  * Delete a fee rule
  */
 export async function deleteFeeRule(userId: string, ruleId: string): Promise<void> {
-<<<<<<< HEAD
-    const { error } = await supabase
-        .from('fee_rules')
-=======
     const { error } = await fromTable(DB_TABLES.FEE_RULES)
->>>>>>> Antigravity
+
         .delete()
         .eq('id', ruleId)
         .eq('user_id', userId);

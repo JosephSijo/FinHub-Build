@@ -322,6 +322,7 @@ export interface FinanceContextType {
   isOffline: boolean;
   apiStatus: 'online' | 'offline' | 'error';
   pendingMobile: string;
+  setPendingMobile: React.Dispatch<React.SetStateAction<string>>;
   authMessage?: { message: string, subMessage?: string };
 
   // Auth State
@@ -408,7 +409,7 @@ export interface FinanceContextType {
     amount: number;
     destinationType: 'goal' | 'emergency';
   }) => Promise<void>;
-  deductFromAccount: (accountId: string, amount: number) => Promise<void>;
+  deductFromAccount: (accountId: string, amount: number, description: string) => Promise<void>;
   transferFunds: (sourceId: string, destinationId: string, amount: number) => Promise<void>;
   clearAllData: () => void;
 

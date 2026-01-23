@@ -93,7 +93,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             // This prevents the app from getting stuck on the loading screen.
             financeData.setIsLoading(false);
         }
-    }, [auth.authStatus, loader, financeData]);
+    }, [auth.authStatus, loader, financeData.setIsLoading]);
 
     useEffect(() => {
         const interval = setInterval(() => {
