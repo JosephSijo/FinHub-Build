@@ -546,7 +546,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
 
                   {infAmount && (
                     <div className="space-y-4">
-                      <div className="h-[300px] w-full bg-black/20 rounded-2xl p-2 border border-white/5 overflow-hidden">
+                      <div className="h-[300px] w-full bg-black/20 rounded-[24px] p-2 border border-white/5 overflow-hidden min-h-[300px]">
                         <ResponsiveContainer width="100%" height="100%" minHeight={300}>
                           <AreaChart data={projectionData}>
                             <defs>

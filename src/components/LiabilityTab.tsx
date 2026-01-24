@@ -6,14 +6,19 @@ import { Label } from './ui/label';
 import { MeshBackground } from './ui/MeshBackground';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { CreditCard, Plus, Pencil, Trash2, Calculator } from 'lucide-react';
+import { CreditCard, Plus, Pencil, Trash2, Calculator, Sparkles } from 'lucide-react';
 import { Liability } from '../types';
 import { toast } from 'sonner';
 import { formatCurrency } from '../utils/numberFormat';
 import { motion } from 'framer-motion';
 import { useFinance } from '../context/FinanceContext';
 import { CyberButton } from './ui/CyberButton';
-import { calculateLoanDetails as getLoanDetails } from '../utils/financeCalculations';
+import {
+  calculateLoanDetails as getLoanDetails,
+  calculateAnnualRate,
+  calculateTenure,
+  calculateClosureDate
+} from '../utils/financeCalculations';
 
 
 
@@ -60,6 +65,7 @@ export function LiabilityTab({ currency, expenses = [], accounts = [], debts = [
     startDate: new Date().toISOString().split('T')[0],
     tenure: '',
     tenureUnit: 'months' as 'months' | 'years',
+    closureDate: '',
     accountId: 'none'
   });
 
@@ -119,6 +125,7 @@ export function LiabilityTab({ currency, expenses = [], accounts = [], debts = [
       startDate: liability.startDate,
       tenure: tenureValue.toString(),
       tenureUnit: tenureUnit,
+      closureDate: '', // Will be auto-calculated by useEffect
       accountId: liability.accountId || 'none'
     });
     setIsAddDialogOpen(true);
@@ -135,10 +142,45 @@ export function LiabilityTab({ currency, expenses = [], accounts = [], debts = [
       startDate: new Date().toISOString().split('T')[0],
       tenure: '',
       tenureUnit: 'months',
+      closureDate: '',
       accountId: 'none'
     });
     setEditingLiability(null);
   };
+
+  // Reactive Auto-calculation logic
+  React.useEffect(() => {
+    const p = parseFloat(formData.principal);
+    const e = parseFloat(formData.emiAmount);
+    const r = parseFloat(formData.interestRate);
+    const tVal = parseInt(formData.tenure);
+    const tMonths = formData.tenureUnit === 'years' ? tVal * 12 : tVal;
+    const start = formData.startDate;
+
+    if (p > 0 && e > 0 && tMonths > 0 && !formData.interestRate) {
+      // Solve for Rate
+      const solvedRate = calculateAnnualRate(p, e, tMonths);
+      if (solvedRate > 0) {
+        setFormData(prev => ({ ...prev, interestRate: solvedRate.toString() }));
+        toast.info(`Solved Interest Rate: ${solvedRate}%`, { id: 'solve-rate', duration: 2000 });
+      }
+    } else if (p > 0 && e > 0 && r > 0 && !formData.tenure) {
+      // Solve for Tenure
+      const solvedTenure = calculateTenure(p, e, r);
+      if (solvedTenure > 0) {
+        setFormData(prev => ({ ...prev, tenure: solvedTenure.toString(), tenureUnit: 'months' }));
+        toast.info(`Solved Tenure: ${solvedTenure} months`, { id: 'solve-tenure', duration: 2000 });
+      }
+    }
+
+    // Always update closure date if enough info
+    if (start && tMonths > 0) {
+      const cDate = calculateClosureDate(start, tMonths);
+      if (cDate !== formData.closureDate) {
+        setFormData(prev => ({ ...prev, closureDate: cDate }));
+      }
+    }
+  }, [formData.principal, formData.emiAmount, formData.interestRate, formData.tenure, formData.tenureUnit, formData.startDate]);
 
   // Auto-calculate outstanding amount and EMI
   const calculateLoanDetails = () => {
@@ -572,43 +614,55 @@ export function LiabilityTab({ currency, expenses = [], accounts = [], debts = [
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <Label htmlFor="liability-start-date" className="text-label text-[10px] mb-3 block">Actual EMI Due Date (Anchor)</Label>
-              <Input
-                id="liability-start-date"
-                name="startDate"
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
-                required
-              />
               <div>
-                <Label htmlFor="liability-tenure" className="text-label text-[10px] mb-3 block">Tenure</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="liability-tenure"
-                    name="tenure"
-                    type="number"
-                    value={formData.tenure}
-                    onChange={(e) => setFormData({ ...formData, tenure: e.target.value })}
-                    placeholder={formData.tenureUnit === 'years' ? '5' : '60'}
-                    required
-                    className="flex-1 bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
-                    autoComplete="off"
-                  />
-                  <Select
-                    value={formData.tenureUnit}
-                    onValueChange={(value: 'months' | 'years') => setFormData({ ...formData, tenureUnit: value })}
-                  >
-                    <SelectTrigger id="liability-tenure-unit" name="tenureUnit" className="w-[110px] bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#1C1C1E] border-[#38383A] text-white">
-                      <SelectItem value="months">Months</SelectItem>
-                      <SelectItem value="years">Years</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Label htmlFor="liability-start-date" className="text-label text-[10px] mb-3 block">Start Date</Label>
+                <Input
+                  id="liability-start-date"
+                  name="startDate"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  className="bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
+                  required
+                />
+              </div>
+              <div className="relative">
+                <Label htmlFor="liability-closure-date" className="text-label text-[10px] mb-3 block text-emerald-500">Auto-Closure Date</Label>
+                <Input
+                  id="liability-closure-date"
+                  readOnly
+                  value={formData.closureDate}
+                  className="bg-emerald-500/5 border-emerald-500/20 rounded-xl h-14 text-emerald-400 font-bold"
+                />
+                <Sparkles className="absolute right-3 top-10 w-4 h-4 text-emerald-500/40" />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="liability-tenure" className="text-label text-[10px] mb-3 block">Tenure</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="liability-tenure"
+                  name="tenure"
+                  type="number"
+                  value={formData.tenure}
+                  onChange={(e) => setFormData({ ...formData, tenure: e.target.value })}
+                  placeholder={formData.tenureUnit === 'years' ? '5' : '60'}
+                  className="flex-1 bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white"
+                  autoComplete="off"
+                />
+                <Select
+                  value={formData.tenureUnit}
+                  onValueChange={(value: 'months' | 'years') => setFormData({ ...formData, tenureUnit: value })}
+                >
+                  <SelectTrigger id="liability-tenure-unit" name="tenureUnit" className="w-[110px] bg-[#2C2C2E] border-[#38383A] rounded-xl h-14 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1C1C1E] border-[#38383A] text-white">
+                    <SelectItem value="months">Months</SelectItem>
+                    <SelectItem value="years">Years</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

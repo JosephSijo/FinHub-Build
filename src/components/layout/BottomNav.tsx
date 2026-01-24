@@ -1,5 +1,5 @@
 import React from 'react';
-import { House, Receipt, RefreshCw, ChartLine, Target, GripVertical } from 'lucide-react';
+import { House, Receipt, CreditCard, ChartLine, Target, GripVertical } from 'lucide-react';
 
 interface BottomNavProps {
     isVisible: boolean;
@@ -36,12 +36,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             </button>
 
             <button
-                aria-label="Recurring Flows"
-                className={`flex flex-col items-center transition-all cursor-pointer ${activeTab === 'recurring' ? 'text-[#0A84FF]' : 'text-[#8E8E93] hover:text-white'}`}
-                onClick={() => onTabChange('recurring')}
+                aria-label="Bills and Debts"
+                className={`flex flex-col items-center transition-all cursor-pointer ${activeTab === 'bills_debts' ? 'text-[#0A84FF]' : 'text-[#8E8E93] hover:text-white'}`}
+                onClick={() => onTabChange('bills_debts')}
             >
-                <RefreshCw className="w-6 h-6" />
-                <span className="text-[9px] font-black uppercase mt-2 tracking-[0.3em]">Flows</span>
+                <CreditCard className="w-6 h-6" />
+                <span className="text-[9px] font-black uppercase mt-2 tracking-[0.3em]">Bills</span>
             </button>
 
             <button

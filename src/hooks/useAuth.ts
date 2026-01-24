@@ -46,7 +46,7 @@ export const useAuth = () => {
         };
         checkSession();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             console.log("Auth State Change:", event, session?.user?.id);
 
             if (session?.user) {
@@ -57,9 +57,13 @@ export const useAuth = () => {
                     name: session.user.user_metadata?.name || 'User'
                 });
                 setAuthStatus('authenticated');
-            } else if (event === 'SIGNED_OUT') {
-                // Only set to guest if explicitly signed out to avoid 'initial load' null session overwriting
-                // manual 'authenticated' set during login race conditions.
+            } else if (event === 'SIGNED_OUT' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+                // If session is null during these events, it often means refresh failed or was revoked
+                if (!session) {
+                    setAuthStatus('guest');
+                    setCurrentUser(null);
+                }
+            } else {
                 setAuthStatus('guest');
                 setCurrentUser(null);
             }

@@ -8,6 +8,7 @@ export interface LoanDetails {
     totalInterest: number;
     totalPayment: number;
     outstanding: number;
+    closureDate?: string;
 }
 
 export interface InvestmentDetails {
@@ -71,8 +72,57 @@ export const calculateLoanDetails = (
         emi: Number(emi.toFixed(2)),
         totalInterest: Number(totalInterest.toFixed(2)),
         totalPayment: Number(totalPayment.toFixed(2)),
-        outstanding: Number(Math.max(0, outstanding).toFixed(2))
+        outstanding: Number(Math.max(0, outstanding).toFixed(2)),
+        closureDate: startDate ? calculateClosureDate(startDate, tenureMonths) : undefined
     };
+};
+
+/**
+ * Iterative solver for Annual Interest Rate using Newton-Raphson method.
+ * P = (EMI / r) * [1 - (1 + r)^-n]
+ */
+export const calculateAnnualRate = (principal: number, emi: number, tenureMonths: number): number => {
+    if (principal <= 0 || emi <= 0 || tenureMonths <= 0 || emi * tenureMonths <= principal) return 0;
+
+    let r = 0.1 / 12; // Initial guess 10% annual
+    for (let i = 0; i < 20; i++) {
+        const powTerm = Math.pow(1 + r, tenureMonths);
+        const f = emi * (powTerm - 1) - principal * r * powTerm;
+        const df = emi * tenureMonths * Math.pow(1 + r, tenureMonths - 1) - principal * (powTerm + r * tenureMonths * Math.pow(1 + r, tenureMonths - 1));
+        const newR = r - f / df;
+        if (Math.abs(newR - r) < 0.000001) {
+            r = newR;
+            break;
+        }
+        r = newR;
+    }
+
+    return Number((r * 12 * 100).toFixed(2));
+};
+
+/**
+ * Calculates tenure in months.
+ * n = log(EMI / (EMI - P*r)) / log(1 + r)
+ */
+export const calculateTenure = (principal: number, emi: number, annualRate: number): number => {
+    if (principal <= 0 || emi <= 0 || annualRate < 0) return 0;
+    const r = annualRate / 12 / 100;
+    if (r === 0) return Math.ceil(principal / emi);
+
+    if (emi <= principal * r) return 0; // EMI doesn't even cover interest
+
+    const n = Math.log(emi / (emi - principal * r)) / Math.log(1 + r);
+    return Math.ceil(n);
+};
+
+/**
+ * Calculates closure date based on start date and tenure.
+ */
+export const calculateClosureDate = (startDate: string, tenureMonths: number): string => {
+    if (!startDate || tenureMonths <= 0) return startDate;
+    const date = new Date(startDate);
+    date.setMonth(date.getMonth() + tenureMonths);
+    return date.toISOString().split('T')[0];
 };
 
 /**

@@ -224,8 +224,8 @@ export function WealthBuilderSimulator() {
                 </div>
 
                 {/* Chart */}
-                <div className="lg:col-span-8 min-h-[350px]">
-                    <ResponsiveContainer width="100%" height={350}>
+                <div className="lg:col-span-8 h-[350px] min-h-[350px] min-w-0">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={350}>
                         <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorWealth" x1="0" y1="0" x2="0" y2="1">

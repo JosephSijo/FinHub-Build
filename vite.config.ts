@@ -96,13 +96,13 @@ export default defineConfig({
     allowedHosts: true,
     headers: {
       'X-Content-Type-Options': 'nosniff',
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data: https://*.supabase.co https://placehold.co; frame-ancestors 'none';",
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.worldbank.org https://api.exchangerate-api.com https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.deepseek.com https://api.perplexity.ai; img-src 'self' data: https://*.supabase.co https://placehold.co https://grainy-gradients.vercel.app; frame-ancestors 'none'; worker-src 'self' blob:;",
     }
   },
   preview: {
     headers: {
       'X-Content-Type-Options': 'nosniff',
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data: https://*.supabase.co https://placehold.co; frame-ancestors 'none';",
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.worldbank.org https://api.exchangerate-api.com https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.deepseek.com https://api.perplexity.ai; img-src 'self' data: https://*.supabase.co https://placehold.co https://grainy-gradients.vercel.app; frame-ancestors 'none'; worker-src 'self' blob:;",
       'Cache-Control': 'public, max-age=31536000, immutable'
     }
   }

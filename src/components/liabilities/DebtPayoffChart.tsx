@@ -1,4 +1,4 @@
- 
+
 import React from 'react';
 import {
     AreaChart,
@@ -57,8 +57,8 @@ export const DebtPayoffChart: React.FC<DebtPayoffChartProps> = React.memo(({ dat
     };
 
     return (
-        <div className="h-[300px] w-full mt-4">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <div className="h-[300px] min-h-[300px] w-full mt-4 min-w-0">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={300}>
                 <AreaChart
                     data={data}
                     margin={{ top: 10, right: 10, left: 10, bottom: 0 }}

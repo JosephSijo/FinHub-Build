@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { calculateBalanceMetrics, mapContextToBalanceBoardData } from "./features/balanceBoard";
 import { BudgetsScreen } from "./features/budgets";
+import { BillsDebtsScreen } from "./features/billsDebts/BillsDebtsScreen";
 
 // Lazy Load Heavy Components
 const Dashboard = lazy(() => import("./components/Dashboard").then(module => ({ default: module.Dashboard })));
@@ -66,7 +67,7 @@ const GoalsTracker = lazy(() => import("./components/GoalsTracker").then(module 
 const EmergencyFundsTab = lazy(() => import("./components/EmergencyFundsTab").then(module => ({ default: module.EmergencyFundsTab })));
 const InvestmentsTab = lazy(() => import("./components/InvestmentsTab").then(module => ({ default: module.InvestmentsTab })));
 
-type View = "dashboard" | "transactions" | "goals" | "investments" | "accounts" | "emergency" | "more" | "recurring" | "budgets";
+type View = "dashboard" | "transactions" | "goals" | "investments" | "accounts" | "emergency" | "more" | "recurring" | "budgets" | "bills_debts";
 type TransactionType = "expense" | "income" | "debt";
 
 export default function App() {
@@ -645,6 +646,12 @@ export default function App() {
 
                       {view === "recurring" && (
                         <RecurringTransactions />
+                      )}
+
+                      {view === "bills_debts" && (
+                        <div className="px-4 py-6">
+                          <BillsDebtsScreen />
+                        </div>
                       )}
 
                       {view === "more" && (

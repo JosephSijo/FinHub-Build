@@ -32,33 +32,41 @@ export const api = {
   // --- Settings (user_profile) ---
   async getSettings(userId: string) {
     const { data, error } = await supabase.from('user_profile')
-      .select('settings, theme, base_currency_code, name')
+      .select('settings, base_currency_code')
       .eq('user_id', userId)
       .maybeSingle();
 
     // Default settings if null
     const settings = data?.settings || {};
-    if (data?.theme) settings.theme = data.theme;
     if (data?.base_currency_code) settings.currency = data.base_currency_code;
-    if (data?.name) settings.name = data.name;
 
-    return { success: !error, settings };
+    // Explicitly handle fields that might be in settings
+    const name = settings.name || 'User';
+    const theme = settings.theme || 'system';
+
+    return { success: !error, settings: { ...settings, name, theme } };
   },
 
   async updateSettings(userId: string, updates: any) {
     // Check existing to preserve values
     const { data: existing } = await supabase.from('user_profile')
-      .select('base_currency_code, name, settings, theme')
+      .select('base_currency_code, settings')
       .eq('user_id', userId)
       .maybeSingle();
 
-    const payload: any = {
-      user_id: userId,
-      settings: { ...((existing?.settings as object) || {}), ...updates, theme: updates.theme || existing?.theme || 'system' },
-      updated_at: new Date().toISOString()
+    const currentSettings = (existing?.settings as any) || {};
+    const newSettings = {
+      ...currentSettings,
+      ...updates,
+      name: updates.name || currentSettings.name,
+      theme: updates.theme || currentSettings.theme
     };
 
-    if (updates.name) payload.name = updates.name;
+    const payload: any = {
+      user_id: userId,
+      settings: newSettings,
+      updated_at: new Date().toISOString()
+    };
 
     // Handle currency: explicit update > existing > default
     if (updates.currency) payload.base_currency_code = updates.currency;
@@ -68,7 +76,7 @@ export const api = {
     const { error } = await supabase.from('user_profile')
       .upsert(payload, { onConflict: 'user_id' });
 
-    return { success: !error, settings: updates };
+    return { success: !error, settings: newSettings };
   },
 
   // --- Expenses (transactions type='expense') ---
@@ -92,10 +100,7 @@ export const api = {
       tags: t.tags || [],
       accountId: t.account_id,
       createdAt: t.created_at,
-      liabilityId: t.entity_kind === 'loan' ? t.entity_id : undefined,
-      investmentId: t.entity_kind === 'investment' ? t.entity_id : undefined,
-      recurringId: t.entity_kind === 'subscription' ? t.entity_id : undefined,
-      paymentMethod: t.payment_method,
+      catalogEntityId: t.catalog_entity_id,
       merchantName: t.merchant_name
     }));
     return { success: !error, expenses };
@@ -117,14 +122,13 @@ export const api = {
       base_currency_code: data.baseCurrency || 'INR',
       base_amount: baseAmount,
       fx_rate: fxRate,
-      fx_date: data.date,
+      fx_date: data.date.split('T')[0], // New required field
       txn_date: data.date,
       note: data.description,
       account_id: data.accountId,
       category_id: categoryId,
       tags: data.tags || [],
-      entity_kind: data.liabilityId ? 'loan' : (data.investmentId ? 'investment' : (data.recurringId ? 'subscription' : null)),
-      entity_id: data.liabilityId || data.investmentId || data.recurringId || null
+      catalog_entity_id: data.catalogEntityId || null
     };
 
     if (data.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.id)) {
@@ -132,7 +136,7 @@ export const api = {
     }
 
     const { data: txn, error } = await supabase.from('transactions')
-      .upsert([payload], { onConflict: 'id' })
+      .upsert(payload, { onConflict: 'id' })
       .select().single();
 
     return {
@@ -156,12 +160,13 @@ export const api = {
     if (data.description) updates.note = data.description;
     if (data.date) {
       updates.txn_date = data.date;
-      updates.fx_date = data.date;
+      updates.fx_date = data.date.split('T')[0];
     }
     if (data.tags) updates.tags = data.tags;
     if (data.category) {
       updates.category_id = await getCategoryId(userId, data.category, 'expense');
     }
+    if (data.catalogEntityId) updates.catalog_entity_id = data.catalogEntityId;
 
     const { data: txn, error } = await supabase.from('transactions')
       .update(updates)
@@ -197,7 +202,7 @@ export const api = {
       tags: t.tags || [],
       accountId: t.account_id,
       createdAt: t.created_at,
-      recurringId: t.entity_kind === 'subscription' ? t.entity_id : undefined,
+      catalogEntityId: t.catalog_entity_id,
       category: t.categories?.name || 'Income'
     }));
     return { success: !error, incomes };
@@ -218,14 +223,13 @@ export const api = {
       base_currency_code: data.baseCurrency || 'INR',
       base_amount: baseAmount,
       fx_rate: fxRate,
-      fx_date: data.date,
+      fx_date: data.date.split('T')[0], // New required field
       txn_date: data.date,
-      note: data.source || data.description || 'Income',
+      note: data.source || data.description || 'Income', // Fixed: note instead of description
       account_id: data.accountId,
       category_id: categoryId,
       tags: data.tags || [],
-      entity_kind: data.recurringId ? 'subscription' : null,
-      entity_id: data.recurringId || null
+      catalog_entity_id: data.catalogEntityId || null
     };
 
     if (data.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.id)) {
@@ -233,7 +237,7 @@ export const api = {
     }
 
     const { data: txn, error } = await supabase.from('transactions')
-      .upsert([payload], { onConflict: 'id' })
+      .upsert(payload, { onConflict: 'id' })
       .select().single();
 
     return {
@@ -259,7 +263,7 @@ export const api = {
     }
     if (data.date) {
       updates.txn_date = data.date;
-      updates.fx_date = data.date;
+      updates.fx_date = data.date.split('T')[0];
     }
     if (data.tags) updates.tags = data.tags;
     if (data.category) {
@@ -317,10 +321,14 @@ export const api = {
       type: 'transfer',
       amount: data.amount,
       txn_date: data.date,
+      fx_date: data.date.split('T')[0],
       note: data.description,
       account_id: data.sourceId,
       to_account_id: data.destinationId,
       currency_code: 'INR',
+      base_currency_code: 'INR',
+      fx_rate: 1,
+      base_amount: data.amount,
       tags: ['transfer']
     };
 
@@ -356,7 +364,7 @@ export const api = {
         amount: account.opening_balance,
         currency_code: account.currency_code,
         base_amount: account.opening_balance,
-        description: 'Opening Balance',
+        note: 'Opening Balance',
         txn_date: new Date().toISOString().split('T')[0]
       }]);
     }
@@ -621,16 +629,17 @@ export const api = {
     const { data, error } = await supabase.from('loans').select('*').eq('user_id', userId);
     const liabilities = (data || []).map((l: any) => ({
       id: l.id,
-      name: l.person_name,
-      type: l.type === 'borrowed' ? 'personal_loan' : 'other',
-      direction: l.type,
+      name: l.loan_name || l.person_name,
+      personName: l.person_name,
+      type: l.type === 'borrowed' ? 'personal_loan' : (l.type === 'lent' ? 'other' : l.type),
       principal: l.principal,
-      outstanding: l.principal, // Note: Snapshot-based for now
-      interestRate: 0,
-      emiAmount: 0,
+      outstanding: l.outstanding || l.principal,
+      interestRate: l.interest_rate || 0,
+      emiAmount: l.emi_amount || 0,
       startDate: l.start_date,
       accountId: l.account_id,
-      tenure: 0,
+      tenure: l.tenure || 0,
+      status: l.loan_status,
       createdAt: l.created_at,
       note: l.note
     }));
@@ -640,18 +649,28 @@ export const api = {
   async createLiability(userId: string, data: any) {
     const { data: loan, error } = await supabase.from('loans').insert([{
       user_id: userId,
-      type: data.direction || 'borrowed',
-      person_name: data.name,
+      type: data.type || 'borrowed',
+      person_name: data.personName || data.name || 'Bank/Lender',
+      loan_name: data.name,
       principal: data.principal,
+      outstanding: data.outstanding || data.principal,
+      interest_rate: data.interestRate || 0,
+      emi_amount: data.emiAmount || 0,
+      tenure: data.tenure || 0,
       currency_code: data.currency || 'INR',
       start_date: data.startDate || new Date().toISOString().split('T')[0],
       account_id: data.accountId,
-      status: 'active',
+      loan_status: 'active',
       note: data.note
     }]).select().single();
 
+    if (error) {
+      console.error("Create Liability Error:", error);
+      throw error;
+    }
+
     return {
-      success: !error,
+      success: true,
       liability: loan ? {
         ...data,
         id: loan.id,
@@ -662,10 +681,19 @@ export const api = {
 
   async updateLiability(userId: string, liabilityId: string, data: any) {
     const updates: any = {};
-    if (data.name) updates.person_name = data.name;
+    if (data.name) {
+      updates.loan_name = data.name;
+      updates.person_name = data.personName || data.name || 'Bank/Lender';
+    }
+    if (data.type) updates.type = data.type;
     if (data.principal !== undefined) updates.principal = data.principal;
-    if (data.status) updates.status = data.status;
+    if (data.outstanding !== undefined) updates.outstanding = data.outstanding;
+    if (data.interestRate !== undefined) updates.interest_rate = data.interestRate;
+    if (data.emiAmount !== undefined) updates.emi_amount = data.emiAmount;
+    if (data.tenure !== undefined) updates.tenure = data.tenure;
+    if (data.status) updates.loan_status = data.status;
     if (data.note) updates.note = data.note;
+    if (data.startDate) updates.start_date = data.startDate;
 
     const { data: loan, error } = await supabase.from('loans')
       .update(updates)
@@ -673,7 +701,12 @@ export const api = {
       .eq('user_id', userId)
       .select().single();
 
-    return { success: !error, liability: loan };
+    if (error) {
+      console.error("Update Liability Error:", error);
+      throw error;
+    }
+
+    return { success: true, liability: loan };
   },
 
   async deleteLiability(userId: string, liabilityId: string) {

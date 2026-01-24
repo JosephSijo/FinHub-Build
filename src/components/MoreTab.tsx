@@ -6,12 +6,13 @@ import {
   Settings,
   Bell,
   HelpCircle,
-  FileText
+  FileText,
+  CreditCard
 } from 'lucide-react';
 import { formatCurrency } from '../utils/numberFormat';
 
 interface MoreTabProps {
-  onNavigate: (view: 'emergency' | 'accounts' | 'recurring') => void;
+  onNavigate: (view: 'emergency' | 'accounts' | 'recurring' | 'bills_debts') => void;
   onOpenSettings: () => void;
   onOpenNotifications: () => void;
   emergencyFundAmount: number;
@@ -101,6 +102,28 @@ export function MoreTab({
           </div>
         </Card>
 
+        <Card
+          className="p-8 cursor-pointer bg-black border-white/5 sq-2xl border hover:bg-white/5 transition-all duration-300 group relative overflow-hidden"
+          onClick={() => onNavigate('bills_debts')}
+        >
+          <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500 blur-3xl opacity-5 -mr-12 -mt-12 transition-opacity group-hover:opacity-20" />
+
+          <div className="relative z-10">
+            <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/20 sq-md flex items-center justify-center text-rose-400 mb-8 group-hover:scale-110 transition-transform duration-500">
+              <CreditCard className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-slate-100">Bills & Debts</h3>
+              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mt-1">Manage Commitments</p>
+            </div>
+
+            <div className="mt-8 flex items-center justify-between text-slate-500">
+              <span className="text-[10px] font-black uppercase tracking-widest">Loans & Subscriptions</span>
+              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Settings & Support Grid */}

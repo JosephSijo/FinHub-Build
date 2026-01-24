@@ -194,8 +194,8 @@ export const InsightsCard: React.FC<InsightsCardProps> = ({
                         </div>
 
                         {/* Unified Line Chart */}
-                        <div className="h-[240px] w-full">
-                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <div className="h-[240px] min-h-[240px] w-full min-w-0">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={240}>
                                 <LineChart
                                     data={
                                         activeTab === 'flow' ? flowChartData :

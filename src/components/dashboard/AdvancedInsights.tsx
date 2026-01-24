@@ -644,8 +644,8 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
                                         {overallHealth > 70 ? 'Verified' : 'Scanning'}
                                     </div>
                                 </div>
-                                <div className="stack-body px-0 pt-8 pb-4 h-[250px] w-full relative">
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                <div className="stack-body px-0 pt-8 pb-4 h-[250px] min-h-[250px] w-full relative min-w-0">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
                                         <RadarChart cx="50%" cy="50%" outerRadius="70%" data={healthData}>
                                             <PolarGrid stroke="rgba(255,255,255,0.1)" />
                                             <PolarAngleAxis dataKey="subject" tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 900 }} />
@@ -674,8 +674,8 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
                                     </div>
                                     <CircleDot className="text-teal-500/50 w-4 h-4" />
                                 </div>
-                                <div className="stack-body px-0 h-[240px] w-full relative">
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                <div className="stack-body px-0 h-[240px] min-h-[240px] w-full relative min-w-0">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={240}>
                                         <PieChart>
                                             <Pie
                                                 data={spendingData}
@@ -721,8 +721,8 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
                                 <div className="stack-cap border-white/5 relative z-10">
                                     <h3 className="text-slate-400 text-[9px] font-bold uppercase tracking-[0.2em]">{COPY.dashboard.actionFlow}: {COPY.dashboard.burnTrend}</h3>
                                 </div>
-                                <div className="stack-body px-0 pb-0 h-[200px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                <div className="stack-body px-0 pb-0 h-[200px] min-h-[200px] w-full min-w-0">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                                         <AreaChart data={trendData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                                             <defs>
                                                 <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
@@ -775,8 +775,8 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
                                         </div>
                                     </div>
                                 </div>
-                                <div className="stack-body px-0 pb-0 h-[200px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                <div className="stack-body px-0 pb-0 h-[200px] min-h-[200px] w-full min-w-0">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                                         <BarChart data={flowData} barGap={8} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
                                             <XAxis
                                                 dataKey="month"
