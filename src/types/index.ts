@@ -223,6 +223,8 @@ export interface RecurringTransaction {
   investmentId?: string;
   liabilityId?: string;
   kind?: 'subscription' | 'bill' | 'income';
+  entityId?: string;
+  entityKind?: 'loan' | 'goal' | 'investment';
   reminderEnabled?: boolean;
   dueDay?: number;
   createdAt: string;

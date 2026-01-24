@@ -30,7 +30,9 @@ export const useLiabilityActions = (state: any, actions: any) => {
                         accountId: response.liability.accountId || 'none',
                         frequency: 'monthly', startDate: response.liability.startDate,
                         tags: ['emi', 'liability', response.liability.name.toLowerCase()],
-                        liabilityId: response.liability.id
+                        liabilityId: response.liability.id,
+                        entityId: response.liability.id,
+                        entityKind: 'loan'
                     });
                 }
             }
@@ -60,7 +62,9 @@ export const useLiabilityActions = (state: any, actions: any) => {
                                 accountId: response.liability.accountId || 'none',
                                 frequency: 'monthly', startDate: response.liability.startDate,
                                 tags: ['emi', 'liability', response.liability.name.toLowerCase()],
-                                liabilityId: response.liability.id
+                                liabilityId: response.liability.id,
+                                entityId: response.liability.id,
+                                entityKind: 'loan'
                             });
                         }
                     } else if (oldLiability.emiAmount > 0) {

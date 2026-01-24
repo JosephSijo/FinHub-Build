@@ -128,7 +128,9 @@ export const api = {
       account_id: data.accountId,
       category_id: categoryId,
       tags: data.tags || [],
-      catalog_entity_id: data.catalogEntityId || null
+      catalog_entity_id: data.catalogEntityId || null,
+      entity_id: data.liabilityId || data.goalId || data.investmentId || null,
+      entity_kind: data.liabilityId ? 'loan' : (data.goalId ? 'goal' : (data.investmentId ? 'investment' : null))
     };
 
     if (data.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.id)) {
@@ -229,7 +231,9 @@ export const api = {
       account_id: data.accountId,
       category_id: categoryId,
       tags: data.tags || [],
-      catalog_entity_id: data.catalogEntityId || null
+      catalog_entity_id: data.catalogEntityId || null,
+      entity_id: data.goalId || data.investmentId || null,
+      entity_kind: data.goalId ? 'goal' : (data.investmentId ? 'investment' : null)
     };
 
     if (data.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.id)) {
@@ -741,6 +745,11 @@ export const api = {
       categoryId: s.category_id,
       isMandateSuggested: s.is_mandate_suggested,
       mandateStatus: s.mandate_status,
+      entityId: s.entity_id,
+      entityKind: s.entity_kind,
+      liabilityId: s.entity_kind === 'loan' ? s.entity_id : undefined,
+      goalId: s.entity_kind === 'goal' ? s.entity_id : undefined,
+      investmentId: s.entity_kind === 'investment' ? s.entity_id : undefined,
     }));
     return { success: !error, recurring };
   },
@@ -765,7 +774,9 @@ export const api = {
       kind: data.kind || (data.type === 'income' ? 'income' : 'subscription'),
       reminder_enabled: data.reminderEnabled ?? true,
       is_mandate_suggested: data.isMandateSuggested,
-      mandate_status: data.mandateStatus || 'offered'
+      mandate_status: data.mandateStatus || 'offered',
+      entity_id: data.liabilityId || data.goalId || data.investmentId || data.entityId,
+      entity_kind: data.liabilityId ? 'loan' : (data.goalId ? 'goal' : (data.investmentId ? 'investment' : data.entityKind))
     };
 
     const { data: sub, error } = await supabase.from('subscriptions')

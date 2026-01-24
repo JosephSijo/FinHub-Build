@@ -22,7 +22,10 @@ export const recurringRepo = {
             ...occurrence,
             id,
             generatedSource: 'recurring',
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            liabilityId: occurrence.liabilityId || (occurrence.entityKind === 'loan' ? occurrence.entityId : undefined),
+            goalId: occurrence.goalId || (occurrence.entityKind === 'goal' ? occurrence.entityId : undefined),
+            investmentId: occurrence.investmentId || (occurrence.entityKind === 'investment' ? occurrence.entityId : undefined)
         };
 
         try {

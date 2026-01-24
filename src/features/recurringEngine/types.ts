@@ -23,4 +23,6 @@ export interface GeneratedOccurrence {
     goalId?: string;
     investmentId?: string;
     liabilityId?: string;
+    entityId?: string;
+    entityKind?: 'loan' | 'goal' | 'investment';
 }

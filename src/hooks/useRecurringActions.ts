@@ -49,16 +49,13 @@ export const useRecurringActions = (state: any) => {
                 setRecurringTransactions((prev: RecurringTransaction[]) => prev.map(r => r.id === id ? updatedRec : r));
                 toast.success('Recurring transaction updated');
 
-                // Check for Backfill
+                // Auto-Backfill instead of asking
                 const preview = await recurringService.getBackfillPreview(updatedRec);
                 if (preview.count > 0) {
-                    setBackfillRequest({
-                        count: preview.count,
-                        dates: preview.occurrences.map(o => o.date),
-                        recurring: updatedRec
-                    });
+                    await recurringService.backfillRule(userId, updatedRec);
+                    toast.success(`Auto-generated ${preview.count} backdated entries.`);
                 } else {
-                    toast.success("Transaction history is already up to date.");
+                    toast.success("Transaction history is up to date.");
                 }
             }
         } catch (error) {
@@ -86,14 +83,11 @@ export const useRecurringActions = (state: any) => {
                         data.name || data.description || 'Subscription'
                     ).catch(e => console.error("Catalog link failed", e));
 
-                    // Check for Backfill
+                    // Auto-Backfill instead of asking
                     const preview = await recurringService.getBackfillPreview(newRec);
                     if (preview.count > 0) {
-                        setBackfillRequest({
-                            count: preview.count,
-                            dates: preview.occurrences.map(o => o.date),
-                            recurring: newRec
-                        });
+                        await recurringService.backfillRule(userId, newRec);
+                        toast.success(`Auto-generated ${preview.count} backdated entries.`);
                     } else {
                         toast.success("Transaction history is up to date.");
                     }

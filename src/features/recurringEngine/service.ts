@@ -57,7 +57,9 @@ export const recurringService = {
                 tags: rule.tags || [],
                 goalId: rule.goalId,
                 investmentId: rule.investmentId,
-                liabilityId: rule.liabilityId
+                liabilityId: rule.liabilityId,
+                entityId: rule.entityId,
+                entityKind: rule.entityKind
             };
 
             const success = await recurringRepo.saveOccurrence(userId, occurrence);
