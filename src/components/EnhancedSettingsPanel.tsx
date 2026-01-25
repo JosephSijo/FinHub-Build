@@ -735,7 +735,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
 
                   <div className="pt-2">
                     <Button
-                      onClick={handleTestConnection}
+                      onClick={() => handleTestConnection()}
                       disabled={isTestingConnection || !resolveApiKey(selectedProvider, settings)}
                       className={`w-full h-11 transition-all font-bold uppercase tracking-[0.2em] text-[10px] rounded-xl ${testResult?.success
                         ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
