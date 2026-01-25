@@ -439,10 +439,10 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                       <Label className="text-[9px] font-black uppercase tracking-widest text-slate-500">Target</Label>
                       <button
                         onClick={handleSyncConverterRates}
-                        className="text-[9px] font-black uppercase text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 px-2 py-1 bg-indigo-500/10 rounded-lg border border-indigo-500/20 transition-all hover:scale-105"
+                        className="text-[8px] font-black uppercase text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors"
                       >
                         <RefreshCcw className="w-2.5 h-2.5" />
-                        Sync Rates
+                        Sync
                       </button>
                     </div>
                     <div className="h-12 flex items-center justify-center bg-indigo-500/10 rounded-2xl border border-indigo-500/20 text-xs font-black text-indigo-400">

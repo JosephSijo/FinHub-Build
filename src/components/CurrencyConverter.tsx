@@ -92,16 +92,14 @@ export function CurrencyConverter() {
             Real-time exchange rates
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
+        <button
           onClick={handleRefresh}
           disabled={isLoading}
-          className="bg-indigo-500/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300 gap-2 font-black uppercase text-[10px]"
+          className="text-[8px] font-black uppercase text-indigo-400 hover:text-indigo-300 disabled:opacity-50 flex items-center gap-1 transition-colors"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-2.5 h-2.5 ${isLoading ? 'animate-spin' : ''}`} />
           Sync
-        </Button>
+        </button>
       </div>
 
       <div className="space-y-6">
