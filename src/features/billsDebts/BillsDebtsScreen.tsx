@@ -1,10 +1,9 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
 import { LiabilityTab } from '../../components/LiabilityTab';
-import { SubscriptionStrategist } from '../../components/SubscriptionStrategist';
 import { LiabilityDashboard } from '../../components/LiabilityDashboard';
 import { useFinance } from '../../context/FinanceContext';
 import { MeshBackground } from '../../components/ui/MeshBackground';
-import { CreditCard, Calendar, Target } from 'lucide-react';
+import { CreditCard, Calendar } from 'lucide-react';
 import { formatCurrency } from '../../utils/numberFormat';
 import { RecurringTransactions } from '../../components/RecurringTransactions';
 
@@ -56,10 +55,6 @@ export function BillsDebtsScreen() {
                             <CreditCard className="w-3.5 h-3.5 mr-2" />
                             Loans
                         </TabsTrigger>
-                        <TabsTrigger value="subs" className="flex-1 rounded-xl text-xs font-bold data-[state=active]:bg-indigo-600">
-                            <Target className="w-3.5 h-3.5 mr-2" />
-                            Subscriptions
-                        </TabsTrigger>
                         <TabsTrigger value="recurring" className="flex-1 rounded-xl text-xs font-bold data-[state=active]:bg-indigo-600">
                             <Calendar className="w-3.5 h-3.5 mr-2" />
                             Recurring
@@ -77,13 +72,14 @@ export function BillsDebtsScreen() {
                     <LiabilityTab currency={currency} liabilities={liabilities} debts={debts} />
                 </TabsContent>
 
-                <TabsContent value="subs" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <SubscriptionStrategist
-                        recurring={recurringTransactions}
+                <TabsContent value="loans" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <LiabilityDashboard
+                        liabilities={liabilities}
+                        debts={debts}
                         currency={currency}
-                        totalMonthlyIncome={0}
-                        onDelete={() => { }}
+                        totalMonthlyIncome={1} // Fallback
                     />
+                    <LiabilityTab currency={currency} liabilities={liabilities} debts={debts} />
                 </TabsContent>
 
                 <TabsContent value="recurring" className="animate-in fade-in slide-in-from-bottom-4 duration-500">

@@ -161,7 +161,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         executeBackfill: async () => {
             await recurringActions.executeBackfill();
             await syncActions.refreshData();
-        }
+        },
+        deleteAccountPermanently: auth.deleteAccountPermanently
     }), [financeData, auth, fullActionsBundle, syncActions, fundAllocation, checkers, loader, userId, recurringActions]);
 
     return (

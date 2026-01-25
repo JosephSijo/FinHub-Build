@@ -348,6 +348,7 @@ export interface FinanceContextType {
   logout: () => void;
   clearPendingSession: () => void;
   scheduleAccountDeletion: () => Promise<void>;
+  deleteAccountPermanently: () => Promise<void>;
   cancelAccountDeletion: () => Promise<void>;
   deletionDate: string | null;
 
@@ -378,9 +379,6 @@ export interface FinanceContextType {
   updateLiability: (id: string, data: Partial<Liability>) => Promise<void>;
   deleteLiability: (id: string) => Promise<void>;
 
-  // Migration
-  migrateSubscriptions: () => Promise<{ count: number }>;
-  cleanupDuplicates: () => Promise<{ count: number }>;
 
   // Investments
   createInvestment: (data: any, sourceAccountId?: string) => Promise<void>;

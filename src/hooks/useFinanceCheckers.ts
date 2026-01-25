@@ -70,15 +70,28 @@ export const useFinanceCheckers = (state: any, actions: any) => {
 
     const checkForAchievements = useCallback(() => {
         const { addNotifications } = actionsRef.current;
-        const { expenses: currentExpenses, goals: currentGoals, emergencyFundAmount: currentEF, debts: currentD, accounts: currentA, recurringTransactions: currentR, settings: currentS } = dataRef.current;
+        const { expenses: currentExpenses, goals: currentGoals, debts: currentD, accounts: currentA, settings: currentS } = dataRef.current;
+        const currentIncomes = state.incomes || [];
+        const totalExpenses = currentExpenses.reduce((sum: number, e: any) => sum + e.amount, 0);
+        const totalIncome = currentIncomes.reduce((sum: number, i: any) => sum + i.amount, 0);
+
+        const monthlySpendingRatio = totalIncome > 0 ? totalExpenses / totalIncome : 0;
+        const savingsRate = totalIncome > 0 ? Math.max(0, (totalIncome - totalExpenses) / totalIncome) : 0;
 
         const stats = {
-            totalExpenses: currentExpenses.length,
-            totalSavings: currentGoals.reduce((sum: number, g: any) => sum + g.currentAmount, 0),
-            emergencyFund: currentEF,
-            debtsSettled: currentD.filter((d: any) => d.status === 'settled').length,
-            accountsCount: currentA.length,
-            recurringCount: currentR.length
+            totalTransactions: currentExpenses.length + currentIncomes.length,
+            totalGoals: currentGoals.length,
+            completedGoals: currentGoals.filter((g: any) => g.currentAmount >= g.targetAmount).length,
+            totalDebts: currentD.length,
+            settledDebts: currentD.filter((d: any) => d.status === 'settled' || d.status === 'PAID').length,
+            totalAccounts: currentA.length,
+            savingsRate,
+            monthlySpendingRatio,
+            notificationsEnabled: true,
+            aiInteractions: 1,
+            profileComplete: !!currentS.name && !!currentS.photoURL,
+            dailyLogin: true, // If they are checking this, they are logged in
+            currentStreak: currentS.currentStreak || 1
         };
 
         const newAchievementIds = checkAchievements(stats, currentS.unlockedAchievements || []);

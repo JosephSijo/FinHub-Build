@@ -117,6 +117,24 @@ export const useAuth = () => {
         logout();
     }, [logout]);
 
+    const deleteAccountPermanently = useCallback(async () => {
+        if (!currentUser?.id) return;
+        const toastId = toast.loading("Processing permanent deletion...");
+        try {
+            const { error } = await supabase.rpc('admin_reset_user_and_globalize', {
+                p_target_user_id: currentUser.id,
+                p_delete_account: true
+            });
+            if (error) throw error;
+
+            toast.success("Account and data permanently removed.", { id: toastId });
+            await clearPendingSession();
+        } catch (error: any) {
+            console.error("Deletion failed:", error);
+            toast.error(`Delete failed: ${error.message}`, { id: toastId });
+        }
+    }, [currentUser?.id, clearPendingSession]);
+
     const checkIdentity = useCallback(async (mobile: string) => {
         setPendingMobile(mobile);
         // We can't easily check if user exists without trying to login or using an integrity API
@@ -307,6 +325,7 @@ export const useAuth = () => {
         signup,
         clearPendingSession,
         scheduleAccountDeletion,
+        deleteAccountPermanently,
         cancelAccountDeletion,
         setAuthStatus,
         setCurrentUser,

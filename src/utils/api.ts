@@ -992,5 +992,19 @@ export const api = {
   },
   async chat() { return { message: "AI Offline" }; },
   async getDashboardFeedback() { return { feedback: "No feedback" }; },
-  async getExchangeRates() { return { rates: { INR: 1, USD: 0.012 } }; },
+  async getExchangeRates(baseCurrency: string = 'INR') {
+    try {
+      const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${baseCurrency}`);
+      const data = await response.json();
+      return { success: true, rates: data.rates };
+    } catch (error) {
+      console.error('API Error: getExchangeRates', error);
+      // Fallback to static rates if API fails
+      return {
+        success: false,
+        rates: { INR: 1, USD: 0.012, AED: 0.044, SAR: 0.045, GBP: 0.009, EUR: 0.011 },
+        error: "Default rates used."
+      };
+    }
+  },
 };

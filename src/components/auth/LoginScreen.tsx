@@ -113,7 +113,11 @@ export const LoginScreen = () => {
                     <div className="absolute inset-0 bg-blue-500/30 rounded-full blur-xl group-hover:blur-2xl transition-all duration-500" />
                     <div className="relative w-24 h-24 rounded-full bg-gradient-to-tr from-[#0F172A] to-[#1E293B] border border-white/10 shadow-2xl flex items-center justify-center overflow-hidden">
                         <div className="absolute inset-0 bg-gradient-to-tr from-sky-500/20 to-transparent opacity-50" />
-                        <span className="font-bold text-4xl bg-gradient-to-br from-white to-white/50 bg-clip-text text-transparent transform translate-y-[-2px]">F</span>
+                        <img
+                            src="/images/logo-icon.png"
+                            alt="FinHub"
+                            className="w-12 h-12 object-contain relative z-10 drop-shadow-2xl"
+                        />
                     </div>
                 </motion.div>
 

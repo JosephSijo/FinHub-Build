@@ -1,10 +1,10 @@
-import { useCallback, useMemo, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useMemo } from 'react';
 import { api } from '../utils/api';
 import { toast } from 'sonner';
 import { STORAGE_KEYS } from '../utils/constants';
-import { isKnownSubscription, autoCategorize } from '../utils/autoCategorize';
-import { UserSettings, Expense } from '../types';
 import { suggestionsService } from '../features/smartSuggestions/service';
+import { supabase } from '../lib/supabase';
+import { UserSettings } from '../types';
 
 export const useFinanceSyncActions = (state: any, actions: any) => {
     const {
@@ -27,8 +27,7 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
         };
     }, [expenses, incomes, goals, accounts, liabilities, recurringTransactions, settings, debts, investments]);
 
-    const { createRecurringTransaction, deleteExpense,
-        deleteIncome, applyTheme } = actions;
+    const { applyTheme } = actions;
 
     const updateSettings = useCallback(async (updates: Partial<UserSettings>) => {
         setSettings((prev: UserSettings) => ({ ...prev, ...updates }));
@@ -139,9 +138,9 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
             for (const due of dates) {
                 const dateStr = due.toISOString().split('T')[0];
                 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                const suffix = `${months[due.getMonth()]} ${due.getFullYear()}`;
+                const suffix = `${months[due.getMonth()]} ${due.getFullYear()} `;
                 const baseDescription = newRec.name || newRec.description || newRec.source || 'Recurring Transaction';
-                const finalDescription = `${baseDescription} ${suffix}`;
+                const finalDescription = `${baseDescription} ${suffix} `;
 
                 const txData = {
                     description: newRec.type === 'expense' ? finalDescription : undefined,
@@ -194,174 +193,62 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
         }
     }, [userId, backfillRequest, setIncomes, setExpenses, setGoals, setLiabilities, setBackfillRequest]);
 
-    const migrateSubscriptions = useCallback(async (): Promise<{ count: number }> => {
-        let updateCount = 0;
-        const currentExpenses = dataRef.current.expenses;
-        const updates: Promise<any>[] = [];
-        for (const expense of currentExpenses) {
-            if (expense.category !== 'Subscription' && isKnownSubscription(expense.description)) {
-                const details = autoCategorize(expense.description);
-                if (details && details.category === 'Subscription') {
-                    updates.push(actions.updateExpense(expense.id, {
-                        category: 'Subscription',
-                        tags: [...new Set([...expense.tags, 'auto-migrated', 'subscription'])]
-                    }));
-                    updateCount++;
+
+
+    const purgeAllData = useCallback(async () => {
+        const toastId = toast.loading("Executing secure wipe...");
+        try {
+            // 1. Database Wipe (Globalize unique metadata, wipe transactions)
+            const { error } = await supabase.rpc('admin_reset_user_and_globalize', {
+                p_target_user_id: userId
+            });
+
+            if (error) throw error;
+
+            // 2. Clear all data from localStorage EXCEPT auth-related keys
+            Object.values(STORAGE_KEYS).forEach(key => {
+                if (key !== STORAGE_KEYS.AUTH &&
+                    key !== STORAGE_KEYS.REMEMBERED_MOBILE &&
+                    key !== STORAGE_KEYS.DELETION_SCHEDULE) {
+                    localStorage.removeItem(key);
                 }
-            }
+            });
+
+            // 3. Reset local state
+            setExpenses([]);
+            setIncomes([]);
+            setDebts([]);
+            setGoals([]);
+            setAccounts([]);
+            setInvestments([]);
+            setLiabilities([]);
+            setRecurringTransactions([]);
+            setNotifications([]);
+            setEmergencyFundAmount(0);
+
+            toast.success("Security wipe complete. Metadata globalized.", { id: toastId });
+        } catch (error: any) {
+            console.error("Purge failed:", error);
+            toast.error(`Wipe failed: ${error.message} `, { id: toastId });
         }
-        if (updates.length > 0) {
-            await Promise.all(updates);
-            toast.success(`Migrated ${updateCount} transactions to Subscriptions`);
-        } else { toast.info("No subscription transactions found to migrate"); }
-        return { count: updateCount };
-    }, [actions]);
-
-    const cleanupDuplicates = useCallback(async (): Promise<{ count: number }> => {
-        let removedCount = 0;
-        const { expenses: currentExpenses, incomes: currentIncomes } = dataRef.current;
-        const updates: Promise<any>[] = [];
-        const seen = new Set<string>();
-        const expensesToDelete = new Set<string>();
-
-        currentExpenses.forEach((expense: Expense) => {
-            const key = `${expense.date}-${expense.description?.toLowerCase().trim()}-${expense.amount}`;
-            const isBlank = !expense.description || expense.description.trim() === '' || expense.amount === 0;
-            if (isBlank || seen.has(key)) expensesToDelete.add(expense.id);
-            else seen.add(key);
-        });
-
-        const subGroups = new Map<string, Expense[]>();
-        currentExpenses.forEach((e: Expense) => {
-            if (expensesToDelete.has(e.id)) return;
-            if (e.category === 'Subscription' || e.isRecurring || isKnownSubscription(e.description)) {
-                const date = new Date(e.date);
-                const key = `${e.description.toLowerCase().trim()}-${date.getFullYear()}-${date.getMonth()}`;
-                if (!subGroups.has(key)) subGroups.set(key, []);
-                subGroups.get(key)!.push(e);
-            }
-        });
-
-        subGroups.forEach((group) => {
-            if (group.length > 1) {
-                group.sort((a, b) => {
-                    if (a.isRecurring !== b.isRecurring) return a.isRecurring ? -1 : 1;
-                    return new Date(b.date).getTime() - new Date(a.date).getTime();
-                });
-                for (let i = 1; i < group.length; i++) expensesToDelete.add(group[i].id);
-            }
-        });
-
-        expensesToDelete.forEach(id => {
-            updates.push(deleteExpense(id));
-            removedCount++;
-        });
-
-        const seenIncomes = new Set<string>();
-        for (const income of currentIncomes) {
-            const key = `${income.date}-${income.source?.toLowerCase().trim()}-${income.amount}`;
-            if (!income.source || income.source.trim() === '' || income.amount === 0 || seenIncomes.has(key)) {
-                updates.push(deleteIncome(income.id));
-                removedCount++;
-            } else seenIncomes.add(key);
-        }
-
-        if (updates.length > 0) {
-            await Promise.all(updates);
-            toast.success(`Cleaned up ${removedCount} entries`);
-        } else toast.info("Logs are clean.");
-
-        return { count: removedCount };
-    }, [deleteExpense, deleteIncome]);
-
-    const purgeAllData = useCallback(() => {
-        // Clear all data from localStorage EXCEPT auth-related keys
-        Object.values(STORAGE_KEYS).forEach(key => {
-            // Skip auth-related keys to keep user logged in
-            if (key !== STORAGE_KEYS.AUTH &&
-                key !== STORAGE_KEYS.REMEMBERED_MOBILE) {
-                localStorage.removeItem(key);
-            }
-        });
-
-        // Reset all financial data
-        setExpenses([]);
-        setIncomes([]);
-        setDebts([]);
-        setGoals([]);
-        setAccounts([]);
-        setInvestments([]);
-        setLiabilities([]);
-        setRecurringTransactions([]);
-        setNotifications([]);
-        setEmergencyFundAmount(0);
-
-        // DO NOT log out the user - keep auth state intact
-        // setCurrentUser(null);
-        // setAuthStatus('guest');
-        // setPendingMobile('');
-
-        toast.success("All data cleared successfully. You remain logged in.");
     }, [
-        setExpenses, setIncomes, setDebts, setGoals, setAccounts,
+        userId, setExpenses, setIncomes, setDebts, setGoals, setAccounts,
         setInvestments, setLiabilities, setRecurringTransactions,
         setNotifications, setEmergencyFundAmount
     ]);
 
-    const runCategorizationMigration = useCallback(() => {
-        const currentRecurring = dataRef.current.recurringTransactions;
-        setExpenses((prev: Expense[]) => {
-            const nextExpenses = [...prev];
-            const subs = nextExpenses.filter(e => isKnownSubscription(e.description));
-
-            if (subs.length > 0) {
-                subs.forEach(exp => {
-                    if (exp.category === 'Subscription') return;
-                    exp.category = 'Subscription';
-                    exp.tags = Array.from(new Set([...(exp.tags || []), 'auto-migrated']));
-
-                    const alreadyTracked = currentRecurring.some((rt: any) =>
-                        rt.description?.toLowerCase().includes(exp.description.toLowerCase()) ||
-                        exp.description.toLowerCase().includes(rt.description?.toLowerCase() || '')
-                    );
-
-                    if (!alreadyTracked) {
-                        setTimeout(() => {
-                            createRecurringTransaction({
-                                type: 'expense',
-                                description: exp.description,
-                                amount: exp.amount,
-                                category: 'Subscription',
-                                accountId: exp.accountId,
-                                frequency: 'monthly',
-                                startDate: exp.date,
-                                tags: ['auto-migrated']
-                            });
-                        }, 100);
-                    }
-                });
-            }
-            return nextExpenses;
-        });
-    }, [createRecurringTransaction, setExpenses]);
 
     return useMemo(() => ({
         updateSettings,
         fetchFromApi,
         refreshData,
         executeBackfill,
-        migrateSubscriptions,
-        cleanupDuplicates,
-        purgeAllData,
-        runCategorizationMigration
+        purgeAllData
     }), [
         updateSettings,
         fetchFromApi,
         refreshData,
         executeBackfill,
-        migrateSubscriptions,
-        cleanupDuplicates,
-        purgeAllData,
-        runCategorizationMigration
+        purgeAllData
     ]);
 };

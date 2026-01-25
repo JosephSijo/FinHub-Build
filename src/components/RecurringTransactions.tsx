@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Plus, Trash2, RefreshCw, Calendar, Sparkles, ArrowUpRight, Wallet, Target, Edit2, TrendingDown } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Calendar, Edit2 } from 'lucide-react';
 import { MONEY_OUT_CATEGORIES, RecurringTransaction } from '../types';
 import { useFinance } from '../context/FinanceContext';
 import { formatCurrency } from '../utils/numberFormat';
@@ -471,13 +471,6 @@ export function RecurringTransactions() {
               Flow List
             </button>
             <button
-              onClick={() => setViewMode('strategist')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${viewMode === 'strategist' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              <Target className="w-3.5 h-3.5" />
-              Strategist
-            </button>
-            <button
               onClick={() => setViewMode('debt')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${viewMode === 'debt' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
             >
@@ -493,16 +486,6 @@ export function RecurringTransactions() {
             debts={debts}
             currency={currency}
             totalMonthlyIncome={totalMonthlyIncome || 1}
-          />
-        ) : viewMode === 'strategist' ? (
-          <SubscriptionStrategist
-            recurring={recurring}
-            currency={currency}
-            totalMonthlyIncome={totalMonthlyIncome}
-            onDelete={(id) => {
-              deleteRecurringTransaction(id);
-              // toast.success(`Cancelled ${desc}`); // Done in context typically
-            }}
           />
         ) : (
           <>

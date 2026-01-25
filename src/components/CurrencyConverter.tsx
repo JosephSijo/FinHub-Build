@@ -97,8 +97,10 @@ export function CurrencyConverter() {
           size="sm"
           onClick={handleRefresh}
           disabled={isLoading}
+          className="bg-indigo-500/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300 gap-2 font-black uppercase text-[10px]"
         >
-          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          Sync
         </Button>
       </div>
 
