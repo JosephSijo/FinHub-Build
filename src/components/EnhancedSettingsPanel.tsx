@@ -60,6 +60,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
   const [fromCurrency, setFromCurrency] = useState<string>('USD');
   const [targetCurrency, setTargetCurrency] = useState<string>(settings.currency);
   const [amount, setAmount] = useState<string>('100');
+  const [focusedApiKeyProvider, setFocusedApiKeyProvider] = useState<string | null>(null);
 
   const [infAmount, setInfAmount] = useState<string>('100000');
   const [infYears, setInfYears] = useState<string>('10');
@@ -694,9 +695,11 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                             <div className="flex-1 min-w-0">
                               <div className="relative group/input">
                                 <Input
-                                  type="password"
-                                  value={settingKey || ''}
+                                  type="text"
+                                  value={focusedApiKeyProvider === provider.id ? (settingKey || '') : (settingKey ? `${settingKey.slice(0, 4)}••••••••${settingKey.slice(-4)}` : '')}
                                   onChange={(e) => handleInputChange('apiKeys', { ...settings.apiKeys, [provider.id]: e.target.value })}
+                                  onFocus={() => setFocusedApiKeyProvider(provider.id)}
+                                  onBlur={() => setFocusedApiKeyProvider(null)}
                                   placeholder={hasEnvKey ? 'Using System Environment Key' : `Enter ${provider.label} Key...`}
                                   className={`bg-transparent border-none p-0 h-auto text-[11px] font-bold text-white placeholder:text-slate-700 focus-visible:ring-0 shadow-none ${hasEnvKey && !settingKey ? 'opacity-40 italic font-medium' : ''}`}
                                   disabled={hasEnvKey && !settingKey}
