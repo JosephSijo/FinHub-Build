@@ -454,7 +454,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                     <Select value={targetCurrency} onValueChange={(value: string) => {
                       setTargetCurrency(value);
                     }}>
-                      <SelectTrigger id="converter-target-currency" name="targetCurrency" className="bg-white/5 border-white/5 rounded-2xl h-12 text-[10px] font-black uppercase tracking-widest text-[#0A84FF]">
+                      <SelectTrigger id="converter-target-currency" name="targetCurrency" className="bg-white/5 border-white/5 rounded-2xl h-12">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-slate-900 border-white/10 text-white">
