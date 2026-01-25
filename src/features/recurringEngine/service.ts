@@ -33,17 +33,16 @@ export const recurringService = {
         const formatDateSuffix = (date: Date) => {
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             const mmm = months[date.getMonth()];
-            const yy = date.getFullYear().toString().slice(-2);
-            return `${mmm}-${yy}`;
+            const yyyy = date.getFullYear();
+            return `${mmm} ${yyyy}`;
         };
 
         for (const occ of occurrences) {
             const dateStr = occ.date.toISOString().split('T')[0];
-            const baseDescription = rule.description || rule.source || rule.name || 'Recurring Transaction';
+            // Prioritize rule.name as the "main" name provided by the user
+            const baseDescription = rule.name || rule.description || rule.source || 'Recurring Transaction';
 
             // For backfilled entries, we add the month-year suffix
-            // We only add it if it's not the very first day of the rule (which should be the manual entry)
-            // But getBackfillPreview already skips the start date, so all these are "subsequent"
             const description = `${baseDescription} ${formatDateSuffix(occ.date)}`;
 
             const occurrence: GeneratedOccurrence = {

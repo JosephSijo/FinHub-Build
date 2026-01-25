@@ -138,8 +138,15 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
         try {
             for (const due of dates) {
                 const dateStr = due.toISOString().split('T')[0];
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const suffix = `${months[due.getMonth()]} ${due.getFullYear()}`;
+                const baseDescription = newRec.name || newRec.description || newRec.source || 'Recurring Transaction';
+                const finalDescription = `${baseDescription} ${suffix}`;
+
                 const txData = {
-                    description: newRec.description, source: newRec.source, amount: newRec.amount,
+                    description: newRec.type === 'expense' ? finalDescription : undefined,
+                    source: newRec.type === 'income' ? finalDescription : undefined,
+                    amount: newRec.amount,
                     category: newRec.category, date: dateStr, tags: [...(newRec.tags || []), 'auto-backfill'],
                     accountId: newRec.accountId, isRecurring: true, recurringId: newRec.id,
                     liabilityId: newRec.liabilityId, investmentId: newRec.investmentId
