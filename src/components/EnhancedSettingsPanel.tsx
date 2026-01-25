@@ -708,11 +708,11 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                             </div>
                           </div>
 
-                          <div className="w-10 flex flex-col items-center justify-center border-l border-white/5 bg-white/5">
+                          <div className="flex items-center bg-white/5 border-l border-white/5">
                             {settingKey && (
                               <button
                                 onClick={() => handleTestConnection(provider.id)}
-                                className="w-full flex-1 flex items-center justify-center text-slate-500 hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                                className="w-12 h-full flex items-center justify-center text-slate-500 hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors border-r border-white/5"
                                 title={`Test ${provider.label} Link`}
                               >
                                 <Activity className="w-4 h-4" />
@@ -721,7 +721,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                             {settingKey && (
                               <button
                                 onClick={() => handleInputChange('apiKeys', { ...settings.apiKeys, [provider.id]: '' })}
-                                className="w-full flex-1 flex items-center justify-center text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors border-t border-white/5"
+                                className="w-12 h-full flex items-center justify-center text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
                                 title="Clear saved key"
                                 aria-label={`Clear saved key for ${provider.label}`}
                               >

@@ -19,7 +19,7 @@ const scrubError = (error: any, key?: string): string => {
 
     // Check for common connectivity/CORS issues
     if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('networkerror')) {
-        msg = "Connectivity Issue: Unable to reach the AI server. FinHub will transition to 'Cached View' using local intelligence fallback. Please check your internet connection.";
+        msg = `Connectivity Issue: Unable to reach the AI server. (Details: ${error.message}). This usually indicates a CORS blockage or local network restriction.`;
     }
 
     // Handle rate limits or quota issues
