@@ -30,6 +30,11 @@ export const ScrollAwareLayout: React.FC<ScrollAwareLayoutProps> = ({
     const effectivelyVisible = isVisible && !forceHide;
 
     useEffect(() => {
+        window.scrollTo(0, 0);
+        setIsVisible(true);
+    }, [activeTab]);
+
+    useEffect(() => {
         const handleScroll = () => {
             if (forceHide) return;
             const currentScrollY = window.scrollY;
