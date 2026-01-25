@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Separator } from './ui/separator';
 import {
   User, Camera, TrendingUp, ArrowRightLeft, Trophy, Bot, X,
-  Loader2, CheckCircle2, Trash2, LogOut, AlertOctagon, RefreshCcw
+  Loader2, CheckCircle2, Trash2, LogOut, AlertOctagon, RefreshCcw, Activity
 } from 'lucide-react';
 import {
   Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area
@@ -214,10 +214,13 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
     onUpdateSettings({ [key]: value });
   }, [onUpdateSettings]);
 
-  const handleTestConnection = async () => {
-    const key = resolveApiKey(selectedProvider, settings);
+  const handleTestConnection = async (specificProvider?: string) => {
+    const providerToTest = specificProvider || selectedProvider;
+    const providerLabel = aiProviders.find(p => p.id === providerToTest)?.label || providerToTest;
+    const key = resolveApiKey(providerToTest, settings);
+
     if (!key) {
-      toast.error('No API key found in Settings or System Environment');
+      toast.error(`No API key found for ${providerLabel}`);
       return;
     }
 
@@ -225,18 +228,18 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
     setTestResult(null);
 
     try {
-      const response = await validateApiKey(selectedProvider, key);
+      const response = await validateApiKey(providerToTest, key);
       if (response.error) {
         setTestResult({ success: false, message: response.error });
-        toast.error(`Connection failed: ${response.error}`);
+        toast.error(`${providerLabel} check failed: ${response.error}`);
       } else {
-        setTestResult({ success: true, message: 'Neural link established.' });
-        toast.success('Connection successful!');
+        setTestResult({ success: true, message: `${providerLabel} link established.` });
+        toast.success(`${providerLabel} connection successful!`);
       }
     } catch (error: any) {
       const msg = error.message || 'Unknown error';
-      console.error('Settings save error:', error);
-      toast.error(`${COPY.common.status.error}: ${msg}`);
+      console.error('API Test Error:', error);
+      toast.error(`Error testing ${providerLabel}: ${msg}`);
     } finally {
       setIsTestingConnection(false);
     }
@@ -677,18 +680,29 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                         <div key={provider.id} className={`flex flex-col gap-2 p-3 rounded-2xl border transition-all ${provider.id === selectedProvider ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-white/5 border-white/5'}`}>
                           <div className="flex items-center justify-between px-1">
                             <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">
-                              {provider.label} {provider.id === selectedProvider && '(Preferred)'}
+                              {provider.label}
                             </span>
-                            {settingKey && (
-                              <button
-                                onClick={() => handleInputChange('apiKeys', { ...settings.apiKeys, [provider.id]: '' })}
-                                className="text-slate-600 hover:text-rose-500 transition-colors p-1"
-                                title="Clear saved key"
-                                aria-label={`Clear saved key for ${provider.label}`}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            )}
+                            <div className="flex items-center gap-1">
+                              {settingKey && (
+                                <button
+                                  onClick={() => handleTestConnection(provider.id)}
+                                  className="text-slate-600 hover:text-emerald-500 transition-colors p-1.5"
+                                  title={`Test ${provider.label} Link`}
+                                >
+                                  <Activity className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {settingKey && (
+                                <button
+                                  onClick={() => handleInputChange('apiKeys', { ...settings.apiKeys, [provider.id]: '' })}
+                                  className="text-slate-600 hover:text-rose-500 transition-colors p-1.5"
+                                  title="Clear saved key"
+                                  aria-label={`Clear saved key for ${provider.label}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-3">
