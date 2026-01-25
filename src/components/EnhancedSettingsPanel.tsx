@@ -58,6 +58,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   // Currency Converter State
   const [fromCurrency, setFromCurrency] = useState<string>('USD');
+  const [targetCurrency, setTargetCurrency] = useState<string>(settings.currency);
   const [amount, setAmount] = useState<string>('100');
 
   const [infAmount, setInfAmount] = useState<string>('100000');
@@ -106,7 +107,12 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
   });
 
   const currencies = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SAR'] as const;
-  const toCurrency = settings.currency;
+
+  useEffect(() => {
+    if (settings.currency) {
+      setTargetCurrency(settings.currency);
+    }
+  }, [settings.currency]);
 
   useEffect(() => {
     setName(settings.name || '');
@@ -118,12 +124,12 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
     const numValue = parseFloat(value);
     if (!isNaN(numValue) && numValue > 0) {
       const ratesToUse = rates || exchangeRates;
-      const rate = ratesToUse[toCurrency] || 1;
+      const rate = ratesToUse[targetCurrency] || 1;
       setConvertedAmount(numValue * rate);
     } else {
       setConvertedAmount(null);
     }
-  }, [exchangeRates, toCurrency]);
+  }, [exchangeRates, targetCurrency]);
 
   const loadExchangeRates = useCallback(async () => {
     try {
@@ -445,9 +451,20 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                         Sync
                       </button>
                     </div>
-                    <div className="h-12 flex items-center justify-center bg-indigo-500/10 rounded-2xl border border-indigo-500/20 text-xs font-black text-indigo-400">
-                      {CURRENCY_SYMBOLS[toCurrency]} {toCurrency}
-                    </div>
+                    <Select value={targetCurrency} onValueChange={(value: string) => {
+                      setTargetCurrency(value);
+                    }}>
+                      <SelectTrigger id="converter-target-currency" name="targetCurrency" className="bg-white/5 border-white/5 rounded-2xl h-12 text-[10px] font-black uppercase tracking-widest text-[#0A84FF]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-white/10 text-white">
+                        {currencies.map(curr => (
+                          <SelectItem key={curr} value={curr}>
+                            {CURRENCY_SYMBOLS[curr]} {curr}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -475,17 +492,17 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2">Estimated Value</p>
                     <div className="flex items-baseline gap-2">
                       <p className="text-2xl font-black text-emerald-400 tabular-nums">
-                        {CURRENCY_SYMBOLS[toCurrency]}{convertedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {CURRENCY_SYMBOLS[targetCurrency]}{convertedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                       <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">
                         ESTIMATED VALUE
                       </p>
                     </div>
-                    {exchangeRates[toCurrency] && (
+                    {exchangeRates[targetCurrency] && (
                       <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
                         <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-700">Exchange Rate</span>
                         <span className="text-[10px] font-black text-slate-500 tabular-nums">
-                          1 {fromCurrency} = {exchangeRates[toCurrency].toFixed(4)} {toCurrency}
+                          1 {fromCurrency} = {exchangeRates[targetCurrency].toFixed(4)} {targetCurrency}
                         </span>
                       </div>
                     )}
