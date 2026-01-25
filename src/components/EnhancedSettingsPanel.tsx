@@ -282,7 +282,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                   onClick={() => setIsEditingProfile(!isEditingProfile)}
                   className="text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 hover:bg-white/5"
                 >
-                  {isEditingProfile ? 'Cancel' : 'Refine'}
+                  {isEditingProfile ? 'Cancel' : 'Edit Profile'}
                 </Button>
               </div>
 
@@ -366,7 +366,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                     Virtual Round-Ups
                   </div>
                   <p className="text-[10px] text-slate-500 font-bold leading-relaxed uppercase tracking-widest">
-                    Build your fortress automatically via expense spillover.
+                    Round up your spending to save the difference automatically.
                   </p>
                 </div>
 
