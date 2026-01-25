@@ -26,7 +26,7 @@ import { Button } from '../ui/button';
 import { COPY } from '@/content';
 
 import { Expense, Income, Account, Goal, Liability, Debt } from '@/types';
-import { analyzeFinancialFreedom } from '@/utils/architect';
+import { analyzeFinancialHealth } from '@/utils/architect';
 
 interface AdvancedInsightsProps {
     currency: string;
@@ -94,7 +94,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
     const [expandedTrigger, setExpandedTrigger] = useState<string | null>(null);
     const [showDetails, setShowDetails] = useState(false);
 
-    const analysis = useMemo(() => analyzeFinancialFreedom({
+    const analysis = useMemo(() => analyzeFinancialHealth({
         totalIncome: incomes.reduce((sum, i) => sum + i.amount, 0),
         totalExpenses: expenses.reduce((sum, e) => sum + e.amount, 0),
         activeDebts: liabilities.length + debts.filter(d => d.type === 'borrowed' && d.status === 'pending').length,

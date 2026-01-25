@@ -734,7 +734,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                         autoComplete="off"
                       />
                       <p className="text-[8px] font-bold text-slate-500 uppercase leading-relaxed">
-                        Strategic credit use is prohibited beyond the safe threshold unless it manifests capital growth.
+                        Strategic credit use is prohibited beyond the safe threshold unless it manifests fund growth.
                       </p>
                     </div>
                   )}

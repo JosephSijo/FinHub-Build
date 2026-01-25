@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Goal, Liability, Account } from '@/types';
 
-interface UseShadowWalletProps {
+interface UseAssistantInsightsProps {
     accounts: Account[];
     goals: Goal[];
     liabilities: Liability[];
@@ -9,13 +9,13 @@ interface UseShadowWalletProps {
     emergencyFundAmount?: number;
 }
 
-export const useShadowWallet = ({
+export const useAssistantInsights = ({
     accounts,
     goals,
     liabilities,
     expenses,
     emergencyFundAmount = 0
-}: UseShadowWalletProps) => {
+}: UseAssistantInsightsProps) => {
 
     // 1. Total Bank Balance (Real Money / Liquidity)
     const totalBankBalance = useMemo(() => {
@@ -24,7 +24,7 @@ export const useShadowWallet = ({
             .reduce((sum, acc) => sum + acc.balance, 0);
     }, [accounts]);
 
-    // 1.1 Total Credit Usage (The "Trap" Gauge)
+    // 1.1 Total Credit Usage
     const totalCreditUsage = useMemo(() => {
         return accounts
             .filter(acc => acc.type === 'credit_card')
@@ -34,7 +34,6 @@ export const useShadowWallet = ({
     // 2. Commitments (Liabilities EMI + Recurring Expenses)
     const totalCommitments = useMemo(() => {
         const liabilityEMI = liabilities.reduce((sum, l) => sum + (l.emiAmount || 0), 0);
-        // Rough estimate of recurring expenses if not explicitly marked (placeholder logic)
         const recurringExpenses = expenses
             .filter(e => e.isRecurring)
             .reduce((sum, e) => sum + e.amount, 0);
@@ -42,32 +41,33 @@ export const useShadowWallet = ({
         return liabilityEMI + recurringExpenses;
     }, [liabilities, expenses]);
 
-    // 3. Shadow Wallets (Virtual Reservations)
-    // - Goal allocations
-    // - Emergency Fund buffer (if part of balance)
-    const shadowWalletTotal = useMemo(() => {
+    // 3. Reserved Funds (Goal allocations + Emergency Fund)
+    const reservedFundsTotal = useMemo(() => {
         const goalAllocated = goals.reduce((sum, g) => sum + g.currentAmount, 0);
         return goalAllocated + (emergencyFundAmount || 0);
     }, [goals, emergencyFundAmount]);
 
-    // 4. Total Reserved (Goals + EF + Bills/Commitments)
+    // 4. Total Reserved (Reserved + Commitments)
     const totalReserved = useMemo(() => {
-        return shadowWalletTotal + totalCommitments;
-    }, [shadowWalletTotal, totalCommitments]);
+        return reservedFundsTotal + totalCommitments;
+    }, [reservedFundsTotal, totalCommitments]);
 
     // 5. Available to Spend (The Hero Number)
     const availableToSpend = useMemo(() => {
-        // Formula: Bank Balance - Total Reserved
         const safeBalance = totalBankBalance - totalReserved;
-        return Math.max(0, safeBalance); // Never show negative available to spend (means debt trap)
+        return Math.max(0, safeBalance);
     }, [totalBankBalance, totalReserved]);
 
     return {
         totalBankBalance,
         totalCreditUsage,
         totalCommitments,
-        shadowWalletTotal, // Goals + EF
-        totalReserved,    // Goals + EF + Commitments
+        reservedFundsTotal,
+        totalReserved,
         availableToSpend
     };
 };
+
+// Legacy Export for Migration Phase
+export const useVirtualReservations = useAssistantInsights;
+export const useShadowWallet = useAssistantInsights;

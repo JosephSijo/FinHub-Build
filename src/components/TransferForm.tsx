@@ -79,7 +79,7 @@ export function TransferForm({
                     <DialogHeader className="relative z-10">
                         <DialogTitle className="text-2xl font-black tracking-tighter text-slate-100 flex items-center gap-3">
                             <ArrowLeftRight className="w-6 h-6 text-indigo-400" />
-                            Capital Migration
+                            Internal Transfer
                         </DialogTitle>
                         <DialogDescription className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em] mt-1">
                             Transfer between accounts
@@ -90,7 +90,7 @@ export function TransferForm({
                 <div className="p-8">
                     {!showPreview ? (
                         <div className="space-y-6">
-                            {/* Source Reservoir */}
+                            {/* Source Account */}
                             <div className="space-y-3">
                                 <Label htmlFor="source-account" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">From Account</Label>
                                 <Select value={sourceId} onValueChange={setSourceId}>
@@ -115,7 +115,7 @@ export function TransferForm({
                                 </Select>
                             </div>
 
-                            {/* Destination Reservoir */}
+                            {/* Destination Account */}
                             <div className="space-y-3">
                                 <Label htmlFor="dest-account" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">To Account</Label>
                                 <Select value={destinationId} onValueChange={setDestinationId}>
@@ -142,13 +142,13 @@ export function TransferForm({
 
                             {/* Amount */}
                             <div className="space-y-3">
-                                <Label htmlFor="migration-amount" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Capital Amount</Label>
+                                <Label htmlFor="transfer-amount" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Transfer Amount</Label>
                                 <div className="relative group">
                                     <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 font-bold group-focus-within:text-indigo-400 transition-colors">
                                         {currency === 'INR' ? '₹' : '$'}
                                     </div>
                                     <Input
-                                        id="migration-amount"
+                                        id="transfer-amount"
                                         name="amount"
                                         type="number"
                                         placeholder="0.00"
@@ -174,7 +174,7 @@ export function TransferForm({
                                     onClick={handlePreview}
                                     className="flex-1 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
                                 >
-                                    Verify Migration
+                                    Review Transfer
                                 </Button>
                             </div>
                         </div>
@@ -235,7 +235,7 @@ export function TransferForm({
                                     onClick={handleConfirm}
                                     className="flex-1 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
                                 >
-                                    Confirm Migration
+                                    Confirm Transfer
                                 </Button>
                             </div>
                         </div>

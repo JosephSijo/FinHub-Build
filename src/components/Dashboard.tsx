@@ -24,13 +24,13 @@ import { TruthBanner } from './dashboard/TruthBanner';
 import { TacticalRecovery } from './dashboard/TacticalRecovery';
 import { AdvancedInsights } from './dashboard/AdvancedInsights';
 import { CollapsibleSection } from './ui/CollapsibleSection';
-import { useShadowWallet } from '@/hooks/useShadowWallet';
+import { useAssistantInsights } from '@/hooks/useAssistantInsights';
 import { formatCurrency, formatFinancialValue } from '@/utils/numberFormat';
 import { MeshBackground } from './ui/MeshBackground';
 import { CategoryBackdrop } from './ui/CategoryBackdrop';
 import { isTransfer } from '@/utils/isTransfer';
 import { Expense, Income, Account, Debt, AIContext, Goal, Liability, RecurringTransaction } from '@/types';
-import { calculateFoundationMetrics } from '@/utils/architect';
+import { calculateCoreHealthMetrics } from '@/utils/architect';
 import { ActionInsightCard, actionInsightsLogic } from '../features/actionInsights';
 import { NotificationCard, notificationsLogic, NotificationContext } from '../features/notifications';
 import { FinancialHealthClarity } from './dashboard/FinancialHealthClarity';
@@ -150,22 +150,19 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
     return { reconciledExpenses: rExpenses, reconciledIncomes: rIncomes };
   }, [displayExpenses, displayIncomes]);
 
-  // Logic for Available-to-Spend
-  const shadowWallet = useShadowWallet({
+  const {
+    reservedFundsTotal,
+    totalReserved,
+    availableToSpend,
+    totalCreditUsage,
+    totalCommitments
+  } = useAssistantInsights({
     accounts: displayAccounts as any,
     goals: displayGoals,
     liabilities: displayLiabilities,
     expenses: reconciledExpenses as any,
     emergencyFundAmount
   });
-
-  const {
-    shadowWalletTotal,
-    totalReserved,
-    availableToSpend,
-    totalCreditUsage,
-    totalCommitments
-  } = shadowWallet;
 
   const [activeCard, setActiveCard] = useState<string | null>(null);
 
@@ -291,8 +288,8 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
       goalsCount: displayGoals.length
     };
 
-    const foundationMetrics = calculateFoundationMetrics(architectureContext);
-    const safeDailyLimit = foundationMetrics.foundationLimit;
+    const coreHealthMetrics = calculateCoreHealthMetrics(architectureContext);
+    const safeDailyLimit = coreHealthMetrics.dailySpendingLimit;
 
     const hasExpensesInLast3Days = reconciledExpenses.some(e => {
       const diffTime = Math.abs(today.getTime() - new Date(e.date).getTime());
@@ -319,7 +316,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
       subscriptionBurden,
       velocityValue,
       liquidVelocity,
-      foundationMetrics,
+      coreHealthMetrics,
       safeDailyLimit,
       missingEssentials,
       architectureContext,
@@ -346,7 +343,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
     subscriptionBurden,
     velocityValue,
     liquidVelocity,
-    foundationMetrics,
+    coreHealthMetrics,
     safeDailyLimit,
     missingEssentials,
     outflowRatio,
@@ -440,7 +437,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
     const context: NotificationContext = {
       userId: 'current-user',
       accountCount: displayAccounts.length,
-      totalBalance: shadowWalletTotal,
+      totalBalance: reservedFundsTotal,
       hasIncome: displayIncomes.length > 0,
       transactionCount: reconciledExpenses.length + displayIncomes.length,
       accountAge,
@@ -448,7 +445,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
         id: l.id,
         amount: l.emiAmount || 0,
         dueDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
-        accountBalance: shadowWalletTotal
+        accountBalance: reservedFundsTotal
       })),
       budgetGaps: [],
       overdueIOUs: [],
@@ -459,7 +456,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
     };
 
     return notificationsLogic.generateNotifications(context, currency, 1);
-  }, [displayAccounts, shadowWalletTotal, displayIncomes, reconciledExpenses, displayLiabilities, availableToSpend, currency]);
+  }, [displayAccounts, reservedFundsTotal, displayIncomes, reconciledExpenses, displayLiabilities, availableToSpend, currency]);
 
   return (
     <div className="main-grid">
@@ -490,8 +487,8 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
 
       {/* AI Truth Banner */}
       <TruthBanner
-        message={`Assessment: ${foundationMetrics.isRestricted ? 'Restricted' : 'Growth'} mode active. Foundation-adjusted limit is ${formatCurrency(safeDailyLimit, currency, true)} for the next ${foundationMetrics.remainingDays} days.`}
-        icon={foundationMetrics.isRestricted ? <Zap className="w-4 h-4 text-orange-400" /> : <ShieldCheck className="w-4 h-4 text-blue-400" />}
+        message={`Assessment: ${coreHealthMetrics.isRestricted ? 'Restricted' : 'Growth'} mode active. Foundation-adjusted limit is ${formatCurrency(safeDailyLimit, currency, true)} for the next ${coreHealthMetrics.remainingDays} days.`}
+        icon={coreHealthMetrics.isRestricted ? <Zap className="w-4 h-4 text-orange-400" /> : <ShieldCheck className="w-4 h-4 text-blue-400" />}
       />
 
       {/* Financial Health Clarity Dashboard */}
@@ -525,10 +522,10 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
               <div className="space-y-1">
                 <h3 className="text-label text-[11px] font-black tracking-[0.2em] text-blue-400/80 uppercase">Account Balance</h3>
                 <div className="flex items-center gap-2 justify-center">
-                  <div className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border transition-colors ${foundationMetrics.isRestricted ? 'bg-orange-500/10 text-orange-300 border-orange-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}`}>
-                    {foundationMetrics.isRestricted ? 'Restricted Limit' : 'Growth-Ready'}
+                  <div className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border transition-colors ${coreHealthMetrics.isRestricted ? 'bg-orange-500/10 text-orange-300 border-orange-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}`}>
+                    {coreHealthMetrics.isRestricted ? 'Restricted Limit' : 'Growth-Ready'}
                   </div>
-                  <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${foundationMetrics.isRestricted ? 'bg-orange-500' : 'bg-emerald-500'}`} />
+                  <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${coreHealthMetrics.isRestricted ? 'bg-orange-500' : 'bg-emerald-500'}`} />
                 </div>
               </div>
             </div>
@@ -576,7 +573,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
                         </div>
                         <div className="flex justify-between gap-4">
                           <span className="text-slate-400">Reserved (Goals + EF)</span>
-                          <span className="text-rose-500">-{formatCurrency(shadowWalletTotal, currency)}</span>
+                          <span className="text-rose-500">-{formatCurrency(reservedFundsTotal, currency)}</span>
                         </div>
                         <div className="flex justify-between gap-4">
                           <span className="text-slate-400">Obligations (EMI/Bills)</span>
@@ -592,7 +589,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
                           <span>{formatCurrency(safeDailyLimit, currency)}/day</span>
                         </div>
 
-                        {foundationMetrics.tier0DebtService > 0 && (
+                        {coreHealthMetrics.priorityDebtRepayment > 0 && (
                           <div className="mt-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-2.5">
                             <div className="flex items-center gap-2">
                               <Zap className="w-3 h-3 text-rose-400" />
@@ -602,17 +599,17 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
                             <div className="grid grid-cols-2 gap-2">
                               <div className="flex flex-col gap-0.5">
                                 <span className="text-[8px] text-slate-500 uppercase font-black tracking-tight">Leak Rate</span>
-                                <span className="text-[11px] text-rose-300 font-mono font-black leading-none">{foundationMetrics.maxInterestRate}%</span>
+                                <span className="text-[11px] text-rose-300 font-mono font-black leading-none">{coreHealthMetrics.maxInterestRate}%</span>
                               </div>
                               <div className="flex flex-col gap-0.5 border-l border-white/5 pl-2">
                                 <span className="text-[8px] text-slate-500 uppercase font-black tracking-tight">Idle Capital</span>
-                                <span className="text-[11px] text-blue-300 font-mono font-black leading-none">{formatCurrency(shadowWalletTotal, currency)}</span>
+                                <span className="text-[11px] text-blue-300 font-mono font-black leading-none">{formatCurrency(reservedFundsTotal, currency)}</span>
                               </div>
                             </div>
 
                             <p className="text-[9px] text-slate-400 leading-relaxed font-medium italic border-t border-rose-500/10 pt-2">
-                              Holding cash while paying <span className="text-rose-300 font-bold">{foundationMetrics.maxInterestRate}%</span> interest is a <span className="not-italic text-rose-400 font-black">negative-sum game</span>.
-                              Reserves cost you <span className="text-rose-300 font-bold">{formatCurrency((shadowWalletTotal * foundationMetrics.maxInterestRate / 100) / 12, currency)}/mo</span>.
+                              Holding cash while paying <span className="text-rose-300 font-bold">{coreHealthMetrics.maxInterestRate}%</span> interest is a <span className="not-italic text-rose-400 font-black">costly choice</span>.
+                              Your debt is costing you approximately <span className="text-rose-300 font-bold">{formatCurrency((reservedFundsTotal * coreHealthMetrics.maxInterestRate / 100) / 12, currency)}/mo</span>.
                             </p>
                           </div>
                         )}
@@ -666,8 +663,8 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
           </CollapsibleSection>
 
           <CollapsibleSection
-            title="Debt & Liability"
-            subtitle="Capital Sourced"
+            title="Debt & Liabilities"
+            subtitle="Total Owed"
             icon={<Activity className="w-4 h-4" />}
             value={<InteractiveFinancialValue value={totalLiabilities + totalMoneyOwed + totalCreditUsage} currency={currency} />}
             valueColor="text-rose-400"
@@ -732,8 +729,8 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
           </CollapsibleSection>
 
           <CollapsibleSection
-            title="Growth Assets"
-            subtitle="Wealth Engines"
+            title="Investments"
+            subtitle="Growth Portfolio"
             icon={<TrendingUp className="w-4 h-4" />}
             value={<InteractiveFinancialValue value={totalInvestmentValue} currency={currency} />}
             isOpen={activeCard === 'invest-group'}
@@ -767,7 +764,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
 
           <CollapsibleSection
             title="Lent & Receivables"
-            subtitle="Trust Capital Displaced"
+            subtitle="Money Owed to You"
             icon={<ArrowRightLeft className="w-4 h-4" />}
             value={<InteractiveFinancialValue value={totalMoneyLent} currency={currency} />}
             isOpen={activeCard === 'receivable-group'}
@@ -955,7 +952,7 @@ export const Dashboard: React.FC<DashboardProps> = React.memo(({
                 title="Active Goals"
                 subtitle="Targets Initialized"
                 icon={<Target className="w-4 h-4" />}
-                value={formatFinancialValue(shadowWalletTotal, currency)}
+                value={formatFinancialValue(reservedFundsTotal, currency)}
                 valueColor="text-emerald-400"
                 isOpen={activeCard === 'goals-vault'}
                 onToggle={() => toggleCard('goals-vault')}

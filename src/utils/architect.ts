@@ -1,7 +1,7 @@
 import { AIContext, Goal, Liability, Account, Income, Debt } from '../types';
 import { formatCurrency } from './numberFormat';
 
-export interface ArchitectTrigger {
+export interface InsightTrigger {
     id: string;
     type: 'breach' | 'windfall' | 'spike' | 'closer' | 'milestone';
     title: string;
@@ -11,7 +11,7 @@ export interface ArchitectTrigger {
     explanation?: string;
 }
 
-export interface ArchitectAnalysis {
+export interface FinancialAdvisorAnalysis {
     priority: number;
     title: string;
     message: string;
@@ -29,7 +29,7 @@ export interface ArchitectAnalysis {
         value: number;
         message: string;
     };
-    triggers: ArchitectTrigger[];
+    triggers: InsightTrigger[];
     state?: 'leakage' | 'inversion' | 'normal';
     pivotActions?: string[];
     alertColor?: string;
@@ -49,40 +49,40 @@ const clamp = (val: number, min: number, max: number): number => {
     return Math.max(min, Math.min(max, safeVal));
 };
 
-export interface FoundationMetrics {
-    tier0DebtService: number; // Sum of high-interest debt payments (>10%)
-    tier1Security: number; // Insurance premiums
-    tier2Buffer: number; // 3-month basic buffer
+export interface CoreHealthMetrics {
+    priorityDebtRepayment: number; // Sum of high-interest debt payments (>10%)
+    insurancePremiums: number; // Insurance premiums
+    emergencyBuffer: number; // 3-month basic buffer
     isRestricted: boolean;
     remainingDays: number;
     availableCash: number;
-    foundationLimit: number;
+    dailySpendingLimit: number;
     maxInterestRate: number;
     status: 'restricted' | 'growth-ready';
 }
 
-export const calculateFoundationMetrics = (context: AIContext): FoundationMetrics => {
+export const calculateCoreHealthMetrics = (context: AIContext): CoreHealthMetrics => {
     const { liabilities, expenses, accounts, currentMonthExpenses } = context;
 
-    // Tier 0: High Interest Debt (>10%)
+    // High Interest Debt (>10%)
     const highInterestDebts = liabilities.filter(l => {
         const rate = l.effective_rate || l.interestRate / 100;
         return rate >= 0.10;
     });
-    const tier0DebtService = highInterestDebts.reduce((sum, l) => sum + (l.emiAmount || 0), 0);
+    const priorityDebtRepayment = highInterestDebts.reduce((sum, l) => sum + (l.emiAmount || 0), 0);
 
-    // Tier 1: Vital Security (Insurance)
+    // Insurance Security
     // We look at expenses from the current month or recurring transactions if needed
     // But per requirement, we scan currentMonthExpenses for category "Insurance"
-    const tier1Security = currentMonthExpenses
+    const insurancePremiums = currentMonthExpenses
         .filter(e => e.category === 'Insurance')
         .reduce((sum, e) => sum + e.amount, 0);
 
-    // Tier 2: 3-month Buffer (Heuristic)
+    // Emergency Buffer (3-month Heuristic)
     const totalExp = expenses.reduce((sum, e) => sum + e.amount, 0);
     const days = Math.max(1, expenses.length / 30);
     const avgMonthlyExpense = clamp(expenses.length > 0 ? (totalExp / days) : 20000, 1, 10000000);
-    const tier2Buffer = avgMonthlyExpense * 3;
+    const emergencyBuffer = avgMonthlyExpense * 3;
 
     // Available Cash (M1 Assets)
     const availableCash = accounts
@@ -94,13 +94,13 @@ export const calculateFoundationMetrics = (context: AIContext): FoundationMetric
     const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     const remainingDays = Math.max(1, lastDayOfMonth.getDate() - today.getDate());
 
-    const foundationLimit = Math.max(0, Math.floor((availableCash - (tier0DebtService + tier1Security)) / remainingDays));
+    const dailySpendingLimit = Math.max(0, Math.floor((availableCash - (priorityDebtRepayment + insurancePremiums)) / remainingDays));
 
     // Status Determination
-    // Tier 0 is complete if no high-interest debts OR if emi is zero (unlikely for active loans)
-    // Tier 1 is complete if insurance expense exists this month
+    // Debt is complete if no high-interest debts OR if emi is zero (unlikely for active loans)
+    // Insurance is complete if insurance expense exists this month
     const isTier0Complete = highInterestDebts.length === 0;
-    const isTier1Complete = tier1Security > 0;
+    const isTier1Complete = insurancePremiums > 0;
 
     const isRestricted = !isTier0Complete || !isTier1Complete;
 
@@ -109,24 +109,24 @@ export const calculateFoundationMetrics = (context: AIContext): FoundationMetric
         : 0;
 
     return {
-        tier0DebtService,
-        tier1Security,
-        tier2Buffer,
+        priorityDebtRepayment,
+        insurancePremiums,
+        emergencyBuffer,
         isRestricted,
         remainingDays,
         availableCash,
-        foundationLimit,
+        dailySpendingLimit,
         maxInterestRate,
         status: isRestricted ? 'restricted' : 'growth-ready'
     };
 };
 
-export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis => {
+export const analyzeFinancialHealth = (context: AIContext): FinancialAdvisorAnalysis => {
     const { liabilities, expenses, goals, healthScore, totalIncome, totalExpenses, incomes, accounts, investments, debts } = context;
 
     const surplus = Math.max(0, totalIncome - totalExpenses);
     const monthlyPriorityAllocation = surplus * 0.8;
-    const triggers: ArchitectTrigger[] = [];
+    const triggers: InsightTrigger[] = [];
     const inflationRate = 0.06; // Standard 6% inflation heuristic
 
     const calculateRealReturn = (nominal: number) => {
@@ -135,7 +135,7 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
         return clamp(real, -0.99, 100);
     };
 
-    const SHIELD_MIN = 500;
+    const MIN_SAFETY_FUND = 500;
     const totalLiquidity = accounts.reduce((sum: number, a: Account) => sum + (a.type !== 'credit_card' ? a.balance : 0), 0);
     const avgMonthlyExpense = clamp(totalExpenses || 20000, 1, 10000000);
 
@@ -268,7 +268,7 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
     const isHighInterestActive = highInterestDebts.length > 0;
 
     // Leakage: Debt Cost > Inv Gain AND Shield < Min
-    if (totalAnnualDebtCost > totalExpectedInvGain && totalLiquidity < SHIELD_MIN) {
+    if (totalAnnualDebtCost > totalExpectedInvGain && totalLiquidity < MIN_SAFETY_FUND) {
         state = 'leakage';
     }
     // Inversion: High-Interest coexists with discretionary/low-interest prepayments
@@ -283,8 +283,8 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
         const topDebt = highInterestDebts.sort((a, b) => (b.effective_rate || 0) - (a.effective_rate || 0))[0];
         pivotActions.push(`PAY: Putting extra cash into ${topDebt.name} (costs you ${((topDebt.effective_rate || 0) * 100).toFixed(1)}% in interest).`);
         // Step 3: Safety Net
-        if (totalLiquidity < SHIELD_MIN) {
-            pivotActions.push(`SAVE: Setting aside money to rebuild your ${formatCurrency(SHIELD_MIN, context.currency)} safety fund.`);
+        if (totalLiquidity < MIN_SAFETY_FUND) {
+            pivotActions.push(`SAVE: Setting aside money to rebuild your ${formatCurrency(MIN_SAFETY_FUND, context.currency)} safety fund.`);
         } else {
             pivotActions.push(`DONE: Your basic safety fund is verified at ${formatCurrency(totalLiquidity, context.currency)}.`);
         }
@@ -312,7 +312,7 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
             alertColor: '#f59e0b', // Amber for trust priority
             summarySentence: `Solving your IOU with ${topBorrowed.personName} is the primary goal. Repaying personal trust improves your overall financial security score.`,
             interpretation: {
-                liquidityStatus: totalLiquidity > SHIELD_MIN ? 'Stable' : 'Building',
+                liquidityStatus: totalLiquidity > MIN_SAFETY_FUND ? 'Stable' : 'Building',
                 securityStatus: 'Personal Trust Gap',
                 safeZoneValue: 30
             }
@@ -357,7 +357,7 @@ export const analyzeFinancialFreedom = (context: AIContext): ArchitectAnalysis =
             alertColor: '#730800',
             summarySentence: `Your ${topDebt.name}${summaryIOU} is a critical drag. This chart shows how its ${(effectiveRatePercent).toFixed(1)}% cost is preventing your 'Safe Zone' from expanding.`,
             interpretation: {
-                liquidityStatus: totalLiquidity > SHIELD_MIN ? 'Stable' : 'Critical',
+                liquidityStatus: totalLiquidity > MIN_SAFETY_FUND ? 'Stable' : 'Critical',
                 securityStatus: 'Threatened',
                 safeZoneValue: Math.round(healthScore)
             }

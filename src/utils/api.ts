@@ -758,7 +758,7 @@ export const api = {
     const payload: any = {
       user_id: userId,
       type: data.type || 'expense',
-      name: data.description || data.source || data.name || 'Recurring Transaction',
+      name: data.description || data.source || data.name || 'Monthly Payment',
       amount: data.amount,
       currency_code: data.currency || 'INR',
       account_id: data.accountId,

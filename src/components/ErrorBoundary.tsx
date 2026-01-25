@@ -35,8 +35,8 @@ export class ErrorBoundary extends Component<Props, State> {
                         </div>
                         <div className="space-y-2">
                             <h2 className="text-xl font-black text-white uppercase tracking-tight">System Glitch Detected</h2>
-                            <p className="text-sm text-slate-400 font-medium">
-                                The neural link to this component was interrupted. This usually happens during background updates.
+                            <p className="text-slate-500 font-bold text-sm">
+                                The connection to this component was interrupted. This usually happens during background updates.
                             </p>
                         </div>
                         {this.state.error && (
@@ -49,7 +49,7 @@ export class ErrorBoundary extends Component<Props, State> {
                             className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-6 rounded-2xl gap-2 h-auto"
                         >
                             <RefreshCw className="w-4 h-4" />
-                            Re-establish Connection
+                            Reload Page
                         </Button>
                     </Card>
                 </div>

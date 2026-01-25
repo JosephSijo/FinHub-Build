@@ -61,7 +61,7 @@ export interface Debt {
   tags: string[];
   accountId: string;
   dueDate?: string;
-  interestRate?: number; // Added for Tier 0 Wealth Leaks
+  interestRate?: number; // Added for High-Interest Debt detection
   recurringId?: string;
   createdAt: string;
 }
@@ -143,7 +143,7 @@ export const MONEY_OUT_CATEGORIES = [
   { value: 'Subscription', emoji: '📺' },
   { value: 'Personal IOU', emoji: '🤝' },
   { value: 'Transfer', emoji: '🔄' },
-  { value: 'Insurance', emoji: '🛡️' }, // Added for Tier 1 Vital Security
+  { value: 'Insurance', emoji: '🛡️' }, // Added for Essential Protection
   { value: 'Other', emoji: '📦' }
 ];
 

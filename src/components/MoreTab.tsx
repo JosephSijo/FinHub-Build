@@ -38,7 +38,7 @@ export function MoreTab({
       <div>
         <h2 className="text-3xl font-black text-slate-100 tracking-tight leading-none mb-3">Settings & Assets</h2>
         <p className="text-slate-500 font-bold max-w-md">
-          Manage your accounts, app settings, and personal preferences.
+          Manage your accounts, cards, and personal settings.
         </p>
       </div>
 
@@ -115,7 +115,7 @@ export function MoreTab({
 
             <div className="space-y-2">
               <h3 className="text-xl font-black text-slate-100">Bills & Debts</h3>
-              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mt-1">Manage Commitments</p>
+              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mt-1">Manage Balances</p>
             </div>
 
             <div className="mt-8 flex items-center justify-between text-slate-500">
@@ -207,8 +207,8 @@ export function MoreTab({
 
       {/* App Info Footer */}
       <div className="text-center pt-8 border-t border-white/5">
-        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-700 mb-1">FinHub Obsidian System</p>
-        <p className="text-[9px] font-bold text-slate-800">BUILD 50.3.0 // ADVANCED ENGINE</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-700 mb-1">FinHub Assistant</p>
+        <p className="text-[9px] font-bold text-slate-800">VERSION 5.0.0 // FINANCIAL ENGINE</p>
       </div>
     </div>
   );

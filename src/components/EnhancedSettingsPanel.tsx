@@ -15,7 +15,6 @@ import {
 } from 'recharts';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -249,7 +248,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent side="left" className="w-full sm:max-w-lg overflow-y-auto px-0 bg-slate-950 border-white/5 text-slate-100 h-dvh">
         <SheetTitle className="sr-only">Settings</SheetTitle>
-        <SheetDescription className="sr-only">Customize your FinHub core experience.</SheetDescription>
+        <SheetDescription className="sr-only">Customize your FinHub settings.</SheetDescription>
         <div className="space-y-12 animate-in fade-in slide-in-from-left-4 duration-500 px-8 pt-12 pb-10 text-white relative">
           {/* Close Button Area */}
           <div className="absolute top-4 right-4 z-20">
@@ -268,7 +267,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
               <h2 className="text-3xl font-black text-slate-100 tracking-tight leading-none text-white">App Settings</h2>
             </div>
             <p className="text-slate-500 font-bold ml-4 text-sm">
-              Customize your FinHub core experience.
+              Manage your personal preferences.
             </p>
           </div>
 
@@ -278,7 +277,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
               <div className="flex items-center justify-between">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 flex items-center gap-2">
                   <User className="w-3.5 h-3.5" />
-                  User Identity
+                  Profile Details
                 </h3>
                 <Button
                   variant="ghost"
@@ -322,7 +321,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                   {isEditingProfile ? (
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <Label htmlFor="settings-profile-name" className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Alias</Label>
+                        <Label htmlFor="settings-profile-name" className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Name</Label>
                         <Input
                           id="settings-profile-name"
                           name="name"
@@ -341,7 +340,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                     <>
                       <h4 className="text-2xl font-black text-slate-100 tracking-tight">{name || 'Guest User'}</h4>
                       <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">
-                        FinHub Core
+                        Free Account
                       </p>
                     </>
                   )}
@@ -388,7 +387,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
             <div className="space-y-4">
               <Label htmlFor="settings-currency" className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 flex items-center gap-2">
                 <ArrowRightLeft className="w-3.5 h-3.5" />
-                Standard Denomination
+                Base Currency
               </Label>
               <div className="bg-slate-900/40 p-6 rounded-[32px] border border-white/5 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500 blur-3xl opacity-5 -mr-12 -mt-12" />
@@ -473,7 +472,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                 </div>
 
                 <div className="space-y-1.5 relative z-10">
-                  <Label htmlFor="converter-amount" className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Capital Amount</Label>
+                  <Label htmlFor="converter-amount" className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Amount</Label>
                   <Input
                     id="converter-amount"
                     name="amount"
@@ -519,7 +518,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
             <div className="space-y-6">
               <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 flex items-center gap-2">
                 <TrendingUp className="w-3.5 h-3.5 text-rose-500" />
-                Inflation Projection
+                Future Value Tool
               </Label>
 
               <div className="space-y-6 p-6 bg-slate-900/40 rounded-[32px] border border-white/5 relative overflow-hidden group">
@@ -527,7 +526,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
 
                 <div className="space-y-4 relative z-10">
                   <div className="space-y-1.5">
-                    <Label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Current Capital</Label>
+                    <Label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Current Amount</Label>
                     <Input
                       type="number"
                       value={infAmount}
@@ -619,12 +618,11 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
 
             <div className="h-px bg-white/5" />
 
-            {/* AI Configuration */}
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
                   <Bot className="w-3.5 h-3.5 text-indigo-400" />
-                  AI Assistant Config
+                  Assistant Connection
                 </Label>
                 {settings.apiKeys && Object.values(settings.apiKeys).some(k => !!k) && (
                   <Button
@@ -663,7 +661,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                 </div>
 
                 <div className="space-y-4 pt-2 relative z-10 border-t border-white/5 mt-2">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-slate-500 ml-1">Configured Credentials</Label>
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-slate-500 ml-1">API Credentials</Label>
 
                   <div className="space-y-3">
                     {aiProviders.map((provider) => {
@@ -753,10 +751,10 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                       ) : testResult?.success ? (
                         <div className="flex items-center gap-2">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          Configuration Stable
+                          Connection Ready
                         </div>
                       ) : (
-                        "Save AI Configuration"
+                        "Save Assistant Settings"
                       )}
                     </Button>
                     {testResult && (
@@ -843,12 +841,12 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
 
               {/* Copyright System Footer */}
               <div className="text-center pt-8 space-y-2 opacity-40 hover:opacity-100 transition-opacity duration-700 pb-10">
-                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-100">Obsidian System</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-100">FinHub Engine</p>
                 <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">
-                  Architect: Sijo Joseph // BUILD 50.3.0 // QUANTUM CORE
+                  Developer: Joseph Sijo // VERSION 5.0.0
                 </p>
                 <p className="text-[8px] font-bold text-slate-700 uppercase tracking-widest mt-4">
-                  © 2025 NEURAL FINHUB FABRIC
+                  © 2025 FINHUB FINANCIAL
                 </p>
                 <button
                   onClick={onOpenAbout}
@@ -868,7 +866,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                   className="w-full h-14 bg-white/5 hover:bg-white/10 border-white/10 hover:border-white/20 text-white/60 hover:text-white font-black uppercase tracking-widest gap-3 rounded-[24px] transition-all group mb-4"
                 >
                   <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                  Terminate Session
+                  Log Out
                 </Button>
 
                 <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -899,15 +897,15 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                       <AlertDialogCancel className="h-14 flex-1 rounded-2xl bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white font-black uppercase tracking-widest transition-all">
                         Abort
                       </AlertDialogCancel>
-                      <AlertDialogAction
+                      <Button
                         onClick={async () => {
                           await deleteAccountPermanently();
                           onClose();
                         }}
                         className="h-14 flex-1 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black uppercase tracking-widest shadow-lg shadow-rose-500/20 transition-all active:scale-95"
                       >
-                        Confirm Purge
-                      </AlertDialogAction>
+                        Confirm Deletion
+                      </Button>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>

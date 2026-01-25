@@ -2,14 +2,14 @@ import React, { useMemo } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import { EXPENSE_CATEGORIES } from '../../types';
 import { budgetsLogic } from './logic';
-import { useShadowWallet } from '../../hooks/useShadowWallet';
+import { useAssistantInsights } from '../../hooks/useAssistantInsights';
 import { Progress } from '../../components/ui/progress';
 import { cn } from '../../components/ui/utils';
 
 export const BudgetsScreen: React.FC = () => {
     const { expenses, incomes, liabilities, goals, accounts, emergencyFundAmount, currency } = useFinance();
 
-    const { availableToSpend } = useShadowWallet({
+    const { availableToSpend } = useAssistantInsights({
         accounts: accounts as any,
         goals,
         liabilities,

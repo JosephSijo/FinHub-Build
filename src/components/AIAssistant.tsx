@@ -31,7 +31,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: "I am your FinHub AI Assistant. My mission is to help you reach financial freedom using a Security and Growth framework. I've analyzed your financial data—how can I help you today?"
+      content: "I am your FinHub Assistant. My mission is to help you reach financial freedom using a Security and Growth framework. I've analyzed your financial data—how can I help you today?"
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
@@ -134,8 +134,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                 <Bot className="w-6 h-6 text-[#0A84FF]" />
               </div>
               <div>
-                <h3 className="text-balance text-xl text-slate-100">AI Assistant</h3>
-                <p className="text-label text-[10px] opacity-60">AI Financial Advisor</p>
+                <h3 className="text-balance text-xl text-slate-100">FinHub Assistant</h3>
+                <p className="text-label text-[10px] opacity-60">Financial Mentor</p>
               </div>
             </div>
             <Button
@@ -170,7 +170,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                 {message.role === 'assistant' && (
                   <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="w-3 h-3 text-[#0A84FF]" />
-                    <span className="text-label text-[8px] opacity-50">AI Analysis</span>
+                    <span className="text-label text-[8px] opacity-50">Assistant Analysis</span>
                   </div>
                 )}
                 <p className="text-sm leading-relaxed whitespace-pre-wrap font-medium">{message.content}</p>
@@ -234,7 +234,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               </Button>
             </div>
             <p className="text-label text-[8px] text-center opacity-40 px-2 leading-relaxed">
-              Data Processing Active // Connection Secure
+              Assistant Analysis in progress // Connection Secure
             </p>
           </div>
         </div>

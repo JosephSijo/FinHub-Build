@@ -171,7 +171,7 @@ export function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
                                     </div>
                                 </div>
                                 <div className="space-y-3">
-                                    <h2 className="text-4xl font-black text-white tracking-tight">Initiate Obsidian</h2>
+                                    <h2 className="text-4xl font-black text-white tracking-tight">Setup Assistant</h2>
                                     <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-sm mx-auto">
                                         Let's set up your financial basics in 4 quick steps. No complicated navigation required.
                                     </p>
@@ -324,9 +324,9 @@ export function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
                                     </div>
                                 </div>
                                 <div className="space-y-3">
-                                    <h3 className="text-3xl font-black text-white">Stream Multiplicity?</h3>
+                                    <h3 className="text-3xl font-black text-white">Multiple Incomes?</h3>
                                     <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-sm mx-auto">
-                                        Obsidian works best when all accounts are linked. Do you have other monthly income sources?
+                                        FinHub works best when all income sources are linked. Do you have other monthly earnings?
                                     </p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
@@ -398,7 +398,7 @@ export function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
                                         onClick={handleAddExpense}
                                         className="flex-1 h-16 bg-rose-600 hover:bg-rose-500 text-white rounded-[20px] font-black shadow-lg shadow-rose-900/40"
                                     >
-                                        Set Recurring
+                                        Add Monthly Bill
                                     </Button>
                                 </div>
                             </motion.div>
@@ -427,7 +427,7 @@ export function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
                                     onClick={handleFinish}
                                     className="w-full h-16 bg-emerald-600 hover:bg-emerald-500 text-white rounded-[20px] font-black text-lg shadow-xl shadow-emerald-900/40"
                                 >
-                                    Enter Obsidian Dashboard
+                                    Enter Dashboard
                                 </Button>
                             </motion.div>
                         )}

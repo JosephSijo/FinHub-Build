@@ -7,7 +7,7 @@ export interface SAIResponse {
 
 const OPENAI_API_URL = import.meta.env.VITE_OPENAI_API_URL || 'https://api.openai.com/v1/chat/completions';
 const ANTHROPIC_API_URL = import.meta.env.VITE_ANTHROPIC_API_URL || 'https://api.anthropic.com/v1/messages';
-const GEMINI_API_URL = import.meta.env.VITE_GEMINI_API_URL || 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
+const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1/models';
 const DEEPSEEK_API_URL = import.meta.env.VITE_DEEPSEEK_API_URL || 'https://api.deepseek.com/chat/completions';
 const PERPLEXITY_API_URL = import.meta.env.VITE_PERPLEXITY_API_URL || 'https://api.perplexity.ai/chat/completions';
 
@@ -19,12 +19,24 @@ const scrubError = (error: any, key?: string): string => {
 
     // Check for common connectivity/CORS issues
     if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('networkerror')) {
-        msg = `Connectivity Issue: Unable to reach the AI server. (Details: ${error.message}). This usually indicates a CORS blockage or local network restriction.`;
+        msg = `Connectivity Issue: Unable to reach the AI server. (Details: ${error.message}). This usually indicates a CORS blockage, an ad-blocker, or local network restriction.`;
+    }
+
+    // Check for version/model errors
+    if (msg.includes('404') || msg.toLowerCase().includes('model not found') || msg.toLowerCase().includes('not exist') || msg.toLowerCase().includes('unsupported model')) {
+        const modelInfo = error.modelName ? ` (Model: ${error.modelName})` : '';
+        const triedInfo = error.triedModels ? ` (Tried: ${error.triedModels.join(', ')})` : '';
+        msg = `AI Version/Model Error${modelInfo}${triedInfo}. The model might be deprecated or your API key lacks access. We attempted fallbacks but none succeeded.`;
+    }
+
+    // Handle specific permission errors
+    if (msg.toLowerCase().includes('permission') || msg.includes('403')) {
+        msg = `API Key Permission Error: Your key is valid but does not have the necessary permissions for this model/service.`;
     }
 
     // Handle rate limits or quota issues
-    if (msg.includes('429') || msg.toLowerCase().includes('too many requests')) {
-        msg = "AI Capacity Reached: The provider is currently busy or rate-limited. Falling back to local 'Cached View'.";
+    if (msg.includes('429') || msg.toLowerCase().includes('too many requests') || msg.toLowerCase().includes('quota')) {
+        msg = "AI Capacity Reached: Your API quota is exhausted or the provider is rate-limiting requests. Please check your billing/usage console.";
     }
 
     if (key) {
@@ -96,18 +108,17 @@ const callOpenAI = async (key: string, userPrompt: string, systemPrompt: string)
 };
 
 const callAnthropic = async (key: string, userPrompt: string, systemPrompt: string): Promise<SAIResponse> => {
-    // Note: Anthropic needs CORS proxy usually from browser, but we'll try direct.
-    // Warning: Browser usage of Anthropic API often fails CORS.
+    // Claude 3.5 Haiku is the latest efficient model
     const response = await fetch(ANTHROPIC_API_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'x-api-key': key,
             'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true' // Necessary for client-side
+            'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-            model: 'claude-3-haiku-20240307',
+            model: 'claude-3-5-haiku-20241022',
             system: systemPrompt,
             messages: [{ role: 'user', content: userPrompt }],
             max_tokens: 1024,
@@ -120,28 +131,72 @@ const callAnthropic = async (key: string, userPrompt: string, systemPrompt: stri
 };
 
 const callGemini = async (key: string, userPrompt: string, systemPrompt: string): Promise<SAIResponse> => {
-    // Using stable v1 endpoint with the latest flash model
-    const url = `${GEMINI_API_URL}?key=${key}`;
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{
-                parts: [{ text: `${systemPrompt}\n\nUser Question: ${userPrompt}` }]
-            }]
-        }),
-    });
+    // List of models to try in order of preference (latest to fallback)
+    const models = [
+        'gemini-3-flash-preview',
+        'gemini-2.5-flash',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash'
+    ];
 
-    const data = await response.json();
-    if (!response.ok) {
-        throw new Error(data.error?.message || `Gemini Error ${response.status}: ${response.statusText}`);
+    let lastError: any = null;
+
+    for (const model of models) {
+        try {
+            const url = `${GEMINI_BASE_URL}/${model}:generateContent?key=${key}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                mode: 'cors',
+                credentials: 'omit',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Goog-Api-Client': 'gl-js/0.0.0'
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: `${systemPrompt}\n\nUser Question: ${userPrompt}` }]
+                    }]
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const status = response.status;
+                const errorMsg = errorData.error?.message || response.statusText;
+
+                // If model not found or invalid request (potentially unsupported model), try next model
+                if (status === 404 || status === 400 || errorMsg.toLowerCase().includes('not found') || errorMsg.toLowerCase().includes('unsupported')) {
+                    console.warn(`Gemini Model ${model} failed, trying next...`, errorMsg);
+                    const err = new Error(errorMsg);
+                    Object.assign(err, { status, modelName: model, triedModels: models });
+                    lastError = err;
+                    continue;
+                }
+
+                const err = new Error(errorMsg);
+                Object.assign(err, { status, modelName: model });
+                throw err;
+            }
+
+            const data = await response.json();
+            if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                throw new Error("Gemini returned an empty response. Check safety filters or prompt.");
+            }
+
+            return { text: data.candidates[0].content.parts[0].text };
+        } catch (err: any) {
+            lastError = err;
+            if (!err.modelName) Object.assign(err, { modelName: model, triedModels: models });
+
+            // Only continue for specific model errors, rethrow others (like auth or generic network)
+            if (err.message?.toLowerCase().includes('not found') || err.message?.includes('404') || err.message?.toLowerCase().includes('unsupported')) {
+                continue;
+            }
+            throw err;
+        }
     }
 
-    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        throw new Error("Gemini returned an empty response. Check safety filters or prompt.");
-    }
-
-    return { text: data.candidates[0].content.parts[0].text };
+    throw lastError || new Error("All Gemini fallback models failed.");
 };
 
 const callDeepSeek = async (key: string, userPrompt: string, systemPrompt: string): Promise<SAIResponse> => {

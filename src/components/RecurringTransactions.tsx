@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Plus, Trash2, RefreshCw, Calendar, Edit2 } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Calendar, Edit2, TrendingDown, Sparkles, Wallet, ArrowUpRight, Brain } from 'lucide-react';
 import { MONEY_OUT_CATEGORIES, RecurringTransaction } from '../types';
 import { useFinance } from '../context/FinanceContext';
 import { formatCurrency } from '../utils/numberFormat';
@@ -32,7 +32,7 @@ export function RecurringTransactions() {
     deleteLiability
   } = useFinance();
 
-  const [viewMode, setViewMode] = useState<'list' | 'strategist' | 'debt'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'advisor' | 'debt'>('list');
 
   // Calculate total monthly income for Strategist
   // Note: This is an approximation based on recurring incomes. Ideally usage of actual monthly income logic.
@@ -106,7 +106,7 @@ export function RecurringTransactions() {
         <div className="space-y-6 relative z-10">
           <div className="flex justify-between items-end">
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-widest font-black text-slate-600 mb-1 font-mono">{liability ? 'Monthly EMI' : 'Commitment'}</span>
+              <span className="text-[10px] uppercase tracking-widest font-black text-slate-600 mb-1 font-mono">{liability ? 'Monthly EMI' : 'Payment Flow'}</span>
               <span className={`text-2xl font-black tabular-nums leading-none font-mono ${rec.type === 'income' ? 'text-emerald-400' : 'text-slate-100'}`}>
                 {rec.type === 'income' ? '+' : '-'}{formatCurrency(rec.amount, currency)}
               </span>
@@ -374,6 +374,11 @@ export function RecurringTransactions() {
     }
   };
 
+  const handleAdvisorDelete = (id: string, _description: string) => {
+    const rec = recurring.find(r => r.id === id);
+    if (rec) handleDelete(rec);
+  };
+
 
 
   // Filter out zero/null amount transactions
@@ -471,6 +476,13 @@ export function RecurringTransactions() {
               Flow List
             </button>
             <button
+              onClick={() => setViewMode('advisor')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${viewMode === 'advisor' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <Brain className="w-3.5 h-3.5" />
+              Advisor
+            </button>
+            <button
               onClick={() => setViewMode('debt')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${viewMode === 'debt' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
             >
@@ -487,6 +499,13 @@ export function RecurringTransactions() {
             currency={currency}
             totalMonthlyIncome={totalMonthlyIncome || 1}
           />
+        ) : viewMode === 'advisor' ? (
+          <SubscriptionStrategist
+            recurring={recurring}
+            currency={currency}
+            totalMonthlyIncome={totalMonthlyIncome}
+            onDelete={handleAdvisorDelete}
+          />
         ) : (
           <>
             {/* Summary Dashboard Card - Aligned with History Tab */}
@@ -501,14 +520,14 @@ export function RecurringTransactions() {
                       <RefreshCw className="w-5 h-5 text-cyan-400" />
                     </div>
                     <div>
-                      <h3 className="text-slate-100 font-bold text-xs uppercase tracking-widest font-mono">Flow Analysis</h3>
+                      <h3 className="text-slate-100 font-bold text-xs uppercase tracking-widest font-mono">Payment Analysis</h3>
                       <p className="text-[10px] text-slate-500 uppercase tracking-tighter">
                         Monthly Leftover Cash
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider font-extrabold font-mono">Total Commitments</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider font-extrabold font-mono">Regular Payments</p>
                     <p className="text-sm font-black text-white tabular-nums font-mono">
                       {insights.totalActive} Active
                     </p>
@@ -548,9 +567,9 @@ export function RecurringTransactions() {
                         <span className="font-black text-lg text-indigo-400 font-mono tabular-nums">{formatCurrency(Math.abs(insights.subTotal), currency)}</span>
                       </div>
                     </div>
-                    {/* Recur. Income */}
+                    {/* Regular Income */}
                     <div className="bg-slate-800/40 backdrop-blur-md px-6 py-4 rounded-3xl border border-white/5 text-center flex flex-col items-center justify-center min-w-[120px]">
-                      <p className="text-[10px] uppercase font-black text-slate-500 mb-1 font-mono tracking-widest">Recur. Income</p>
+                      <p className="text-[10px] uppercase font-black text-slate-500 mb-1 font-mono tracking-widest">Regular Income</p>
                       <div className="flex flex-col items-center">
                         <span className="text-2xl font-black leading-none text-emerald-400/80 font-mono mb-1">+</span>
                         <span className="font-black text-lg text-emerald-400 font-mono tabular-nums">{formatCurrency(Math.abs(insights.incomeTotal), currency)}</span>
@@ -567,7 +586,7 @@ export function RecurringTransactions() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 sticky top-0 z-30 py-2 bg-slate-950/80 backdrop-blur-md rounded-2xl border border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-1.5 h-6 bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)]" />
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Commitment Stream</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Regular Payments</p>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
@@ -609,7 +628,7 @@ export function RecurringTransactions() {
 
               <div className="flex items-center gap-4 border-t sm:border-t-0 sm:border-l border-white/5 pt-4 sm:pt-0 sm:pl-6">
                 <div className="space-y-0.5">
-                  <p className="text-[10px] uppercase font-black text-slate-600">Shadow Health</p>
+                  <p className="text-[10px] uppercase font-black text-slate-600">Flow Health</p>
                   <div className="flex items-center gap-2">
                     <span className={`font-black text-lg tabular-nums ${insights.healthScore > 60 ? 'text-emerald-400' :
                       insights.healthScore > 30 ? 'text-indigo-400' : 'text-rose-400'
@@ -674,7 +693,7 @@ export function RecurringTransactions() {
           {filteredRecurring.length === 0 ? (
             <Card className="py-24 text-center bg-slate-800/20 rounded-[40px] border border-dashed border-white/10">
               <Calendar className="w-20 h-20 mx-auto text-slate-700 mb-6" />
-              <h3 className="text-2xl font-black text-slate-200 mb-3">No Active Commitments</h3>
+              <h3 className="text-2xl font-black text-slate-200 mb-3">No Regular Payments</h3>
               <p className="text-sm text-slate-500 font-bold mb-10 max-w-[320px] mx-auto leading-relaxed">
                 Set up your subscriptions, EMIs, and monthly income to unlock deep financial insights.
               </p>
@@ -683,7 +702,7 @@ export function RecurringTransactions() {
                 className="bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-600/20 rounded-2xl px-10 h-14 font-black"
               >
                 <Plus className="w-5 h-5 mr-3" />
-                Add First Commitment
+                Add First Payment
               </Button>
             </Card>
           ) : (
@@ -692,7 +711,7 @@ export function RecurringTransactions() {
               {categorized.incomes.length > 0 && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-3 border-l-4 border-emerald-500 pl-4 py-1">
-                    <h3 className="text-xl font-black text-slate-100 uppercase tracking-tight font-mono">Recurring Income</h3>
+                    <h3 className="text-xl font-black text-slate-100 uppercase tracking-tight font-mono">Regular Income</h3>
                     <span className="bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-black font-mono">{categorized.incomes.length} SOURCE(S)</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -706,7 +725,7 @@ export function RecurringTransactions() {
                 <div className="space-y-6">
                   <div className="flex items-center gap-3 border-l-4 border-rose-500 pl-4 py-1">
                     <h3 className="text-xl font-black text-slate-100 uppercase tracking-tight font-mono">Loan EMIs</h3>
-                    <span className="bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded text-[10px] font-black font-mono">{categorized.loans.length} COMMITMENT(S)</span>
+                    <span className="bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded text-[10px] font-black font-mono">{categorized.loans.length} PAYMENT(S)</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {categorized.loans.map((rec, idx) => <RecurringCard key={`${rec.id}-${idx}`} rec={rec} />)}
@@ -744,7 +763,7 @@ export function RecurringTransactions() {
               {categorized.others.length > 0 && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-3 border-l-4 border-slate-500 pl-4 py-1">
-                    <h3 className="text-xl font-black text-slate-100 uppercase tracking-tight">Other Commitments</h3>
+                    <h3 className="text-xl font-black text-slate-100 uppercase tracking-tight">Other Regular Payments</h3>
                     <span className="bg-slate-500/10 text-slate-400 px-2 py-0.5 rounded text-[10px] font-black">{categorized.others.length} ITEM(S)</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -762,10 +781,10 @@ export function RecurringTransactions() {
         <DialogContent className="max-w-md bg-slate-950 border-white/10 text-white rounded-[32px]">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black tracking-tight text-white">
-              {editingId ? 'Edit Commitment' : 'Create New Commitment'}
+              {editingId ? 'Edit Regular Flow' : 'Create New Regular Flow'}
             </DialogTitle>
             <DialogDescription className="text-slate-400 font-bold">
-              {editingId ? 'Modify existing flow parameters.' : 'Automate your financial shadow-wallets.'}
+              {editingId ? 'Modify existing flow parameters.' : 'Automate your regular financial entries.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 mt-4">
@@ -790,7 +809,7 @@ export function RecurringTransactions() {
 
             <div className="space-y-4">
               <div>
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Flow Nature</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Payment Type</Label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => setFormData({ ...formData, kind: 'subscription', category: 'Subscription' })}

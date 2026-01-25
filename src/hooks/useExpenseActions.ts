@@ -49,9 +49,9 @@ export const useExpenseActions = (state: any, actions: any) => {
         try {
             // 1. Calculate Available to Spend (Global Check)
             const totalBankBalance = currentAccounts.reduce((sum: number, acc: any) => sum + (acc.type !== 'credit_card' ? acc.balance : 0), 0);
-            const shadowWalletTotal = currentGoals.reduce((sum: number, g: any) => sum + g.currentAmount, 0) + currentEF;
+            const reservedFundsTotal = currentGoals.reduce((sum: number, g: any) => sum + g.currentAmount, 0) + currentEF;
             const totalCommitments = currentL.reduce((sum: number, l: any) => sum + l.emiAmount, 0);
-            const availableToSpend = Math.max(0, totalBankBalance - shadowWalletTotal - totalCommitments);
+            const availableToSpend = Math.max(0, totalBankBalance - reservedFundsTotal - totalCommitments);
 
             const expenseAmount = data.amount;
 
@@ -85,7 +85,7 @@ export const useExpenseActions = (state: any, actions: any) => {
                         notificationsToSend.push({
                             id: `leak_${asset.id}_${new Date().toISOString().split('T')[0]}`,
                             type: 'alert', priority: 'medium', category: 'transactions',
-                            title: 'Shadow Wallet Leakage', message: `₹${amountToTake} spent reduced your '${asset.name}' reserve.`,
+                            title: 'Assistant Reservation Leak', message: `₹${amountToTake} spent reduced your '${asset.name}' reserve.`,
                             timestamp: new Date(), read: false
                         });
                     } else if (asset.type === 'emergency') {

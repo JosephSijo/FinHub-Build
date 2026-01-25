@@ -175,7 +175,7 @@ export function AccountsManager({
             </span>
           </div>
           <p className="text-slate-500 font-bold max-w-md text-[10px] truncate">
-            Monitor liquidity across core reservoirs and credit pools.
+            Monitor your bank accounts and credit cards in real-time.
           </p>
         </div>
         <Button
@@ -188,7 +188,7 @@ export function AccountsManager({
         </Button>
       </div>
 
-      {/* Group: Liquidity Reservoirs (Banks) */}
+      {/* Group: Bank Accounts */}
       <div className="space-y-6">
         <h3 className="text-[10px] uppercase font-black tracking-[0.3em] text-slate-600 flex items-center gap-2 ml-2">
           <Building2 className="w-3.5 h-3.5" />
@@ -204,7 +204,7 @@ export function AccountsManager({
         </div>
       </div>
 
-      {/* Group: Credit Pools (Cards) */}
+      {/* Group: Credit Cards */}
       <div className="space-y-6">
         <h3 className="text-[10px] uppercase font-black tracking-[0.3em] text-slate-600 flex items-center gap-2 ml-2">
           <CreditCard className="w-3.5 h-3.5" />
@@ -215,12 +215,12 @@ export function AccountsManager({
             <AccountCard key={account.id} account={account} />
           ))}
           {accounts.filter(a => a.type === 'credit_card').length === 0 && (
-            <EmptyState message="No credit pools detected." />
+            <EmptyState message="No credit cards detected." />
           )}
         </div>
       </div>
 
-      {/* Group: Cold Storage (Cash) */}
+      {/* Group: Cash Accounts */}
       <div className="space-y-6">
         <h3 className="text-[10px] uppercase font-black tracking-[0.3em] text-slate-600 flex items-center gap-2 ml-2">
           <Wallet className="w-3.5 h-3.5" />
@@ -231,7 +231,7 @@ export function AccountsManager({
             <AccountCard key={account.id} account={account} />
           ))}
           {accounts.filter(a => a.type === 'cash').length === 0 && (
-            <EmptyState message="No physical liquid reservoirs detected." />
+            <EmptyState message="No cash accounts detected." />
           )}
         </div>
       </div>
@@ -258,10 +258,10 @@ export function AccountsManager({
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-slate-950 border-white/10 text-white squircle-22 p-8 custom-scrollbar">
           <DialogHeader>
             <DialogTitle className="text-3xl font-black tracking-tight text-white mb-2">
-              {editingAccount ? 'Refine Account' : 'New Liquidity Reservoir'}
+              {editingAccount ? 'Edit Account' : 'New Account'}
             </DialogTitle>
             <DialogDescription className="text-slate-500 font-bold mb-6">
-              Establish a new liquidity pool in the Obsidian system.
+              Add a new account to your financial assistant.
             </DialogDescription>
           </DialogHeader>
 
@@ -284,7 +284,7 @@ export function AccountsManager({
                   <div className="mt-3 p-4 bg-indigo-500/5 border border-indigo-500/10 squircle-12 flex items-start gap-4 animate-in fade-in zoom-in-95 duration-300">
                     <Sparkles className="w-4 h-4 text-indigo-400 mt-1 flex-shrink-0" />
                     <div className="flex-1">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-3 opacity-60">Intelligence Suggested</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-3 opacity-60">Smart Suggestion</p>
                       <div className="grid grid-cols-1 gap-2">
                         {suggestions.map((bank) => (
                           <button
@@ -538,7 +538,7 @@ export function AccountsManager({
           <div className="flex justify-between items-end">
             <div className="space-y-1">
               <p className="text-[10px] uppercase font-black tracking-widest text-slate-600">
-                {isCC ? 'Current Obligation' : 'Available Liquidity'}
+                {isCC ? 'Amount Owed' : 'Available Balance'}
               </p>
               {(() => {
                 const balanceProps = {
@@ -568,7 +568,7 @@ export function AccountsManager({
           {isCC && account.creditLimit && (
             <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-[8px] font-black text-slate-700 uppercase">Safe Threshold</p>
+                <p className="text-[8px] font-black text-slate-700 uppercase">Safe Limit</p>
                 <p className="text-[10px] font-black text-slate-500">
                   {formatCurrency(safeLimit, currency)}
                 </p>

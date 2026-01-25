@@ -7,7 +7,7 @@ import { ArrowRight, AlertCircle, Sparkles, Wallet, Target, Info, ChevronUp } fr
 import { Account, Goal, Liability } from '../types';
 import { formatCurrency } from '../utils/numberFormat';
 import { toast } from 'sonner';
-import { useShadowWallet } from '../hooks/useShadowWallet';
+import { useAssistantInsights } from '../hooks/useAssistantInsights';
 import { MeshBackground } from './ui/MeshBackground';
 import { CyberButton } from './ui/CyberButton';
 
@@ -50,13 +50,13 @@ export function FundAllocationDialog({
   const [showPreview, setShowPreview] = useState(false);
   const [showCalculation, setShowCalculation] = useState(false);
 
-  // Get surplus from shadow wallet
+  // Get surplus from assistant
   const {
     availableToSpend,
     totalBankBalance,
-    shadowWalletTotal,
+    reservedFundsTotal,
     totalCommitments
-  } = useShadowWallet({
+  } = useAssistantInsights({
     accounts,
     goals,
     liabilities,
@@ -212,7 +212,7 @@ export function FundAllocationDialog({
                         </div>
                         <div className="flex justify-between text-[10px] text-rose-500/60 font-medium">
                           <span>Reserved Funds (Goals + EF)</span>
-                          <span>-{formatCurrency(shadowWalletTotal, currency)}</span>
+                          <span>-{formatCurrency(reservedFundsTotal, currency)}</span>
                         </div>
                         <div className="flex justify-between text-[10px] text-rose-500/60 font-medium pb-2 border-b border-emerald-500/10">
                           <span>Total Commitments (Bills)</span>

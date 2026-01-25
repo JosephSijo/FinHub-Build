@@ -40,7 +40,7 @@ export const recurringService = {
         for (const occ of occurrences) {
             const dateStr = occ.date.toISOString().split('T')[0];
             // Prioritize rule.name as the "main" name provided by the user
-            const baseDescription = rule.name || rule.description || rule.source || 'Recurring Transaction';
+            const baseDescription = rule.name || rule.description || rule.source || 'Monthly Payment';
 
             // For backfilled entries, we add the month-year suffix
             const description = `${baseDescription} ${formatDateSuffix(occ.date)}`;

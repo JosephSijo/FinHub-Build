@@ -4,7 +4,7 @@
 
 @theme {
   /* Quantum Core Colors */
-  --color-q-primary: var(--q-obsidian);
+  --color-q-primary: var(--q-primary-black);
   --color-q-glass: var(--q-glass);
   --color-q-sapphire: var(--q-sapphire);
   --color-q-amethyst: var(--q-amethyst);
@@ -13,8 +13,8 @@
   --color-q-gold: var(--q-gold);
 
   /* Legacy Shims */
-  --color-bg-primary: var(--q-obsidian);
-  --color-bg-secondary: var(--q-obsidian);
+  --color-bg-primary: var(--q-primary-black);
+  --color-bg-secondary: var(--q-primary-black);
   --color-text-primary: #FFFFFF;
   --color-text-secondary: var(--q-slate);
 
@@ -56,17 +56,17 @@
 
   :root {
     /* --- APPLE INSPIRED VISUAL DNA (LEGACY MAPPING) --- */
-    --bg-obsidian: var(--q-obsidian);
+    --bg-primary-black: var(--q-primary-black);
     --surface-glass: var(--q-glass);
     --card-edge: var(--q-card-border);
 
     /* Tailwind Mappings */
-    --bg-primary: var(--q-obsidian);
-    --bg-secondary: var(--q-obsidian);
+    --bg-primary: var(--q-primary-black);
+    --bg-secondary: var(--q-primary-black);
     --text-primary: #FFFFFF;
     --text-secondary: var(--q-slate);
     --text-muted: var(--q-slate);
-    --text-inverse: var(--q-obsidian);
+    --text-inverse: var(--q-primary-black);
 
     --accent-blue: var(--q-sapphire);
     --accent-purple: var(--q-amethyst);
@@ -86,7 +86,7 @@
   body {
     @apply bg-transparent text-white antialiased overflow-x-hidden;
     font-family: 'JetBrains Mono Digits', var(--q-font-ui);
-    background: var(--q-obsidian);
+    background: var(--q-primary-black);
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     -webkit-user-select: text;
@@ -172,7 +172,7 @@
     background: #2C2C2E;
   }
 
-  /* Segmented Stack Components - Solid Obsidian */
+  /* Segmented Stack Components - Solid Primary Black */
   .segmented-stack {
     display: flex;
     flex-direction: column;
@@ -180,7 +180,7 @@
     overflow: hidden;
     border-radius: var(--q-radius-2xl); 
     border: 1px solid var(--q-card-border);
-    background-color: var(--q-obsidian);
+    background-color: var(--q-primary-black);
   }
  
   .stack-cap {
@@ -203,7 +203,7 @@
   .solid-card {
     position: relative;
     z-index: 10;
-    background: var(--q-obsidian);
+    background: var(--q-primary-black);
     border: 1px solid var(--q-card-border);
     border-radius: var(--q-radius-lg);
     padding: 1.5rem;

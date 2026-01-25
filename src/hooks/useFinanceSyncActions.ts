@@ -139,7 +139,7 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
                 const dateStr = due.toISOString().split('T')[0];
                 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                 const suffix = `${months[due.getMonth()]} ${due.getFullYear()} `;
-                const baseDescription = newRec.name || newRec.description || newRec.source || 'Recurring Transaction';
+                const baseDescription = newRec.name || newRec.description || newRec.source || 'Monthly Payment';
                 const finalDescription = `${baseDescription} ${suffix} `;
 
                 const txData = {
@@ -200,7 +200,8 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
         try {
             // 1. Database Wipe (Globalize unique metadata, wipe transactions)
             const { error } = await supabase.rpc('admin_reset_user_and_globalize', {
-                p_target_user_id: userId
+                p_target_user_id: userId,
+                p_delete_account: false
             });
 
             if (error) throw error;

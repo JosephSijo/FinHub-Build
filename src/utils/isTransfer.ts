@@ -16,7 +16,7 @@ export const isTransfer = (transaction: Expense | Income | any): boolean => {
     if (desc.includes('payment')) return true;
     if (desc.includes('cc bill')) return true;
     if (desc.includes('credit card bill')) return true;
-    if (desc.includes('migration')) return true;
+    if (desc.includes('internal transfer')) return true;
 
     // Check tags
     if (transaction.tags && Array.isArray(transaction.tags)) {

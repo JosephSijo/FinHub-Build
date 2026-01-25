@@ -5,7 +5,7 @@
 
 :root {
   /* --- 1. CORE COLOR PALETTE (Quantum Tones) --- */
-  --q-obsidian: #000000;
+  --q-primary-black: #000000;
   --q-glass: #1C1C1E;
   --q-card-border: rgba(255, 255, 255, 0.08);
   
