@@ -461,7 +461,7 @@ export function AccountsManager({
                 Abort
               </Button>
               <Button type="submit" className="flex-1 h-14 squircle-12 bg-emerald-600 hover:bg-emerald-500 text-white font-black shadow-lg shadow-emerald-600/20">
-                {editingAccount ? 'Update Account' : 'Ignite Account'}
+                {editingAccount ? 'Update Account' : 'Save Account'}
               </Button>
             </div>
           </form>
