@@ -677,35 +677,14 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                       if (!settingKey && !hasEnvKey && provider.id !== selectedProvider) return null;
 
                       return (
-                        <div key={provider.id} className={`flex flex-col gap-2 p-3 rounded-2xl border transition-all ${provider.id === selectedProvider ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-white/5 border-white/5'}`}>
-                          <div className="flex items-center justify-between px-1">
-                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">
-                              {provider.label}
-                            </span>
-                            <div className="flex items-center gap-1">
-                              {settingKey && (
-                                <button
-                                  onClick={() => handleTestConnection(provider.id)}
-                                  className="text-slate-600 hover:text-emerald-500 transition-colors p-1.5"
-                                  title={`Test ${provider.label} Link`}
-                                >
-                                  <Activity className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                              {settingKey && (
-                                <button
-                                  onClick={() => handleInputChange('apiKeys', { ...settings.apiKeys, [provider.id]: '' })}
-                                  className="text-slate-600 hover:text-rose-500 transition-colors p-1.5"
-                                  title="Clear saved key"
-                                  aria-label={`Clear saved key for ${provider.label}`}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              )}
+                        <div key={provider.id} className={`flex items-stretch gap-0 rounded-2xl border transition-all overflow-hidden ${provider.id === selectedProvider ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-white/5 border-white/5'}`}>
+                          <div className="flex-1 p-4 pr-2">
+                            <div className="flex items-center justify-between px-1 mb-2">
+                              <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">
+                                {provider.label}
+                              </span>
                             </div>
-                          </div>
 
-                          <div className="flex items-center gap-3">
                             <div className="flex-1 min-w-0">
                               <div className="relative group/input">
                                 <Input
@@ -727,6 +706,28 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                                 )}
                               </div>
                             </div>
+                          </div>
+
+                          <div className="w-10 flex flex-col items-center justify-center border-l border-white/5 bg-white/5">
+                            {settingKey && (
+                              <button
+                                onClick={() => handleTestConnection(provider.id)}
+                                className="w-full flex-1 flex items-center justify-center text-slate-500 hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                                title={`Test ${provider.label} Link`}
+                              >
+                                <Activity className="w-4 h-4" />
+                              </button>
+                            )}
+                            {settingKey && (
+                              <button
+                                onClick={() => handleInputChange('apiKeys', { ...settings.apiKeys, [provider.id]: '' })}
+                                className="w-full flex-1 flex items-center justify-center text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors border-t border-white/5"
+                                title="Clear saved key"
+                                aria-label={`Clear saved key for ${provider.label}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
@@ -752,155 +753,165 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                       ) : testResult?.success ? (
                         <div className="flex items-center gap-2">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          Link Stable
+                          Configuration Stable
                         </div>
                       ) : (
-                        `Test ${aiProviders.find(p => p.id === selectedProvider)?.label} Link`
+                        "Save AI Configuration"
                       )}
                     </Button>
+                    {testResult && (
+                      <div className={`p-4 rounded-2xl border animate-in fade-in slide-in-from-top-2 relative z-10 ${testResult.success ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-rose-500/10 border-rose-500/20'}`}>
+                        <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${testResult.success ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          {testResult.success ? 'Status: Success' : 'Status: Connection Failed'}
+                        </p>
+                        <p className="text-[10px] font-bold text-slate-500 leading-relaxed">
+                          {testResult.message}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            </div>
 
 
-            <div className="h-px bg-white/5" />
+              <div className="h-px bg-white/5" />
 
-            <div className="h-px bg-white/5" />
+              <div className="h-px bg-white/5" />
 
-            <div className="h-px bg-white/5" />
+              <div className="h-px bg-white/5" />
 
-            {/* Achievements */}
-            <div className="space-y-6">
-              <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 flex items-center gap-2">
-                <Trophy className="w-3.5 h-3.5 text-amber-500" />
-                {COPY.settings.achievementLevel} ({settings.unlockedAchievements.length}/{allAchievements.length})
-              </Label>
+              {/* Achievements */}
+              <div className="space-y-6">
+                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 flex items-center gap-2">
+                  <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                  {COPY.settings.achievementLevel} ({settings.unlockedAchievements.length}/{allAchievements.length})
+                </Label>
 
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-                {allAchievements.map((achievement) => {
-                  const isUnlocked = unlockedIds.has(achievement.id);
-                  return (
-                    <button
-                      key={achievement.id}
-                      onClick={() => {
-                        if (isUnlocked && onAchievementClick) {
-                          onAchievementClick(achievement.id);
-                        }
-                      }}
-                      disabled={!isUnlocked}
-                      className={`w-12 h-12 rounded-xl border flex items-center justify-center text-xl transition-all ${isUnlocked
-                        ? 'border-amber-500/50 bg-amber-500/10 grayscale-0 hover:scale-110 hover:shadow-lg hover:shadow-amber-500/20 active:scale-95'
-                        : 'border-white/5 bg-white/5 grayscale opacity-20 cursor-not-allowed'
-                        }`}
-                    >
-                      {achievement.icon}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <p className="text-[10px] text-slate-500 font-bold text-center leading-relaxed">
-                {settings.unlockedAchievements.length > 0 ? COPY.settings.achievementSelect : COPY.settings.achievementLocked}
-              </p>
-            </div>
-
-            <div className="h-px bg-white/5" />
-
-            {/* Danger Zone: Full Wipe for Testing */}
-            <div className="space-y-4">
-              <div className="p-4 bg-rose-500/5 border border-rose-500/10 rounded-2xl flex items-center justify-between">
-                <div>
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400">{COPY.settings.factoryReset}</h4>
-                  <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wide mt-1">
-                    {COPY.settings.wipeDescription}
-                  </p>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                  {allAchievements.map((achievement) => {
+                    const isUnlocked = unlockedIds.has(achievement.id);
+                    return (
+                      <button
+                        key={achievement.id}
+                        onClick={() => {
+                          if (isUnlocked && onAchievementClick) {
+                            onAchievementClick(achievement.id);
+                          }
+                        }}
+                        disabled={!isUnlocked}
+                        className={`w-12 h-12 rounded-xl border flex items-center justify-center text-xl transition-all ${isUnlocked
+                          ? 'border-amber-500/50 bg-amber-500/10 grayscale-0 hover:scale-110 hover:shadow-lg hover:shadow-amber-500/20 active:scale-95'
+                          : 'border-white/5 bg-white/5 grayscale opacity-20 cursor-not-allowed'
+                          }`}
+                      >
+                        {achievement.icon}
+                      </button>
+                    );
+                  })}
                 </div>
-                <Button
-                  onClick={async () => {
-                    if (confirm("Are you sure? This deletes ALL transaction data.")) {
-                      await clearAllData();
-                    }
-                  }}
-                  className="bg-slate-950 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/20 font-black uppercase tracking-widest text-[9px] h-9 px-4 rounded-xl transition-colors"
-                >
-                  {COPY.settings.wipeData}
-                </Button>
+
+                <p className="text-[10px] text-slate-500 font-bold text-center leading-relaxed">
+                  {settings.unlockedAchievements.length > 0 ? COPY.settings.achievementSelect : COPY.settings.achievementLocked}
+                </p>
               </div>
-            </div>
 
-            <Separator className="bg-white/5" />
+              <div className="h-px bg-white/5" />
 
-            {/* Copyright System Footer */}
-            <div className="text-center pt-8 space-y-2 opacity-40 hover:opacity-100 transition-opacity duration-700 pb-10">
-              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-100">Obsidian System</p>
-              <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">
-                Architect: Sijo Joseph // BUILD 50.3.0 // QUANTUM CORE
-              </p>
-              <p className="text-[8px] font-bold text-slate-700 uppercase tracking-widest mt-4">
-                © 2025 NEURAL FINHUB FABRIC
-              </p>
-              <button
-                onClick={onOpenAbout}
-                className="mt-4 text-[8px] font-black text-indigo-400/60 hover:text-indigo-400 uppercase tracking-[0.2em] transition-colors"
-              >
-                [ {COPY.settings.about} ]
-              </button>
-            </div>
-
-            <div className="px-2 pb-10">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  logout();
-                  onClose();
-                }}
-                className="w-full h-14 bg-white/5 hover:bg-white/10 border-white/10 hover:border-white/20 text-white/60 hover:text-white font-black uppercase tracking-widest gap-3 rounded-[24px] transition-all group mb-4"
-              >
-                <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                Terminate Session
-              </Button>
-
-              <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogTrigger asChild>
+              {/* Danger Zone: Full Wipe for Testing */}
+              <div className="space-y-4">
+                <div className="p-4 bg-rose-500/5 border border-rose-500/10 rounded-2xl flex items-center justify-between">
+                  <div>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400">{COPY.settings.factoryReset}</h4>
+                    <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wide mt-1">
+                      {COPY.settings.wipeDescription}
+                    </p>
+                  </div>
                   <Button
-                    variant="outline"
-                    className="w-full h-14 bg-rose-500/5 hover:bg-rose-500/10 border-rose-500/20 hover:border-rose-500/40 text-rose-500 font-black uppercase tracking-widest gap-3 rounded-[24px] transition-all group"
+                    onClick={async () => {
+                      if (confirm("Are you sure? This deletes ALL transaction data.")) {
+                        await clearAllData();
+                      }
+                    }}
+                    className="bg-slate-950 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/20 font-black uppercase tracking-widest text-[9px] h-9 px-4 rounded-xl transition-colors"
                   >
-                    <AlertOctagon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                    Delete Account & Data
+                    {COPY.settings.wipeData}
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="bg-slate-950 border-white/10 text-white rounded-[32px] p-8">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="text-2xl font-black tracking-tight flex items-center gap-3">
-                      <div className="p-2 rounded-full bg-rose-500/20 text-rose-500">
-                        <AlertOctagon className="w-6 h-6" />
-                      </div>
-                      Irreversible Action?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="text-slate-400 font-medium leading-relaxed mt-4">
-                      Your account will be <span className="text-white font-bold italic">deactivated immediately</span> and scheduled for permanent deletion in <span className="text-white font-bold">30 days</span>.
-                      <br /><br />
-                      Log in anytime before then to cancel this request and restore your data.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter className="mt-8 gap-3">
-                    <AlertDialogCancel className="h-14 flex-1 rounded-2xl bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white font-black uppercase tracking-widest transition-all">
-                      Abort
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={async () => {
-                        await deleteAccountPermanently();
-                        onClose();
-                      }}
-                      className="h-14 flex-1 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black uppercase tracking-widest shadow-lg shadow-rose-500/20 transition-all active:scale-95"
+                </div>
+              </div>
+
+              <Separator className="bg-white/5" />
+
+              {/* Copyright System Footer */}
+              <div className="text-center pt-8 space-y-2 opacity-40 hover:opacity-100 transition-opacity duration-700 pb-10">
+                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-100">Obsidian System</p>
+                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">
+                  Architect: Sijo Joseph // BUILD 50.3.0 // QUANTUM CORE
+                </p>
+                <p className="text-[8px] font-bold text-slate-700 uppercase tracking-widest mt-4">
+                  © 2025 NEURAL FINHUB FABRIC
+                </p>
+                <button
+                  onClick={onOpenAbout}
+                  className="mt-4 text-[8px] font-black text-indigo-400/60 hover:text-indigo-400 uppercase tracking-[0.2em] transition-colors"
+                >
+                  [ {COPY.settings.about} ]
+                </button>
+              </div>
+
+              <div className="px-2 pb-10">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    logout();
+                    onClose();
+                  }}
+                  className="w-full h-14 bg-white/5 hover:bg-white/10 border-white/10 hover:border-white/20 text-white/60 hover:text-white font-black uppercase tracking-widest gap-3 rounded-[24px] transition-all group mb-4"
+                >
+                  <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                  Terminate Session
+                </Button>
+
+                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full h-14 bg-rose-500/5 hover:bg-rose-500/10 border-rose-500/20 hover:border-rose-500/40 text-rose-500 font-black uppercase tracking-widest gap-3 rounded-[24px] transition-all group"
                     >
-                      Confirm Purge
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                      <AlertOctagon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                      Delete Account & Data
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-slate-950 border-white/10 text-white rounded-[32px] p-8">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-2xl font-black tracking-tight flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-rose-500/20 text-rose-500">
+                          <AlertOctagon className="w-6 h-6" />
+                        </div>
+                        Irreversible Action?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-slate-400 font-medium leading-relaxed mt-4">
+                        Your account will be <span className="text-white font-bold italic">deactivated immediately</span> and scheduled for permanent deletion in <span className="text-white font-bold">30 days</span>.
+                        <br /><br />
+                        Log in anytime before then to cancel this request and restore your data.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-8 gap-3">
+                      <AlertDialogCancel className="h-14 flex-1 rounded-2xl bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white font-black uppercase tracking-widest transition-all">
+                        Abort
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={async () => {
+                          await deleteAccountPermanently();
+                          onClose();
+                        }}
+                        className="h-14 flex-1 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black uppercase tracking-widest shadow-lg shadow-rose-500/20 transition-all active:scale-95"
+                      >
+                        Confirm Purge
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </div>
           </div>
         </div>
