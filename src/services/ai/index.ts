@@ -64,7 +64,19 @@ ${brainSummary}
 User Query: ${userPrompt}
   `.trim();
 
-    // 3. Call Provider
+    // 3. Call Backend Proxy (Preferred) or Provider directly
+    if (activeProvider === 'gemini') {
+        try {
+            const { api } = await import('../../utils/api');
+            const response = await api.chat(userPrompt, context);
+            if (!response.error) return response;
+            console.warn("Backend AI failed, falling back to local...", response.error);
+        } catch (e) {
+            console.warn("Backend AI unavailable, falling back to local...", e);
+        }
+    }
+
+    // 4. Fallback to Local Provider call
     return await generateCompletion(activeProvider, apiKey, fullPrompt, persona);
 };
 

@@ -270,5 +270,43 @@ export const useExpenseActions = (state: any, actions: any) => {
         }
     }, [userId, setExpenses]);
 
-    return useMemo(() => ({ createExpense, updateExpense, deleteExpense, addNotifications }), [createExpense, updateExpense, deleteExpense, addNotifications]);
+    const runCategorizationMigration = useCallback(async () => {
+        const { expenses: currentExpenses } = dataRef.current;
+        if (!currentExpenses?.length) return;
+
+        let migratedCount = 0;
+        const updates: Promise<any>[] = [];
+
+        for (const expense of currentExpenses) {
+            // Only migrate Uncategorized or Other expenses
+            if (expense.category === 'Uncategorized' || expense.category === 'Other' || !expense.category) {
+                const suggestion = autoCategorize(expense.description);
+                if (suggestion && suggestion.category === 'Subscription') {
+                    // Perform the update
+                    updates.push(
+                        api.updateExpense(userId, expense.id, { category: 'Subscription' })
+                            .then(res => {
+                                if (res.success) {
+                                    migratedCount++;
+                                }
+                            })
+                    );
+                }
+            }
+        }
+
+        if (updates.length > 0) {
+            await Promise.all(updates);
+            if (migratedCount > 0) {
+                // Refresh data to reflect changes
+                const response = await api.getExpenses(userId);
+                if (response.success) {
+                    setExpenses(response.expenses);
+                    toast.success(`Subscription Migration complete: ${migratedCount} expenses updated.`);
+                }
+            }
+        }
+    }, [userId, setExpenses]);
+
+    return useMemo(() => ({ createExpense, updateExpense, deleteExpense, addNotifications, runCategorizationMigration }), [createExpense, updateExpense, deleteExpense, addNotifications, runCategorizationMigration]);
 };

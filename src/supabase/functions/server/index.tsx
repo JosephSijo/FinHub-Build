@@ -31,6 +31,26 @@ const SettingsSchema = z.object({
   aiProvider: z.enum(['openai', 'anthropic', 'gemini']).optional(),
 });
 
+// ===== AI DISPATCHER =====
+app.post('/server', async (c: any) => {
+  try {
+    const { action, ...payload } = await c.req.json();
+
+    switch (action) {
+      case 'categorize':
+        return await handleCategorize(c, payload);
+      case 'chat':
+        return await handleChat(c, payload);
+      case 'dashboard-feedback':
+        return await handleDashboardFeedback(c, payload);
+      default:
+        return c.json({ success: false, error: 'Unknown AI action' }, 400);
+    }
+  } catch (error) {
+    return c.json({ success: false, error: String(error) }, 500);
+  }
+});
+
 const AccountSchema = z.object({
   name: z.string().min(1),
   type: z.enum(['bank', 'cash', 'credit_card', 'investment', 'other']),
@@ -54,7 +74,7 @@ const TransactionSchema = z.object({
 // ===== USER ROUTES =====
 
 // Get user profile and settings
-app.get('/make-server-6e7daf8e/user/:userId', async (c) => {
+app.get('/make-server-6e7daf8e/user/:userId', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const settingsKey = `user:${userId}:settings`;
@@ -75,7 +95,7 @@ app.get('/make-server-6e7daf8e/user/:userId', async (c) => {
 });
 
 // Update user settings
-app.post('/make-server-6e7daf8e/user/:userId/settings', async (c) => {
+app.post('/make-server-6e7daf8e/user/:userId/settings', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const jsonBody = await c.req.json();
@@ -100,7 +120,7 @@ app.post('/make-server-6e7daf8e/user/:userId/settings', async (c) => {
 // ===== ACCOUNT ROUTES =====
 
 // Get all accounts for a user
-app.get('/make-server-6e7daf8e/user/:userId/accounts', async (c) => {
+app.get('/make-server-6e7daf8e/user/:userId/accounts', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const prefix = `user:${userId}:account:`;
@@ -379,7 +399,7 @@ app.post('/make-server-6e7daf8e/user/:userId/purge', async (c: Context) => {
 });
 
 // Get all debts for a user
-app.get('/make-server-6e7daf8e/user/:userId/debts', async (c) => {
+app.get('/make-server-6e7daf8e/user/:userId/debts', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const prefix = `user:${userId}:debt:`;
@@ -393,7 +413,7 @@ app.get('/make-server-6e7daf8e/user/:userId/debts', async (c) => {
 });
 
 // Create debt
-app.post('/make-server-6e7daf8e/user/:userId/debts', async (c) => {
+app.post('/make-server-6e7daf8e/user/:userId/debts', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const body = await c.req.json();
@@ -432,7 +452,7 @@ app.post('/make-server-6e7daf8e/user/:userId/debts', async (c) => {
 });
 
 // Update debt (including settle)
-app.put('/make-server-6e7daf8e/user/:userId/debts/:debtId', async (c) => {
+app.put('/make-server-6e7daf8e/user/:userId/debts/:debtId', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const debtId = c.req.param('debtId');
@@ -455,7 +475,7 @@ app.put('/make-server-6e7daf8e/user/:userId/debts/:debtId', async (c) => {
 });
 
 // Delete debt
-app.delete('/make-server-6e7daf8e/user/:userId/debts/:debtId', async (c) => {
+app.delete('/make-server-6e7daf8e/user/:userId/debts/:debtId', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const debtId = c.req.param('debtId');
@@ -472,7 +492,7 @@ app.delete('/make-server-6e7daf8e/user/:userId/debts/:debtId', async (c) => {
 // ===== GOALS ROUTES =====
 
 // Get all goals for a user
-app.get('/make-server-6e7daf8e/user/:userId/goals', async (c) => {
+app.get('/make-server-6e7daf8e/user/:userId/goals', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const prefix = `user:${userId}:goal:`;
@@ -486,7 +506,7 @@ app.get('/make-server-6e7daf8e/user/:userId/goals', async (c) => {
 });
 
 // Create goal
-app.post('/make-server-6e7daf8e/user/:userId/goals', async (c) => {
+app.post('/make-server-6e7daf8e/user/:userId/goals', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const body = await c.req.json();
@@ -509,7 +529,7 @@ app.post('/make-server-6e7daf8e/user/:userId/goals', async (c) => {
 });
 
 // Update goal
-app.put('/make-server-6e7daf8e/user/:userId/goals/:goalId', async (c) => {
+app.put('/make-server-6e7daf8e/user/:userId/goals/:goalId', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const goalId = c.req.param('goalId');
@@ -532,7 +552,7 @@ app.put('/make-server-6e7daf8e/user/:userId/goals/:goalId', async (c) => {
 });
 
 // Delete goal
-app.delete('/make-server-6e7daf8e/user/:userId/goals/:goalId', async (c) => {
+app.delete('/make-server-6e7daf8e/user/:userId/goals/:goalId', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const goalId = c.req.param('goalId');
@@ -549,9 +569,9 @@ app.delete('/make-server-6e7daf8e/user/:userId/goals/:goalId', async (c) => {
 // ===== AI ASSISTANT ROUTES =====
 
 // Smart categorization suggestion
-app.post('/make-server-6e7daf8e/ai/categorize', async (c) => {
+const handleCategorize = async (c: Context, payload: any) => {
   try {
-    const { description } = await c.req.json();
+    const { description } = payload;
     const apiKey = Deno.env.get('GEMINI_API_KEY');
 
     if (!apiKey) {
@@ -559,7 +579,7 @@ app.post('/make-server-6e7daf8e/ai/categorize', async (c) => {
     }
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+      `https://generative-language.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -597,12 +617,13 @@ app.post('/make-server-6e7daf8e/ai/categorize', async (c) => {
     console.log(`Error in AI categorization: ${error}`);
     return c.json({ success: false, error: String(error) }, 500);
   }
-});
+};
+app.post('/make-server-6e7daf8e/ai/categorize', async (c) => handleCategorize(c, await c.req.json()));
 
 // AI Finance Guru chat
-app.post('/make-server-6e7daf8e/ai/chat', async (c) => {
+const handleChat = async (c: Context, payload: any) => {
   try {
-    const { message, context } = await c.req.json();
+    const { message, context } = payload;
     const apiKey = Deno.env.get('GEMINI_API_KEY');
 
     if (!apiKey) {
@@ -621,7 +642,7 @@ app.post('/make-server-6e7daf8e/ai/chat', async (c) => {
     Provide specific, personalized advice based on this data.`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+      `https://generative-language.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -651,12 +672,13 @@ app.post('/make-server-6e7daf8e/ai/chat', async (c) => {
     console.log(`Error in AI chat: ${error}`);
     return c.json({ success: false, error: String(error) }, 500);
   }
-});
+};
+app.post('/make-server-6e7daf8e/ai/chat', async (c) => handleChat(c, await c.req.json()));
 
 // Generate dashboard AI feedback
-app.post('/make-server-6e7daf8e/ai/dashboard-feedback', async (c) => {
+const handleDashboardFeedback = async (c: Context, payload: any) => {
   try {
-    const { context } = await c.req.json();
+    const { context } = payload;
     const apiKey = Deno.env.get('GEMINI_API_KEY');
 
     if (!apiKey) {
@@ -672,7 +694,7 @@ app.post('/make-server-6e7daf8e/ai/dashboard-feedback', async (c) => {
     Make it personal, actionable, and positive.`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+      `https://generative-language.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -698,12 +720,13 @@ app.post('/make-server-6e7daf8e/ai/dashboard-feedback', async (c) => {
     console.log(`Error generating dashboard feedback: ${error}`);
     return c.json({ success: false, error: String(error) }, 500);
   }
-});
+};
+app.post('/make-server-6e7daf8e/ai/dashboard-feedback', async (c) => handleDashboardFeedback(c, await c.req.json()));
 
 // ===== RECURRING TRANSACTIONS ROUTES =====
 
 // Get recurring transactions for a user
-app.get('/make-server-6e7daf8e/user/:userId/recurring', async (c) => {
+app.get('/make-server-6e7daf8e/user/:userId/recurring', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const prefix = `user:${userId}:recurring:`;
@@ -717,7 +740,7 @@ app.get('/make-server-6e7daf8e/user/:userId/recurring', async (c) => {
 });
 
 // Create recurring transaction
-app.post('/make-server-6e7daf8e/user/:userId/recurring', async (c) => {
+app.post('/make-server-6e7daf8e/user/:userId/recurring', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const body = await c.req.json();
@@ -739,7 +762,7 @@ app.post('/make-server-6e7daf8e/user/:userId/recurring', async (c) => {
 });
 
 // Delete recurring transaction
-app.delete('/make-server-6e7daf8e/user/:userId/recurring/:recurringId', async (c) => {
+app.delete('/make-server-6e7daf8e/user/:userId/recurring/:recurringId', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const recurringId = c.req.param('recurringId');
@@ -754,7 +777,7 @@ app.delete('/make-server-6e7daf8e/user/:userId/recurring/:recurringId', async (c
 });
 
 // Process recurring transactions (called by cron or manually)
-app.post('/make-server-6e7daf8e/user/:userId/recurring/process', async (c) => {
+app.post('/make-server-6e7daf8e/user/:userId/recurring/process', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const prefix = `user:${userId}:recurring:`;
@@ -868,7 +891,7 @@ app.post('/make-server-6e7daf8e/user/:userId/recurring/process', async (c) => {
 // ===== LIABILITY ROUTES =====
 
 // Get all liabilities for a user
-app.get('/make-server-6e7daf8e/user/:userId/liabilities', async (c) => {
+app.get('/make-server-6e7daf8e/user/:userId/liabilities', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const prefix = `user:${userId}:liability:`;
@@ -882,7 +905,7 @@ app.get('/make-server-6e7daf8e/user/:userId/liabilities', async (c) => {
 });
 
 // Create liability
-app.post('/make-server-6e7daf8e/user/:userId/liabilities', async (c) => {
+app.post('/make-server-6e7daf8e/user/:userId/liabilities', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const body = await c.req.json();
@@ -904,7 +927,7 @@ app.post('/make-server-6e7daf8e/user/:userId/liabilities', async (c) => {
 });
 
 // Update liability
-app.put('/make-server-6e7daf8e/user/:userId/liabilities/:liabilityId', async (c) => {
+app.put('/make-server-6e7daf8e/user/:userId/liabilities/:liabilityId', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const liabilityId = c.req.param('liabilityId');
@@ -927,7 +950,7 @@ app.put('/make-server-6e7daf8e/user/:userId/liabilities/:liabilityId', async (c)
 });
 
 // Delete liability
-app.delete('/make-server-6e7daf8e/user/:userId/liabilities/:liabilityId', async (c) => {
+app.delete('/make-server-6e7daf8e/user/:userId/liabilities/:liabilityId', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const liabilityId = c.req.param('liabilityId');
@@ -944,7 +967,7 @@ app.delete('/make-server-6e7daf8e/user/:userId/liabilities/:liabilityId', async 
 // ===== INVESTMENT ROUTES =====
 
 // Get all investments for a user
-app.get('/make-server-6e7daf8e/user/:userId/investments', async (c) => {
+app.get('/make-server-6e7daf8e/user/:userId/investments', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const prefix = `user:${userId}:investment:`;
@@ -958,7 +981,7 @@ app.get('/make-server-6e7daf8e/user/:userId/investments', async (c) => {
 });
 
 // Create investment
-app.post('/make-server-6e7daf8e/user/:userId/investments', async (c) => {
+app.post('/make-server-6e7daf8e/user/:userId/investments', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const body = await c.req.json();
@@ -980,7 +1003,7 @@ app.post('/make-server-6e7daf8e/user/:userId/investments', async (c) => {
 });
 
 // Update investment
-app.put('/make-server-6e7daf8e/user/:userId/investments/:investmentId', async (c) => {
+app.put('/make-server-6e7daf8e/user/:userId/investments/:investmentId', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const investmentId = c.req.param('investmentId');
@@ -1003,7 +1026,7 @@ app.put('/make-server-6e7daf8e/user/:userId/investments/:investmentId', async (c
 });
 
 // Delete investment
-app.delete('/make-server-6e7daf8e/user/:userId/investments/:investmentId', async (c) => {
+app.delete('/make-server-6e7daf8e/user/:userId/investments/:investmentId', async (c: any) => {
   try {
     const userId = c.req.param('userId');
     const investmentId = c.req.param('investmentId');
@@ -1020,7 +1043,7 @@ app.delete('/make-server-6e7daf8e/user/:userId/investments/:investmentId', async
 // ===== CURRENCY CONVERSION =====
 
 // Get exchange rates (proxy to avoid CORS issues)
-app.get('/make-server-6e7daf8e/currency/rates/:baseCurrency', async (c) => {
+app.get('/make-server-6e7daf8e/currency/rates/:baseCurrency', async (c: any) => {
   try {
     const baseCurrency = c.req.param('baseCurrency');
     const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${baseCurrency}`);

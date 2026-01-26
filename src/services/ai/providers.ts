@@ -7,7 +7,7 @@ export interface SAIResponse {
 
 const OPENAI_API_URL = import.meta.env.VITE_OPENAI_API_URL || 'https://api.openai.com/v1/chat/completions';
 const ANTHROPIC_API_URL = import.meta.env.VITE_ANTHROPIC_API_URL || 'https://api.anthropic.com/v1/messages';
-const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1/models';
+const GEMINI_BASE_URL = 'https://generative-language.googleapis.com/v1beta/models';
 const DEEPSEEK_API_URL = import.meta.env.VITE_DEEPSEEK_API_URL || 'https://api.deepseek.com/chat/completions';
 const PERPLEXITY_API_URL = import.meta.env.VITE_PERPLEXITY_API_URL || 'https://api.perplexity.ai/chat/completions';
 
@@ -133,10 +133,9 @@ const callAnthropic = async (key: string, userPrompt: string, systemPrompt: stri
 const callGemini = async (key: string, userPrompt: string, systemPrompt: string): Promise<SAIResponse> => {
     // List of models to try in order of preference (latest to fallback)
     const models = [
-        'gemini-3-flash-preview',
-        'gemini-2.5-flash',
         'gemini-2.0-flash',
-        'gemini-1.5-flash'
+        'gemini-1.5-flash',
+        'gemini-1.5-pro'
     ];
 
     let lastError: any = null;
@@ -147,10 +146,8 @@ const callGemini = async (key: string, userPrompt: string, systemPrompt: string)
             const response = await fetch(url, {
                 method: 'POST',
                 mode: 'cors',
-                credentials: 'omit',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-Goog-Api-Client': 'gl-js/0.0.0'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     contents: [{

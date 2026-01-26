@@ -987,11 +987,35 @@ export const api = {
 
   // AI & Others
   async categorize(description: string) {
-    console.log("Categorizing", description);
-    return { category: 'Other' };
+    const { data, error } = await supabase.functions.invoke('server', {
+      body: { action: 'categorize', description },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (error || !data.success) return { category: 'Other', tags: [] };
+    return data.suggestion;
   },
-  async chat() { return { message: "AI Offline" }; },
-  async getDashboardFeedback() { return { feedback: "No feedback" }; },
+
+  async chat(message: string, context: any) {
+    const { data, error } = await supabase.functions.invoke('server', {
+      body: { action: 'chat', message, context },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (error || !data.success) return { text: '', error: error?.message || data?.error || 'AI Offline' };
+    return { text: data.reply };
+  },
+
+  async getDashboardFeedback(context: any) {
+    const { data, error } = await supabase.functions.invoke('server', {
+      body: { action: 'dashboard-feedback', context },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (error || !data.success) return { feedback: 'Keep up the great work! 💪' };
+    return data.feedback;
+  },
+
   async getExchangeRates(baseCurrency: string = 'INR') {
     try {
       const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${baseCurrency}`);
