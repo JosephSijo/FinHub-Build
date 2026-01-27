@@ -9,6 +9,14 @@ export function normalizeName(name: string): string {
 }
 
 /**
+ * Normalizes input for fuzzy matching.
+ * Lowercase, trim, and remove all non-alphanumeric characters.
+ */
+export function normalizeForMatch(name: string): string {
+    return name.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
  * Sorts catalog entities based on fallback priority:
  * 1. Exact Country Match
  * 2. Region Match

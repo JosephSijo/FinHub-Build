@@ -13,6 +13,7 @@ import { Goal, Account } from '../types';
 import { toast } from 'sonner';
 import { formatCurrency } from '../utils/numberFormat';
 import { MeshBackground } from './ui/MeshBackground';
+import { GoalPhysicsCard } from './GoalPhysicsCard';
 
 interface GoalsTrackerProps {
   goals: Goal[];
@@ -135,7 +136,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = React.memo(({
     // Check if deducting from account
     if (fundsData.deductFromAccount && fundsData.accountId) {
       const selectedAccount = accounts.find(a => a.id === fundsData.accountId);
-      if (selectedAccount && selectedAccount.balance < amount) {
+      if (selectedAccount && selectedAccount.cachedBalance < amount) {
         toast.error('Insufficient balance in selected account');
         return;
       }
@@ -511,11 +512,18 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = React.memo(({
 
                   <Button
                     onClick={() => handleOpenFundsDialog(goal)}
-                    className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 hover:border-emerald-500/40 sq-md font-black text-[10px] uppercase tracking-widest py-6 transition-all shadow-[0_0_20px_rgba(16,185,129,0.1)]"
+                    className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 hover:border-emerald-500/40 sq-md font-black text-[10px] uppercase tracking-widest py-6 transition-all shadow-[0_0_20px_rgba(16,185,129,0.1)] mb-4"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Add Money
                   </Button>
+
+                  <GoalPhysicsCard
+                    goal={goal}
+                    expenses={expenses}
+                    currency={currency}
+                    onUpdateGoal={onUpdateGoal}
+                  />
                 </div>
               </div>
             );
@@ -590,7 +598,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = React.memo(({
                             <div className="flex items-center justify-between w-full">
                               <span>{account.icon} {account.name}</span>
                               <span className="text-[10px] text-slate-500 ml-4 font-mono">
-                                {formatCurrency(account.balance, currency)}
+                                {formatCurrency(account.cachedBalance, currency)}
                               </span>
                             </div>
                           </SelectItem>
@@ -599,7 +607,7 @@ export const GoalsTracker: React.FC<GoalsTrackerProps> = React.memo(({
                     </Select>
                     {fundsData.accountId && (
                       <p className="text-[10px] text-slate-500 mt-2 italic px-1">
-                        Available Cash: {formatCurrency(accounts.find(a => a.id === fundsData.accountId)?.balance || 0, currency)}
+                        Available Cash: {formatCurrency(accounts.find(a => a.id === fundsData.accountId)?.cachedBalance || 0, currency)}
                       </p>
                     )}
                   </div>

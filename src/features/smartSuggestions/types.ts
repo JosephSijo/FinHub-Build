@@ -23,6 +23,8 @@ export interface SmartSuggestion {
     };
     source: SuggestionSource;
     status: SuggestionStatus;
+    catalog_entity_id: string | null;
     created_at: string;
     expires_at: string | null;
+    template_key: string | null;
 }

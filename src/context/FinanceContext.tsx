@@ -18,6 +18,8 @@ import { useFinanceLoad } from '../hooks/useFinanceLoad';
 import { useFundAllocation } from '../hooks/useFundAllocation';
 import { FinanceContextType } from '../types';
 import { recurringService } from '../features/recurringEngine';
+import { generateForecast } from '../utils/cashflow';
+import { calculateStressScore } from '../utils/stressScore';
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
@@ -141,6 +143,36 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         };
     }, [auth.authStatus, auth]);
 
+    // 8. Cashflow Forecast Computation
+    const cashflowForecast = useMemo(() => {
+        if (!financeData.accounts.length) return null;
+
+        const totalBalance = financeData.accounts.reduce((sum, a) => sum + a.cachedBalance, 0);
+
+        return {
+            30: generateForecast(totalBalance, financeData.expenses, financeData.recurringTransactions, financeData.liabilities, 30),
+            60: generateForecast(totalBalance, financeData.expenses, financeData.recurringTransactions, financeData.liabilities, 60),
+            90: generateForecast(totalBalance, financeData.expenses, financeData.recurringTransactions, financeData.liabilities, 90)
+        };
+    }, [financeData.accounts, financeData.expenses, financeData.recurringTransactions, financeData.liabilities]);
+
+    // 9. Stress Score Computation
+    const stressScore = useMemo(() => {
+        if (!financeData.accounts.length) return null;
+
+        const totalBalance = financeData.accounts.reduce((sum, a) => sum + a.cachedBalance, 0);
+        const totalIncome = financeData.incomes.reduce((sum, i) => sum + i.amount, 0); // Need a better monthly income estimate ideally
+
+        return calculateStressScore(
+            totalBalance,
+            totalIncome || 50000, // Fallback to a reasonable baseline for demo if no income logged
+            financeData.expenses,
+            financeData.recurringTransactions,
+            financeData.liabilities,
+            financeData.goals
+        );
+    }, [financeData.accounts, financeData.incomes, financeData.expenses, financeData.recurringTransactions, financeData.liabilities, financeData.goals]);
+
     // Construct the context value
     const contextValue: FinanceContextType = useMemo(() => ({
         ...financeData,
@@ -162,8 +194,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             await recurringActions.executeBackfill();
             await syncActions.refreshData();
         },
-        deleteAccountPermanently: auth.deleteAccountPermanently
-    }), [financeData, auth, fullActionsBundle, syncActions, fundAllocation, checkers, loader, userId, recurringActions]);
+        deleteAccountPermanently: auth.deleteAccountPermanently,
+        cashflowForecast,
+        stressScore
+    }), [financeData, auth, fullActionsBundle, syncActions, fundAllocation, checkers, loader, userId, recurringActions, cashflowForecast, stressScore]);
 
     return (
         <FinanceContext.Provider value={contextValue}>

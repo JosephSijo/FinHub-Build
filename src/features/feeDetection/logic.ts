@@ -25,12 +25,12 @@ function matchesRule(transaction: TransactionInput, rule: FeeRule): boolean {
         return false;
     }
 
-    // Keyword match: merchant_name OR note OR external_service
+    // Keyword match: merchant_name OR description OR external_service
     const merchantMatch = containsKeyword(transaction.merchant_name, rule.merchant_keywords);
-    const noteMatch = containsKeyword(transaction.note, rule.note_keywords);
+    const descriptionMatch = containsKeyword(transaction.description, rule.note_keywords);
     const serviceMatch = containsKeyword(transaction.external_service, rule.merchant_keywords);
 
-    return merchantMatch || noteMatch || serviceMatch;
+    return merchantMatch || descriptionMatch || serviceMatch;
 }
 
 /**

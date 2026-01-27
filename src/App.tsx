@@ -202,10 +202,24 @@ export default function App() {
 
   const { openFundAllocation } = useFinance();
 
-  // Expose fund allocation to window for components that use it via window.showFundAllocation
+  // Expose fund allocation and emergency fund deduction to window
   useEffect(() => {
     (window as any).showFundAllocation = openFundAllocation;
-  }, [openFundAllocation]);
+    (window as any).handleEmergencyFundDeduction = async (accountId: string, amount: number) => {
+      const account = accounts.find((a: any) => a.id === accountId);
+      if (account) {
+        // Golden Write Path: All balance changes are Transactions
+        await createExpense({
+          amount: amount,
+          description: `Emergency Fund Injection`,
+          date: new Date().toISOString().split('T')[0],
+          accountId: accountId,
+          category: 'Emergency Fund',
+          tags: ['emergency-fund-injection']
+        });
+      }
+    };
+  }, [openFundAllocation, accounts, createExpense]);
 
   // Calculate financial health score
   const { currentMonthExpenses } = useMemo(() => {
@@ -610,8 +624,14 @@ export default function App() {
                           onDeductFromAccount={async (accountId: string, amount: number) => {
                             const account = accounts.find((a: any) => a.id === accountId);
                             if (account) {
-                              await updateAccount(accountId, {
-                                balance: account.balance - amount
+                              // Golden Write Path: All balance changes are Transactions
+                              await createExpense({
+                                amount: amount,
+                                description: `Goal Contribution: ${goals.find(g => g.id === accountId)?.name || 'Goal'}`, // We might need to passed the goal details if we had them here, but this is a reasonable default
+                                date: new Date().toISOString().split('T')[0],
+                                accountId: accountId,
+                                category: 'Goals',
+                                tags: ['goal-contribution']
                               });
                             }
                           }}

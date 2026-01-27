@@ -160,16 +160,16 @@ export const SubscriptionStrategist: React.FC<SubscriptionStrategistProps> = ({
                             <Card
                                 key={sub.id}
                                 className={`p-4 border flex items-center justify-between group transition-all overflow-hidden relative ${isUnused ? 'bg-rose-500/5 border-rose-500/20 hover:border-rose-500/40' :
-                                        isEssential ? 'bg-emerald-500/5 border-emerald-500/20' :
-                                            isInvestment ? 'bg-teal-500/5 border-teal-500/20' :
-                                                'bg-slate-800/40 border-slate-700/50'
+                                    isEssential ? 'bg-emerald-500/5 border-emerald-500/20' :
+                                        isInvestment ? 'bg-teal-500/5 border-teal-500/20' :
+                                            'bg-slate-800/40 border-slate-700/50'
                                     }`}
                             >
                                 <div className="flex items-center gap-4">
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${isUnused ? 'bg-rose-500/10 text-rose-400' :
-                                            isEssential ? 'bg-emerald-500/10 text-emerald-400' :
-                                                isInvestment ? 'bg-teal-500/10 text-teal-400' :
-                                                    'bg-slate-800 text-slate-400'
+                                        isEssential ? 'bg-emerald-500/10 text-emerald-400' :
+                                            isInvestment ? 'bg-teal-500/10 text-teal-400' :
+                                                'bg-slate-800 text-slate-400'
                                         }`}>
                                         {isUnused ? <AlertTriangle className="w-5 h-5" /> :
                                             isEssential ? <Shield className="w-5 h-5" /> :
@@ -180,15 +180,20 @@ export const SubscriptionStrategist: React.FC<SubscriptionStrategistProps> = ({
                                         <h4 className="font-bold text-slate-200">{sub.description || sub.source}</h4>
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded ${isUnused ? 'bg-rose-500 text-black' :
-                                                    isEssential ? 'bg-emerald-500/20 text-emerald-400' :
-                                                        isInvestment ? 'bg-teal-500/20 text-teal-400' :
-                                                            'bg-slate-700 text-slate-400'
+                                                isEssential ? 'bg-emerald-500/20 text-emerald-400' :
+                                                    isInvestment ? 'bg-teal-500/20 text-teal-400' :
+                                                        'bg-slate-700 text-slate-400'
                                                 }`}>
                                                 {sub.strategyCategory}
                                             </span>
                                             <span className="text-[10px] text-slate-500 font-medium">
                                                 Cost: {burnDays} work days
                                             </span>
+                                            {sub.kind === 'subscription' && (
+                                                <span className="text-[10px] text-indigo-400/60 font-black uppercase">
+                                                    • ROI Aware
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

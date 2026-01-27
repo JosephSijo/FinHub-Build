@@ -1,9 +1,79 @@
 import { catalogRepo } from './repo';
 import { CatalogEntity, CatalogKind } from './types';
-import { sortByFallbackPriority } from './logic';
+import { sortByFallbackPriority, normalizeForMatch } from './logic';
 import { supabase } from '@/lib/supabase';
 
 export const catalogService = {
+    /**
+     * Resolves a user input string to a catalog entity using normalization and linking.
+     */
+    async resolveEntity(userId: string, name: string): Promise<string | null> {
+        if (!name) return null;
+        const normalized = normalizeForMatch(name);
+
+        try {
+            // 1. Check user-specific mappings first (User's personal lexicon)
+            const { data: link } = await supabase
+                .from('user_catalog_link')
+                .select('catalog_entity_id')
+                .eq('user_id', userId)
+                .eq('normalized_name', normalized)
+                .maybeSingle();
+
+            if (link) return link.catalog_entity_id;
+
+            // 2. Exact Match in Global Catalog
+            const { data: globalMatch } = await supabase
+                .from('catalog_entities')
+                .select('id')
+                .eq('normalized_name', normalized)
+                .eq('status', 'active')
+                .maybeSingle();
+
+            if (globalMatch?.id) {
+                await this.createLink(userId, name, normalized, globalMatch.id);
+                return globalMatch.id;
+            }
+
+            // 3. Fuzzy/Contains Match in Global Catalog (High Popularity First)
+            const { data: candidates } = await supabase
+                .from('catalog_entities')
+                .select('id, normalized_name')
+                .eq('status', 'active')
+                .order('popularity_score', { ascending: false })
+                .limit(200);
+
+            const match = candidates?.find(c =>
+                normalized.includes(c.normalized_name) || c.normalized_name.includes(normalized)
+            );
+
+            if (match?.id) {
+                await this.createLink(userId, name, normalized, match.id);
+                return match.id;
+            }
+
+            // 4. No Match - Create unlinked mapping to remember this input
+            await this.createLink(userId, name, normalized, null);
+            return null;
+        } catch (error) {
+            console.error('Error resolving catalog entity:', error);
+            return null;
+        }
+    },
+
+    /**
+     * Internal helper to create a user mapping.
+     */
+    async createLink(userId: string, originalName: string, normalizedName: string, catalogId: string | null) {
+        return supabase.from('user_catalog_link').upsert({
+            user_id: userId,
+            user_input_name: originalName,
+            normalized_name: normalizedName,
+            catalog_entity_id: catalogId,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id,normalized_name' });
+    },
+
     /**
      * Gets templates for a specific kind (bank, subscription, etc.) with fallback priority.
      */

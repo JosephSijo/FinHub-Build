@@ -50,7 +50,7 @@ export function TransferForm({
             toast.error('Please enter a valid amount');
             return;
         }
-        if (sourceAccount && amountNum > sourceAccount.balance) {
+        if (sourceAccount && amountNum > sourceAccount.cachedBalance) {
             toast.error('Insufficient funds in source account');
             return;
         }
@@ -106,7 +106,7 @@ export function TransferForm({
                                                         <span>{account.name}</span>
                                                     </div>
                                                     <span className="text-xs font-black text-slate-500">
-                                                        {formatCurrency(account.balance, currency)}
+                                                        {formatCurrency(account.cachedBalance, currency)}
                                                     </span>
                                                 </div>
                                             </SelectItem>
@@ -131,7 +131,7 @@ export function TransferForm({
                                                         <span>{account.name}</span>
                                                     </div>
                                                     <span className="text-xs font-black text-slate-500">
-                                                        {formatCurrency(account.balance, currency)}
+                                                        {formatCurrency(account.cachedBalance, currency)}
                                                     </span>
                                                 </div>
                                             </SelectItem>
@@ -157,7 +157,7 @@ export function TransferForm({
                                         className="pl-12 h-14 bg-slate-900 border-white/5 rounded-2xl focus:ring-1 focus:ring-indigo-500/50 text-slate-100 font-black text-xl"
                                     />
                                 </div>
-                                {sourceAccount && amountNum > sourceAccount.balance && (
+                                {sourceAccount && amountNum > sourceAccount.cachedBalance && (
                                     <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-rose-400 ml-1 animate-in slide-in-from-top-1">
                                         <AlertCircle className="w-3 h-3" />
                                         <span>Insufficient balance in source account</span>
@@ -208,13 +208,13 @@ export function TransferForm({
                                     <div className="flex justify-between items-center text-xs">
                                         <span className="text-slate-500 font-bold">Source New Balance</span>
                                         <span className="text-rose-400 font-black">
-                                            {formatCurrency((sourceAccount?.balance || 0) - amountNum, currency)}
+                                            {formatCurrency((sourceAccount?.cachedBalance || 0) - amountNum, currency)}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center text-xs">
                                         <span className="text-slate-500 font-bold">Dest. New Balance</span>
                                         <span className="text-emerald-400 font-black">
-                                            {formatCurrency((destinationAccount?.balance || 0) + amountNum, currency)}
+                                            {formatCurrency((destinationAccount?.cachedBalance || 0) + amountNum, currency)}
                                         </span>
                                     </div>
                                 </div>

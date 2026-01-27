@@ -6,6 +6,8 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceL
 import { TrendingUp } from 'lucide-react';
 import { formatCurrency } from '../utils/numberFormat';
 import { Haptics } from '../utils/haptics';
+import { CashflowForecast } from './CashflowForecast';
+import { StressScoreCard } from './StressScoreCard';
 
 interface InsightsCardProps {
     monthlyData: {
@@ -21,7 +23,7 @@ interface InsightsCardProps {
     currency: string;
 }
 
-type TabType = 'flow' | 'budget' | 'growth';
+type TabType = 'flow' | 'budget' | 'growth' | 'forecast' | 'stress' | 'architect';
 
 export const InsightsCard: React.FC<InsightsCardProps> = ({
     monthlyData,
@@ -36,8 +38,10 @@ export const InsightsCard: React.FC<InsightsCardProps> = ({
     const tabs: { id: TabType; label: string; hasAlert?: boolean }[] = [
         { id: 'flow', label: 'Flow' },
         { id: 'budget', label: 'Budget', hasAlert: spendingPercentage >= 90 },
+        { id: 'forecast', label: 'Forecast' },
+        { id: 'stress', label: 'Stress' },
         { id: 'growth', label: 'Growth' },
-        { id: 'architect' as any, label: 'Architect' }
+        { id: 'architect', label: 'Architect' }
     ];
 
     // Colors
@@ -132,10 +136,10 @@ export const InsightsCard: React.FC<InsightsCardProps> = ({
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`
-                    relative px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ease-out flex items-center gap-2
-                    ${activeTab === tab.id ? 'shadow-sm' : 'hover:bg-white/5'}
-                    bg-[var(--tab-bg)] text-[var(--tab-text)]
-                  `}
+                        relative px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ease-out flex items-center gap-2
+                        ${activeTab === tab.id ? 'shadow-sm' : 'hover:bg-white/5'}
+                        bg-[var(--tab-bg)] text-[var(--tab-text)]
+                      `}
                                 {...tabProps}
                             >
                                 {tab.label}
@@ -187,6 +191,26 @@ export const InsightsCard: React.FC<InsightsCardProps> = ({
                                         <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Valuation</p>
                                         <p className="text-4xl font-black tabular-nums text-blue-400">
                                             {formatCurrency(goals.reduce((acc, g) => acc + g.currentAmount, 0), currency)}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                            {activeTab === 'forecast' && (
+                                <div className="flex items-center gap-4">
+                                    <div>
+                                        <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Cashflow Behavioral Forecast</p>
+                                        <p className="text-4xl font-black tabular-nums text-indigo-400">
+                                            30-90 Days
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                            {activeTab === 'stress' && (
+                                <div className="flex items-center gap-4">
+                                    <div>
+                                        <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Financial Weather Forecast</p>
+                                        <p className="text-4xl font-black tabular-nums text-rose-400">
+                                            Pressure Index
                                         </p>
                                     </div>
                                 </div>
@@ -247,6 +271,18 @@ export const InsightsCard: React.FC<InsightsCardProps> = ({
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
+
+                        {activeTab === 'forecast' && (
+                            <div className="px-6 pb-6">
+                                <CashflowForecast />
+                            </div>
+                        )}
+
+                        {activeTab === 'stress' && (
+                            <div className="px-6 pb-6">
+                                <StressScoreCard />
+                            </div>
+                        )}
                     </motion.div>
                 </AnimatePresence>
             </CardContent>

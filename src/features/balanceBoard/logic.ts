@@ -9,7 +9,7 @@ export const calculateBalanceMetrics = (data: BalanceBoardData): BalanceBoardMet
     // A) Liquid_Balance = SUM(accounts.current_balance WHERE is_active)
     // Filtering out 'credit_card' from liquid balance as it's debt, but checking type
     const liquidAccounts = accounts.filter(a => a.type !== 'credit_card');
-    const liquidBalance = liquidAccounts.reduce((sum, a) => sum + (a.balance || 0), 0);
+    const liquidBalance = liquidAccounts.reduce((sum, a) => sum + (a.cachedBalance || 0), 0);
 
     // B) Upcoming_Dues_Global = SUM(scheduled_payments.amount WHERE status='active' AND due_date <= today+7)
     // Mapping recurringTransactions to scheduled_payments
@@ -36,7 +36,7 @@ export const calculateBalanceMetrics = (data: BalanceBoardData): BalanceBoardMet
     const creditCards = accounts.filter(a => a.type === 'credit_card');
     const creditSafeSpend = creditCards.reduce((sum, card) => {
         const limit = card.creditLimit || 0;
-        const currentOutstanding = card.balance || 0; // In this app, balance is usually positive outstanding for CC
+        const currentOutstanding = card.cachedBalance || 0; // In this app, balance is usually positive outstanding for CC
         const availableCredit = Math.max(0, limit - currentOutstanding);
         const safetyCapPercent = card.safeLimitPercentage || 30;
         const safetyCap = (limit * safetyCapPercent) / 100;
@@ -61,7 +61,7 @@ export const calculateBalanceMetrics = (data: BalanceBoardData): BalanceBoardMet
 
         // min_buffer from requirements
         const minBuffer = account.min_buffer || 0;
-        const freeBuffer = account.balance - accountDues7d - minBuffer;
+        const freeBuffer = account.cachedBalance - accountDues7d - minBuffer;
 
         if (freeBuffer > maxFreeBuffer) {
             maxFreeBuffer = freeBuffer;
@@ -83,7 +83,7 @@ export const calculateBalanceMetrics = (data: BalanceBoardData): BalanceBoardMet
                 const startDate = new Date(r.startDate);
                 return (startDate <= sevenDaysFromNow && startDate >= today) ? sum + r.amount : sum;
             }, 0);
-        return account.balance < accountDues7d;
+        return account.cachedBalance < accountDues7d;
     });
 
     if (liquidSafeSpend < 0 || hasAccountShortfall) {
@@ -94,7 +94,7 @@ export const calculateBalanceMetrics = (data: BalanceBoardData): BalanceBoardMet
 
     // Top Alert:
     let topAlert: string | null = null;
-    const highUtilCard = creditCards.find(card => (card.balance / (card.creditLimit || 1)) > 0.7);
+    const highUtilCard = creditCards.find(card => (card.cachedBalance / (card.creditLimit || 1)) > 0.7);
     const unfundedDue = liquidAccounts.find(account => {
         const dues = recurringTransactions
             .filter(r => r.accountId === account.id && r.type === 'expense')
@@ -102,7 +102,7 @@ export const calculateBalanceMetrics = (data: BalanceBoardData): BalanceBoardMet
                 const startDate = new Date(r.startDate);
                 return (startDate <= sevenDaysFromNow && startDate >= today) ? sum + r.amount : sum;
             }, 0);
-        return account.balance < dues;
+        return account.cachedBalance < dues;
     });
 
     if (unfundedDue) {
@@ -143,7 +143,7 @@ export const calculateBalanceMetrics = (data: BalanceBoardData): BalanceBoardMet
         quickFix = {
             fromAccountId: suggestedSpendAccountId,
             toAccountId: unfundedDue.id,
-            amount: dues - unfundedDue.balance
+            amount: dues - unfundedDue.cachedBalance
         };
     }
 

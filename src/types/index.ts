@@ -2,7 +2,7 @@ export interface Account {
   id: string;
   name: string;
   type: 'bank' | 'credit_card' | 'cash' | 'investment';
-  balance: number;
+  cachedBalance: number;
   color: string;
   icon: string;
   createdAt: string;
@@ -77,6 +77,8 @@ export interface Goal {
   emoji: string;
   type?: GoalType; // Defaults to 'growth' if undefined
   status?: 'active' | 'completed' | 'leaking'; // Defaults to 'active'
+  category?: string; // Display name
+  categoryId?: string; // UUID reference
   monthly_contribution?: number;
   is_discretionary?: boolean;
   startDate?: string;
@@ -223,10 +225,20 @@ export interface RecurringTransaction {
   investmentId?: string;
   liabilityId?: string;
   kind?: 'subscription' | 'bill' | 'income';
+  status: 'active' | 'paused' | 'cancelled' | 'cancellation_pending';
   entityId?: string;
   entityKind?: 'loan' | 'goal' | 'investment';
   reminderEnabled?: boolean;
   dueDay?: number;
+  manualUsageCount?: number;
+  lastUsedAt?: string;
+  cancellationMeta?: {
+    policy: 'end_of_cycle' | 'immediate' | 'prorated';
+    graceDays: number;
+    autoRenewCutoffDays?: number;
+    cancelUrl?: string;
+    lastHeavyUsageDate?: string;
+  };
   createdAt: string;
 }
 
@@ -297,6 +309,9 @@ export interface Notification {
     status: 'pending' | 'completed' | 'dismissed';
   };
 }
+
+import { ForecastResult } from '../utils/cashflow';
+import { StressScoreResult } from '../utils/stressScore';
 
 export interface AuthUser {
   id: string;
@@ -417,4 +432,10 @@ export interface FinanceContextType {
   backfillRequest: { count: number; dates: Date[]; recurring: any } | null;
   setBackfillRequest: React.Dispatch<React.SetStateAction<{ count: number; dates: Date[]; recurring: any } | null>>;
   executeBackfill: () => Promise<void>;
+  cashflowForecast: {
+    30: ForecastResult;
+    60: ForecastResult;
+    90: ForecastResult;
+  } | null;
+  stressScore: StressScoreResult | null;
 }

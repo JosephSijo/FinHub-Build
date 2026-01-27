@@ -59,7 +59,7 @@ export function AccountsManager({
   const [formData, setFormData] = useState({
     name: '',
     type: 'bank' as 'bank' | 'credit_card' | 'cash' | 'investment',
-    balance: 0,
+    cachedBalance: 0,
     color: ACCOUNT_COLORS[0],
     icon: ACCOUNT_ICONS[0].value,
     creditLimit: 0,
@@ -75,7 +75,7 @@ export function AccountsManager({
       setFormData({
         name: account.name,
         type: account.type,
-        balance: account.balance,
+        cachedBalance: account.cachedBalance,
         color: account.color,
         icon: account.icon,
         creditLimit: account.creditLimit || 0,
@@ -88,7 +88,7 @@ export function AccountsManager({
       setFormData({
         name: '',
         type: 'bank',
-        balance: 0,
+        cachedBalance: 0,
         color: ACCOUNT_COLORS[0],
         icon: ACCOUNT_ICONS[0].value,
         creditLimit: 0,
@@ -335,14 +335,14 @@ export function AccountsManager({
               </div>
 
               <div>
-                <Label htmlFor="balance" className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">
+                <Label htmlFor="cachedBalance" className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">
                   {formData.type === 'bank' || formData.type === 'cash' || formData.type === 'investment' ? 'Current Balance' : 'Amount Owed'}
                 </Label>
                 <NumberInput
-                  id="balance"
-                  name="balance"
-                  value={formData.balance}
-                  onChange={(value) => setFormData({ ...formData, balance: parseFloat(value) || 0 })}
+                  id="cachedBalance"
+                  name="cachedBalance"
+                  value={formData.cachedBalance}
+                  onChange={(value) => setFormData({ ...formData, cachedBalance: parseFloat(value) || 0 })}
                   placeholder="0.00"
                   className="bg-white/5 border-white/5 squircle-12 h-14 text-white"
                   autoComplete="off"
@@ -473,7 +473,7 @@ export function AccountsManager({
   function AccountCard({ account }: { account: Account }) {
     const isCC = account.type === 'credit_card';
     const safeLimit = isCC ? (account.creditLimit || 0) * (account.safeLimitPercentage || 30) / 100 : 0;
-    const usagePercent = isCC && account.creditLimit ? (Math.abs(account.balance) / account.creditLimit) * 100 : 0;
+    const usagePercent = isCC && account.creditLimit ? (Math.abs(account.cachedBalance) / account.creditLimit) * 100 : 0;
     const isSafe = isCC && usagePercent <= (account.safeLimitPercentage || 30);
 
     return (
@@ -546,7 +546,7 @@ export function AccountsManager({
                 };
                 return (
                   <h4 className="text-2xl font-black tabular-nums tracking-tight text-[var(--balance-color)]" {...balanceProps}>
-                    {formatCurrency(account.balance, currency)}
+                    {formatCurrency(account.cachedBalance, currency)}
                   </h4>
                 );
               })()}

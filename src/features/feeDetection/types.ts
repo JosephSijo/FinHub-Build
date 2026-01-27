@@ -20,7 +20,7 @@ export interface TransactionInput {
     category_id?: string;
     payment_method?: PaymentMethod;
     merchant_name?: string;
-    note?: string;
+    description?: string;
     external_service?: string;
 }
 

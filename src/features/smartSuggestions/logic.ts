@@ -27,7 +27,7 @@ export const suggestionRules = {
 
         // Group by merchant and sort by date
         transactions.forEach(t => {
-            const name = t.note?.toLowerCase().trim() || t.merchant?.toLowerCase() || 'unknown';
+            const name = t.description?.toLowerCase().trim() || t.merchant?.toLowerCase() || 'unknown';
             if (name === 'unknown') return;
             if (!merchants[name]) merchants[name] = [];
             merchants[name].push(t);
@@ -38,11 +38,11 @@ export const suggestionRules = {
             if (txns.length < 3) return;
 
             // Simplified interval check: last 3 transactions are roughly 28-32 days apart
-            const sorted = txns.sort((a, b) => new Date(a.txn_date).getTime() - new Date(b.txn_date).getTime());
+            const sorted = txns.sort((a, b) => new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime());
             const last = sorted[sorted.length - 1];
             const prev = sorted[sorted.length - 2];
 
-            const diffDays = Math.abs(new Date(last.txn_date).getTime() - new Date(prev.txn_date).getTime()) / (1000 * 3600 * 24);
+            const diffDays = Math.abs(new Date(last.transaction_date).getTime() - new Date(prev.transaction_date).getTime()) / (1000 * 3600 * 24);
 
             if (diffDays >= 25 && diffDays <= 35) {
                 suggestions.push({

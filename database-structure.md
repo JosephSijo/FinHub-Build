@@ -131,14 +131,15 @@
 | `id` | uuid | uuid | updatable | gen_random_uuid() | PRIMARY KEY |
 | `user_id` | text | text | updatable | - | - |
 | `name` | text | text | updatable | - | - |
-| `type` | text | text | updatable | - | CHECK: type IN ('CASH', 'BANK', 'CREDIT_CARD', 'INVESTMENT', 'LOAN', 'OTHER') |
+| `type` | text | text | updatable | - | CHECK: type IN ('cash', 'bank', 'wallet', 'credit_card', 'investment', 'loan', 'other') |
 | `currency_code` | text | text | updatable | 'INR'::text | FOREIGN KEY → currencies.code |
-| `balance` | numeric | numeric | updatable | 0 | - |
+| `opening_balance` | numeric | numeric | updatable | 0 | - |
+| `min_buffer` | numeric | numeric | updatable | 0 | - |
+| `cached_balance` | numeric | numeric | updatable | 0 | Derived cache (truth is ledger_entries) |
 | `is_active` | boolean | bool | updatable | true | - |
 | `created_at` | timestamp with time zone | timestamptz | nullable, updatable | now() | - |
 | `updated_at` | timestamp with time zone | timestamptz | nullable, updatable | now() | - |
-| `icon` | text | text | nullable, updatable | - | - |
-| `color` | text | text | nullable, updatable | - | - |
+| `currency` | text | text | nullable, updatable | - | - |
 
 ### Foreign Key Constraints
 
@@ -210,10 +211,7 @@
 | `interest_rate` | numeric | numeric | nullable, updatable | 0 | - |
 | `emi_amount` | numeric | numeric | nullable, updatable | 0 | - |
 | `emi_day` | integer | int4 | nullable, updatable | 1 | CHECK: emi_day BETWEEN 1 AND 31 |
-| `start_date` | date | date | nullable, updatable | CURRENT_DATE | - |
-| `end_date` | date | date | nullable, updatable | - | - |
-| `catalog_entity_id` | uuid | uuid | nullable, updatable | - | FOREIGN KEY → catalog_entities.id |
-| `logo_url` | text | text | nullable, updatable | - | - |
+| `catalog_entity_id` | uuid | uuid | nullable, updatable | - | FOREIGN KEY → catalog_entities.id (SSOT for name/logo) |
 | `description` | text | text | nullable, updatable | - | - |
 | `loan_status` | text | text | updatable | 'active'::text | CHECK: loan_status IN ('active', 'paid_off', 'defaulted', 'refinanced') |
 | `created_at` | timestamp with time zone | timestamptz | nullable, updatable | now() | - |
@@ -289,20 +287,19 @@
 | `id` | uuid | uuid | updatable | gen_random_uuid() | PRIMARY KEY |
 | `user_id` | text | text | updatable | - | - |
 | `account_id` | uuid | uuid | nullable, updatable | - | FOREIGN KEY → accounts.id |
-| `type` | text | text | updatable | - | CHECK: type IN ('INCOME', 'EXPENSE', 'TRANSFER') |
-| `category` | text | text | nullable, updatable | - | - |
+| `type` | text | text | updatable | - | CHECK: type IN ('income', 'expense', 'transfer') |
 | `amount` | numeric | numeric | updatable | 0 | - |
 | `currency_code` | text | text | updatable | 'INR'::text | FOREIGN KEY → currencies.code |
-| `base_currency_code` | text | text | nullable, updatable | - | FOREIGN KEY → currencies.code |
-| `base_amount` | numeric | numeric | nullable, updatable | - | - |
-| `exchange_rate` | numeric | numeric | nullable, updatable | 1 | - |
+| `base_currency_code` | text | text | updatable | - | FOREIGN KEY → currencies.code (NOT NULL) |
+| `base_amount` | numeric | numeric | updatable | - | NOT NULL |
+| `exchange_rate` | numeric | numeric | updatable | - | NOT NULL |
 | `description` | text | text | nullable, updatable | - | - |
-| `transaction_date` | date | date | updatable | CURRENT_DATE | - |
-| `created_at` | timestamp with time zone | timestamptz | nullable, updatable | now() | - |
-| `updated_at` | timestamp with time zone | timestamptz | nullable, updatable | now() | - |
+| `transaction_date` | date | date | updatable | CURRENT_DATE | NOT NULL |
+| `fx_date` | date | date | updatable | - | NOT NULL |
+| `created_at` | timestamp with time zone | timestamptz | nullable, updatable | now() | NOT NULL |
+| `updated_at` | timestamp with time zone | timestamptz | nullable, updatable | now() | NOT NULL |
 | `tags` | ARRAY | _text | nullable, updatable | - | - |
 | `catalog_entity_id` | uuid | uuid | nullable, updatable | - | FOREIGN KEY → catalog_entities.id |
-| `logo_url` | text | text | nullable, updatable | - | - |
 | `auto_categorized` | boolean | bool | updatable | false | - |
 | `confidence_score` | numeric | numeric | nullable, updatable | - | - |
 
@@ -335,10 +332,18 @@
 | `account_id` | uuid | uuid | updatable | - | FOREIGN KEY → accounts.id |
 | `direction` | text | text | nullable, updatable | - | - |
 | `amount` | numeric | numeric | updatable | - | - |
-| `txn_date` | date | date | updatable | CURRENT_DATE | - |
+| `transaction_date` | date | date | updatable | CURRENT_DATE | - |
 | `created_at` | timestamp with time zone | timestamptz | nullable, updatable | now() | - |
 | `currency_code` | text | text | nullable, updatable | 'INR'::text | - |
 | `base_amount` | numeric | numeric | nullable, updatable | - | - |
+| `note` | text | text | nullable, updatable | - | - |
+| `metadata` | jsonb | jsonb | nullable, updatable | - | - |
+
+### Constraints & Triggers
+
+- **Check Constraint**: `direction IN ('IN', 'OUT')`
+- **Balance Trigger**: `validate_ledger_balance` (AFTER INSERT/UPDATE) - Enforces `SUM(IN) = SUM(OUT)` per `transaction_id`.
+- **System Balancing**: All Income/Expense transactions are balanced against a `System: Balancing` account.
 
 ### Foreign Key Constraints
 
@@ -371,8 +376,6 @@
 | `type` | text | text | updatable | - | - |
 | `symbol` | text | text | nullable, updatable | - | - |
 | `quantity` | numeric | numeric | nullable, updatable | 0 | - |
-| `buy_price` | numeric | numeric | nullable, updatable | 0 | - |
-| `principal_amount` | numeric | numeric | nullable, updatable | 0 | - |
 | `current_value` | numeric | numeric | nullable, updatable | 0 | - |
 | `currency_code` | text | text | nullable, updatable | 'INR'::text | - |
 | `start_date` | date | date | nullable, updatable | CURRENT_DATE | - |
@@ -405,7 +408,7 @@
 | `current_amount` | numeric | numeric | nullable, updatable | 0 | - |
 | `currency_code` | text | text | nullable, updatable | 'INR'::text | - |
 | `deadline` | date | date | nullable, updatable | - | - |
-| `category` | text | text | nullable, updatable | - | - |
+| `category_id` | uuid | uuid | nullable, updatable | - | FOREIGN KEY → categories.id |
 | `status` | text | text | nullable, updatable | 'active'::text | CHECK: status IN ('active', 'completed', 'cancelled') |
 | `created_at` | timestamp with time zone | timestamptz | nullable, updatable | now() | - |
 
@@ -539,9 +542,11 @@
 | Column Name | Data Type | Format | Options | Default Value | Constraints |
 |------------|-----------|--------|---------|---------------|-------------|
 | `id` | uuid | uuid | updatable | gen_random_uuid() | PRIMARY KEY |
-| `user_id` | text | text | updatable | - | - |
-| `name` | text | text | updatable | - | - |
+| `user_id` | text | text | nullable, updatable | - | - |
+| `name` | text | text | updatable | - | UNIQUE(user_id, lower(trim(name)), type) |
 | `type` | text | text | updatable | - | CHECK: type IN ('expense', 'income') |
+| `catalog_entity_id` | uuid | uuid | nullable, updatable | - | FOREIGN KEY → catalog_entities.id |
+| `is_system` | boolean | bool | updatable | false | - |
 | `created_at` | timestamp with time zone | timestamptz | nullable, updatable | now() | - |
 
 ### Foreign Key References (Referenced By)
@@ -603,7 +608,7 @@
 | Column Name | Data Type | Format | Options | Default Value | Constraints |
 |------------|-----------|--------|---------|---------------|-------------|
 | `id` | uuid | uuid | updatable | gen_random_uuid() | PRIMARY KEY |
-| `user_id` | text | text | updatable | - | - |
+| `user_id` | text | text | nullable, updatable | - | - |
 | `type` | text | text | updatable | - | - |
 | `title` | text | text | updatable | - | - |
 | `message` | text | text | updatable | - | - |
@@ -611,6 +616,7 @@
 | `action` | jsonb | jsonb | updatable | '{}'::jsonb | - |
 | `source` | text | text | updatable | 'rule'::text | - |
 | `status` | text | text | updatable | 'new'::text | CHECK: status IN ('new', 'viewed', 'accepted', 'dismissed') |
+| `catalog_entity_id` | uuid | uuid | nullable, updatable | - | FOREIGN KEY → catalog_entities.id |
 | `created_at` | timestamp with time zone | timestamptz | nullable, updatable | now() | - |
 | `expires_at` | timestamp with time zone | timestamptz | nullable, updatable | - | - |
 
@@ -708,7 +714,7 @@
 | Column Name | Data Type | Format | Options | Default Value | Constraints |
 |------------|-----------|--------|---------|---------------|-------------|
 | `id` | uuid | uuid | updatable | gen_random_uuid() | PRIMARY KEY |
-| `kind` | text | text | updatable | - | CHECK: kind IN ('bank', 'subscription', 'credit_card', 'merchant', 'category') |
+| `kind` | text | text | updatable | - | CHECK: kind IN ('bank', 'subscription', 'credit_card', 'merchant', 'category', 'service', 'loan') |
 | `name` | text | text | updatable | - | - |
 | `normalized_name` | text | text | nullable, updatable | - | - |
 | `icon_key` | text | text | nullable, updatable | - | - |

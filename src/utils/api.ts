@@ -1,28 +1,83 @@
 import { supabase } from '../lib/supabase';
+import { catalogService } from '../features/catalog/service';
 
 // Category Helper
-const getCategoryId = async (userId: string, name: string, type: 'expense' | 'income'): Promise<string | null> => {
-  if (!name) return null;
-  // Try finding existing
-  const { data } = await supabase.from('categories')
+const getCategoryId = async (
+  userId: string | null,
+  name: string,
+  type: 'expense' | 'income',
+  catalogEntityId?: string | null,
+  isSystem?: boolean
+): Promise<string | null> => {
+  if (!name && !catalogEntityId) return null;
+
+  // 0. If catalogEntityId is provided, check if it has a default category
+  if (catalogEntityId) {
+    const { data: entity } = await supabase
+      .from('catalog_entities')
+      .select('default_category_id')
+      .eq('id', catalogEntityId)
+      .maybeSingle();
+
+    if (entity?.default_category_id) return entity.default_category_id;
+  }
+
+  // 1. Try finding existing (User-Specific or Global)
+  // Search for user's own version first
+  if (userId) {
+    const { data: userCat } = await supabase.from('categories')
+      .select('id')
+      .ilike('name', name)
+      .eq('type', type)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (userCat?.id) return userCat.id;
+  }
+
+  // 2. Search for Global System Category (No user_id)
+  const { data: globalCat } = await supabase.from('categories')
     .select('id')
-    .eq('user_id', userId)
     .ilike('name', name)
     .eq('type', type)
+    .is('user_id', null)
+    .eq('is_system', true)
     .maybeSingle();
 
-  if (data?.id) return data.id;
+  if (globalCat?.id) return globalCat.id;
 
-  // Create new
-  await supabase.from('categories')
-    .insert([{ user_id: userId, name, type }]);
-
-  // Fetch back to avoid 'select' on POST (400 Bad Request avoidance)
-  const { data: newCat } = await supabase.from('categories')
+  // 3. Search in Catalog Entities (kind = 'category')
+  const { data: catalogEnt } = await supabase.from('catalog_entities')
     .select('id')
-    .eq('user_id', userId)
+    .eq('kind', 'category')
     .ilike('name', name)
-    .eq('type', type)
+    .maybeSingle();
+
+  // If found in catalog, create a Global System Category row for it
+  if (catalogEnt?.id) {
+    const { data: newGlobalCat } = await supabase.from('categories')
+      .insert([{
+        user_id: null,
+        name,
+        type,
+        catalog_entity_id: catalogEnt.id,
+        is_system: true
+      }])
+      .select('id')
+      .maybeSingle();
+
+    if (newGlobalCat?.id) return newGlobalCat.id;
+  }
+
+  // 4. Default: Create as User-Specific if not found in catalog
+  const { data: newCat } = await supabase.from('categories')
+    .insert([{
+      user_id: userId,
+      name: name || 'Uncategorized',
+      type,
+      catalog_entity_id: catalogEntityId || null,
+      is_system: isSystem || false
+    }])
+    .select('id')
     .maybeSingle();
 
   return newCat?.id || null;
@@ -85,29 +140,37 @@ export const api = {
       .from('transactions')
       .select(`
         *,
-        categories (name)
+        categories (name),
+        catalog_entities (name, logo_url)
       `)
       .eq('user_id', userId)
       .eq('type', 'expense')
-      .order('txn_date', { ascending: false });
+      .order('transaction_date', { ascending: false });
 
     const expenses = (data || []).map((t: any) => ({
       id: t.id,
-      description: t.note || '',
+      description: t.description || '',
       amount: t.amount,
       category: t.categories?.name || 'Uncategorized',
-      date: t.txn_date,
+      date: t.transaction_date,
       tags: t.tags || [],
       accountId: t.account_id,
       createdAt: t.created_at,
       catalogEntityId: t.catalog_entity_id,
-      merchantName: t.merchant_name
+      merchantName: t.catalog_entities?.name || t.description || '',
+      logoUrl: t.catalog_entities?.logo_url
     }));
     return { success: !error, expenses };
   },
 
   async createExpense(userId: string, data: any) {
-    const categoryId = await getCategoryId(userId, data.category, 'expense');
+    // 1. Resolve Catalog Entity if not explicitly provided
+    let catalogEntityId = data.catalogEntityId;
+    if (!catalogEntityId && data.description) {
+      catalogEntityId = await catalogService.resolveEntity(userId, data.description);
+    }
+
+    const categoryId = await getCategoryId(userId, data.category, 'expense', catalogEntityId);
 
     // FX handling: default to 1:1 if not provided
     const fxRate = data.fxRate || 1;
@@ -121,10 +184,8 @@ export const api = {
       currency_code: data.currency || 'INR',
       base_currency_code: data.baseCurrency || 'INR',
       base_amount: baseAmount,
-      fx_rate: fxRate,
-      fx_date: data.date.split('T')[0], // New required field
-      txn_date: data.date,
-      note: data.description,
+      transaction_date: data.date,
+      description: data.description,
       account_id: data.accountId,
       category_id: categoryId,
       tags: data.tags || [],
@@ -147,8 +208,7 @@ export const api = {
       expense: txn ? {
         ...data,
         id: txn.id,
-        createdAt: txn.created_at,
-        category: data.category // Keep passed value for UI
+        createdAt: txn.created_at
       } : { ...data, id: data.id || `temp_${Date.now()}` }
     };
   },
@@ -159,9 +219,9 @@ export const api = {
       updates.amount = data.amount;
       updates.base_amount = data.baseAmount || data.amount; // Basic assumption if no complex FX
     }
-    if (data.description) updates.note = data.description;
+    if (data.description) updates.description = data.description;
     if (data.date) {
-      updates.txn_date = data.date;
+      updates.transaction_date = data.date;
       updates.fx_date = data.date.split('T')[0];
     }
     if (data.tags) updates.tags = data.tags;
@@ -191,27 +251,33 @@ export const api = {
   async getIncomes(userId: string) {
     const { data, error } = await supabase
       .from('transactions')
-      .select(`*, categories (name)`)
+      .select(`
+        *,
+        categories (name),
+        catalog_entities (name, logo_url)
+      `)
       .eq('user_id', userId)
       .eq('type', 'income')
-      .order('txn_date', { ascending: false });
+      .order('transaction_date', { ascending: false });
 
     const incomes = (data || []).map((t: any) => ({
       id: t.id,
-      source: t.note || '',
+      source: t.description || '',
       amount: t.amount,
-      date: t.txn_date,
+      date: t.transaction_date,
       tags: t.tags || [],
       accountId: t.account_id,
       createdAt: t.created_at,
       catalogEntityId: t.catalog_entity_id,
-      category: t.categories?.name || 'Income'
+      category: t.categories?.name || 'Income',
+      merchantName: t.catalog_entities?.name || t.description || '',
+      logoUrl: t.catalog_entities?.logo_url
     }));
     return { success: !error, incomes };
   },
 
   async createIncome(userId: string, data: any) {
-    const categoryId = await getCategoryId(userId, data.category || 'Income', 'income');
+    const categoryId = await getCategoryId(userId, data.category || 'Income', 'income', data.catalogEntityId);
 
     const fxRate = data.fxRate || 1;
     const amount = data.amount;
@@ -224,10 +290,8 @@ export const api = {
       currency_code: data.currency || 'INR',
       base_currency_code: data.baseCurrency || 'INR',
       base_amount: baseAmount,
-      fx_rate: fxRate,
-      fx_date: data.date.split('T')[0], // New required field
-      txn_date: data.date,
-      note: data.source || data.description || 'Income', // Fixed: note instead of description
+      transaction_date: data.date,
+      description: data.source || data.description || 'Income', // Fixed: description instead of source
       account_id: data.accountId,
       category_id: categoryId,
       tags: data.tags || [],
@@ -250,8 +314,7 @@ export const api = {
       income: txn ? {
         ...data,
         id: txn.id,
-        createdAt: txn.created_at,
-        category: data.category || 'Income'
+        createdAt: txn.created_at
       } : { ...data, id: data.id || `temp_${Date.now()}` }
     };
   },
@@ -263,10 +326,10 @@ export const api = {
       updates.base_amount = data.baseAmount || data.amount;
     }
     if (data.source || data.description) {
-      updates.note = data.source || data.description;
+      updates.description = data.source || data.description;
     }
     if (data.date) {
-      updates.txn_date = data.date;
+      updates.transaction_date = data.date;
       updates.fx_date = data.date.split('T')[0];
     }
     if (data.tags) updates.tags = data.tags;
@@ -304,7 +367,7 @@ export const api = {
         id: a.id,
         name: a.name,
         type: a.type,
-        balance: a.current_balance,
+        cachedBalance: a.cached_balance,
         openingBalance: a.opening_balance,
         minBuffer: a.min_buffer,
         createdAt: a.created_at,
@@ -324,14 +387,14 @@ export const api = {
       user_id: userId,
       type: 'transfer',
       amount: data.amount,
-      txn_date: data.date,
+      transaction_date: data.date,
       fx_date: data.date.split('T')[0],
-      note: data.description,
+      description: data.description,
       account_id: data.sourceId,
       to_account_id: data.destinationId,
       currency_code: 'INR',
       base_currency_code: 'INR',
-      fx_rate: 1,
+      exchange_rate: 1,
       base_amount: data.amount,
       tags: ['transfer']
     };
@@ -349,8 +412,8 @@ export const api = {
       name: data.name,
       type: data.type || 'bank',
       currency_code: data.currency || 'INR',
-      opening_balance: data.balance || 0,
-      current_balance: 0, // Will be updated by ledger entry trigger
+      opening_balance: data.cachedBalance || 0,
+      cached_balance: 0, // Will be updated by ledger entry trigger
       min_buffer: data.minBuffer || 500,
       is_active: true
     };
@@ -360,16 +423,19 @@ export const api = {
       .select().single();
 
     if (account && account.opening_balance !== 0) {
-      // Create initial ledger entry for opening balance
-      await supabase.from('ledger_entries').insert([{
+      // Golden Write Path: Opening Balance is a transaction
+      // This will automatically trigger the ledger entry via DB triggers
+      await supabase.from('transactions').insert([{
         user_id: userId,
-        account_id: account.id,
-        direction: 'IN',
+        type: 'income',
         amount: account.opening_balance,
         currency_code: account.currency_code,
+        base_currency_code: account.currency_code,
         base_amount: account.opening_balance,
-        note: 'Opening Balance',
-        txn_date: new Date().toISOString().split('T')[0]
+        description: 'Opening Balance',
+        transaction_date: new Date().toISOString().split('T')[0],
+        account_id: account.id,
+        tags: ['opening-balance']
       }]);
     }
 
@@ -379,7 +445,7 @@ export const api = {
         id: account.id,
         name: account.name,
         type: account.type,
-        balance: account.current_balance,
+        cachedBalance: account.cached_balance,
         openingBalance: account.opening_balance,
         minBuffer: account.min_buffer,
         createdAt: account.created_at,
@@ -411,7 +477,7 @@ export const api = {
         id: account.id,
         name: account.name,
         type: account.type,
-        balance: account.current_balance,
+        cachedBalance: account.cached_balance,
         openingBalance: account.opening_balance,
         minBuffer: account.min_buffer,
         createdAt: account.created_at,
@@ -433,7 +499,9 @@ export const api = {
 
   // --- Goals (goals table) ---
   async getGoals(userId: string) {
-    const { data, error } = await supabase.from('goals').select('*').eq('user_id', userId);
+    const { data, error } = await supabase.from('goals')
+      .select('*, categories(name)')
+      .eq('user_id', userId);
     const goals = (data || []).map((g: any) => ({
       id: g.id,
       name: g.name,
@@ -441,7 +509,8 @@ export const api = {
       currentAmount: g.current_amount,
       currency: g.currency_code,
       deadline: g.deadline,
-      category: g.category,
+      categoryId: g.category_id,
+      category: g.categories?.name || 'Uncategorized',
       status: g.status,
       createdAt: g.created_at
     }));
@@ -449,6 +518,7 @@ export const api = {
   },
 
   async createGoal(userId: string, data: any) {
+    const categoryId = await getCategoryId(userId, data.category || 'Goals', 'expense');
     const payload: any = {
       user_id: userId,
       name: data.name,
@@ -456,7 +526,7 @@ export const api = {
       current_amount: data.currentAmount || 0,
       currency_code: data.currency || 'INR',
       deadline: data.deadline,
-      category: data.category,
+      category_id: categoryId,
       status: data.status || 'active'
     };
 
@@ -466,7 +536,7 @@ export const api = {
 
     const { data: goal, error } = await supabase.from('goals')
       .insert([payload])
-      .select().single();
+      .select('*, categories(name)').single();
 
     return {
       success: !error,
@@ -477,7 +547,8 @@ export const api = {
         currentAmount: goal.current_amount,
         currency: goal.currency_code,
         deadline: goal.deadline,
-        category: goal.category,
+        categoryId: goal.category_id,
+        category: goal.categories?.name,
         status: goal.status,
         createdAt: goal.created_at
       } : null
@@ -491,12 +562,15 @@ export const api = {
     if (data.currentAmount !== undefined) updates.current_amount = data.currentAmount;
     if (data.status) updates.status = data.status;
     if (data.deadline) updates.deadline = data.deadline;
+    if (data.category) {
+      updates.category_id = await getCategoryId(userId, data.category, 'expense');
+    }
 
     const { data: goal, error } = await supabase.from('goals')
       .update(updates)
       .eq('id', goalId)
       .eq('user_id', userId)
-      .select().single();
+      .select('*, categories(name)').single();
 
     return {
       success: !error,
@@ -507,7 +581,8 @@ export const api = {
         currentAmount: goal.current_amount,
         currency: goal.currency_code,
         deadline: goal.deadline,
-        category: goal.category,
+        categoryId: goal.category_id,
+        category: goal.categories?.name,
         status: goal.status,
         createdAt: goal.created_at
       } : null
@@ -750,11 +825,18 @@ export const api = {
       liabilityId: s.entity_kind === 'loan' ? s.entity_id : undefined,
       goalId: s.entity_kind === 'goal' ? s.entity_id : undefined,
       investmentId: s.entity_kind === 'investment' ? s.entity_id : undefined,
+      status: s.status || 'active'
     }));
     return { success: !error, recurring };
   },
 
   async createRecurring(userId: string, data: any) {
+    // 1. Resolve Catalog Entity
+    let catalogEntityId = data.catalogEntityId;
+    if (!catalogEntityId && (data.description || data.name)) {
+      catalogEntityId = await catalogService.resolveEntity(userId, data.description || data.name);
+    }
+
     const payload: any = {
       user_id: userId,
       type: data.type || 'expense',
@@ -769,8 +851,8 @@ export const api = {
       due_day: data.dueDay || (data.startDate ? new Date(data.startDate).getDate() : null),
       last_generated_date: data.lastGeneratedDate || null,
       interval: data.interval || 1,
-      tags: data.tags || [],
       category_id: data.categoryId,
+      catalog_entity_id: catalogEntityId || null,
       kind: data.kind || (data.type === 'income' ? 'income' : 'subscription'),
       reminder_enabled: data.reminderEnabled ?? true,
       is_mandate_suggested: data.isMandateSuggested,

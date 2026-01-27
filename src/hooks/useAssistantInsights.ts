@@ -21,14 +21,14 @@ export const useAssistantInsights = ({
     const totalBankBalance = useMemo(() => {
         return accounts
             .filter(acc => acc.type === 'bank' || acc.type === 'cash')
-            .reduce((sum, acc) => sum + acc.balance, 0);
+            .reduce((sum, acc) => sum + acc.cachedBalance, 0);
     }, [accounts]);
 
     // 1.1 Total Credit Usage
     const totalCreditUsage = useMemo(() => {
         return accounts
             .filter(acc => acc.type === 'credit_card')
-            .reduce((sum, acc) => sum + Math.abs(acc.balance), 0);
+            .reduce((sum, acc) => sum + Math.abs(acc.cachedBalance), 0);
     }, [accounts]);
 
     // 2. Commitments (Liabilities EMI + Recurring Expenses)

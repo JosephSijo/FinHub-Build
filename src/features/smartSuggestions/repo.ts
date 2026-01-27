@@ -40,10 +40,14 @@ export const suggestionsRepo = {
      */
     async createSuggestion(data: Omit<SmartSuggestion, 'id' | 'created_at'>): Promise<SmartSuggestion | null> {
         try {
+            const payload = {
+                ...data,
+                catalog_entity_id: data.catalog_entity_id || null
+            };
             const response = await fetch(`${SUPABASE_REST}/smart_suggestions`, {
                 method: 'POST',
                 headers: { ...headers, 'Prefer': 'return=representation' },
-                body: JSON.stringify(data)
+                body: JSON.stringify(payload)
             });
             const result = await response.json();
             return Array.isArray(result) ? result[0] : result;

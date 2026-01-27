@@ -196,7 +196,7 @@ export const AdvancedInsights: React.FC<AdvancedInsightsProps> = React.memo(({
         const scoreSpend = scoreLeakage;
 
         // Buffer/Velocity Scoring
-        const currentM1 = accounts.filter(a => a.type === 'bank' || a.type === 'cash').reduce((sum, a) => sum + a.balance, 0);
+        const currentM1 = accounts.filter(a => a.type === 'bank' || a.type === 'cash').reduce((sum, a) => sum + a.cachedBalance, 0);
         const currentVelocity = currentM1 > 0 ? (totalSpent / currentM1) : 0;
 
         let scoreBuffer = 50;

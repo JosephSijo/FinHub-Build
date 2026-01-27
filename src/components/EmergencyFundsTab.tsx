@@ -46,7 +46,7 @@ interface Account {
   id: string;
   name: string;
   type: string;
-  balance: number;
+  cachedBalance: number;
   icon: string;
 }
 
@@ -149,7 +149,7 @@ export function EmergencyFundsTab({ currency, expenses = [], accounts = [], onEm
         toast.error('Account not found');
         return;
       }
-      if (account.balance < amount) {
+      if (account.cachedBalance < amount) {
         toast.error('Insufficient account balance');
         return;
       }
@@ -780,7 +780,7 @@ export function EmergencyFundsTab({ currency, expenses = [], accounts = [], onEm
                           <span>{account.icon}</span>
                           <span className="font-bold">{account.name}</span>
                           <span className="text-[10px] text-slate-500 font-black">
-                            ({formatCurrency(account.balance, currency)})
+                            ({formatCurrency(account.cachedBalance, currency)})
                           </span>
                         </div>
                       </SelectItem>

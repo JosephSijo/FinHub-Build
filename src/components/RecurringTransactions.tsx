@@ -5,7 +5,9 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Plus, Trash2, RefreshCw, Calendar, Edit2, TrendingDown, Sparkles, Wallet, ArrowUpRight, Brain } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Calendar, Edit2, TrendingDown, Sparkles, Wallet, ArrowUpRight, Brain, Zap } from 'lucide-react';
+import { calculateSubscriptionROI } from '../utils/subscriptionROI';
+import { getCancellationStrategy } from '../utils/smartCancellation';
 import { MONEY_OUT_CATEGORIES, RecurringTransaction } from '../types';
 import { useFinance } from '../context/FinanceContext';
 import { formatCurrency } from '../utils/numberFormat';
@@ -15,6 +17,8 @@ import { LiabilityDashboard } from './LiabilityDashboard';
 import { BillLateFlag } from './BillLateFlag';
 import { toast } from 'sonner';
 import { Switch } from './ui/switch';
+import { CancellationFlowModal } from './CancellationFlowModal';
+import { ShieldAlert } from 'lucide-react';
 
 export function RecurringTransactions() {
   const {
@@ -57,25 +61,53 @@ export function RecurringTransactions() {
 
   // Helper component for categorized lists
   const RecurringCard = ({ rec }: { rec: RecurringTransaction }) => {
+    const { updateRecurringTransaction, expenses, currency } = useFinance();
+    const isSubscription = rec.kind === 'subscription';
+
+    // Calculate ROI for subscriptions
+    const roi = isSubscription ? calculateSubscriptionROI(rec, expenses) : null;
+
+    // Calculate Smart Cancellation Strategy
+    const cancelStrategy = isSubscription ? getCancellationStrategy(rec) : null;
+
+    const handleLogUse = async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const currentCount = rec.manualUsageCount || 0;
+      await updateRecurringTransaction(rec.id, {
+        manualUsageCount: currentCount + 1,
+        lastUsedAt: new Date().toISOString()
+      });
+      toast.success(`Logged use for ${rec.description || 'subscription'}`, {
+        icon: '⚡'
+      });
+    };
     const account = accounts.find(a => a.id === rec.accountId);
     const liability = liabilities.find(l => l.id === rec.liabilityId);
     const progress = liability ? Math.max(0, Math.min(100, ((liability.principal - liability.outstanding) / liability.principal) * 100)) : 0;
 
     return (
-      <Card className="p-6 bg-slate-900/40 border-white/5 rounded-[28px] border hover:bg-slate-900/60 transition-all duration-300 group relative overflow-hidden">
+      <Card className={`p-6 bg-slate-900/40 border-white/5 rounded-[28px] border hover:bg-slate-900/60 transition-all duration-300 group relative overflow-hidden ${rec.status === 'cancelled' ? 'opacity-50 grayscale' : ''}`}>
         <div className={`absolute top-0 right-0 w-24 h-24 blur-3xl opacity-5 -mr-12 -mt-12 transition-opacity group-hover:opacity-20 ${rec.type === 'income' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
 
         <div className="flex items-start justify-between mb-8 relative z-10">
           <div className="flex items-center gap-4">
             <div className={`w-14 h-14 border border-white/5 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform text-2xl ${rec.type === 'income' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
               }`}>
-              {rec.type === 'income' ? '💰' : liability ? '🏦' : '💸'}
+              {rec.status === 'cancelled' ? '🚫' : rec.type === 'income' ? '💰' : liability ? '🏦' : '💸'}
             </div>
             <div className="min-w-0">
-              <h3 className="text-base font-bold text-slate-100 truncate flex items-center gap-2">
-                <span className="opacity-40 text-xs">🔄</span> {rec.description || rec.source}
-                <BillLateFlag recurring={rec} />
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-100 truncate flex items-center gap-2">
+                  <span className="opacity-40 text-xs">🔄</span> {rec.description || rec.source}
+                  <BillLateFlag recurring={rec} />
+                </h3>
+                {rec.status === 'cancellation_pending' && (
+                  <span className="bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter border border-amber-500/20">Pending Cancel</span>
+                )}
+                {rec.status === 'cancelled' && (
+                  <span className="bg-rose-500/20 text-rose-400 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter border border-rose-500/20">Cancelled</span>
+                )}
+              </div>
               <p className="text-[10px] uppercase font-black tracking-widest text-slate-600 mt-1">
                 {getFrequencyLabel(rec.frequency)} {rec.kind === 'bill' ? '• Bill' : liability ? '• Loan' : rec.kind === 'subscription' ? '• Subscription' : ''}
                 {rec.endDate ? ` • Until ${new Date(rec.endDate).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}` : ' • Ongoing'}
@@ -83,11 +115,24 @@ export function RecurringTransactions() {
             </div>
           </div>
           <div className="flex bg-slate-900/80 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
+            {isSubscription && rec.status !== 'cancelled' && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleCancelInitiate(rec)}
+                  className={`w-10 h-10 p-0 hover:bg-rose-500/10 ${rec.status === 'cancellation_pending' ? 'text-amber-400' : 'text-slate-500 hover:text-rose-400'}`}
+                >
+                  <ShieldAlert className="w-4 h-4" />
+                </Button>
+                <div className="w-px bg-white/10 my-2" />
+              </>
+            )}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleEdit(rec)}
-              className="w-10 h-10 p-0 rounded-l-xl hover:bg-slate-800 text-slate-500 hover:text-indigo-400"
+              className="w-10 h-10 p-0 hover:bg-slate-800 text-slate-500 hover:text-indigo-400"
             >
               <Edit2 className="w-4 h-4" />
             </Button>
@@ -96,12 +141,60 @@ export function RecurringTransactions() {
               variant="ghost"
               size="sm"
               onClick={() => handleDelete(rec)}
-              className="w-10 h-10 p-0 rounded-r-xl hover:bg-rose-500/10 hover:text-rose-400 text-slate-500 hover:text-rose-400"
+              className="w-10 h-10 p-0 rounded-r-xl hover:bg-rose-500/10 hover:text-rose-400 text-slate-500"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         </div>
+
+        {/* ROI Overlay for subscriptions */}
+        {isSubscription && roi && (
+          <div className="mb-4 flex items-center gap-3 relative z-10 px-1">
+            <div className={`px-2.5 py-1 rounded-full text-[10px] font-black flex items-center gap-1.5 ${roi.isPoorROI ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+              }`}>
+              <Zap className="w-3 h-3" />
+              {formatCurrency(roi.costPerUse, currency)} / use
+            </div>
+            <span className="text-[10px] font-bold text-slate-500">
+              {roi.totalUsage} {roi.totalUsage === 1 ? 'use' : 'uses'} this month
+            </span>
+          </div>
+        )}
+
+
+        {/* Smart Cancellation Alert */}
+        {
+          isSubscription && cancelStrategy && (
+            <div className={`mb-4 p-3 rounded-xl border flex items-start gap-3 relative z-10 ${cancelStrategy.urgency === 'high' ? 'bg-rose-500/10 border-rose-500/20' :
+              cancelStrategy.urgency === 'medium' ? 'bg-amber-500/10 border-amber-500/20' :
+                'bg-indigo-500/10 border-indigo-500/20'
+              }`}>
+              <div className={`mt-0.5 ${cancelStrategy.urgency === 'high' ? 'text-rose-400' :
+                cancelStrategy.urgency === 'medium' ? 'text-amber-400' :
+                  'text-indigo-400'
+                }`}>
+                <Brain className="w-4 h-4" />
+              </div>
+              <div>
+                <p className={`text-[10px] font-black uppercase tracking-wider mb-0.5 ${cancelStrategy.urgency === 'high' ? 'text-rose-400' :
+                  cancelStrategy.urgency === 'medium' ? 'text-amber-400' :
+                    'text-indigo-400'
+                  }`}>
+                  {cancelStrategy.reason}
+                </p>
+                <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                  {cancelStrategy.message}
+                </p>
+                {cancelStrategy.savings > 0 && (
+                  <p className="text-[10px] text-emerald-400 font-bold mt-1">
+                    Save {formatCurrency(cancelStrategy.savings, currency)}
+                  </p>
+                )}
+              </div>
+            </div>
+          )
+        }
 
         <div className="space-y-6 relative z-10">
           <div className="flex justify-between items-end">
@@ -163,13 +256,23 @@ export function RecurringTransactions() {
                   {rec.category}
                 </div>
               )}
-              <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-lg shadow-inner">
-                {account?.icon || '🏦'}
+              <div className="flex items-center gap-2">
+                {isSubscription && (
+                  <Button
+                    onClick={handleLogUse}
+                    className="h-8 rounded-lg bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-600/20 text-[10px] font-black uppercase tracking-tight px-3"
+                  >
+                    Log Use
+                  </Button>
+                )}
+                <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-lg shadow-inner">
+                  {account?.icon || '🏦'}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </Card>
+      </Card >
     );
   };
 
@@ -177,6 +280,17 @@ export function RecurringTransactions() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [selectedForCancel, setSelectedForCancel] = useState<RecurringTransaction | null>(null);
+
+  const handleCancelInitiate = (rec: RecurringTransaction) => {
+    setSelectedForCancel(rec);
+    setIsCancelModalOpen(true);
+  };
+
+  const handleStatusUpdate = async (id: string, newStatus: string) => {
+    await updateRecurringTransaction(id, { status: newStatus });
+  };
 
   const [formData, setFormData] = useState({
     type: 'expense' as 'expense' | 'income',
@@ -1032,6 +1146,14 @@ export function RecurringTransactions() {
           </div>
         </DialogContent>
       </Dialog>
+      {selectedForCancel && (
+        <CancellationFlowModal
+          isOpen={isCancelModalOpen}
+          onOpenChange={setIsCancelModalOpen}
+          subscription={selectedForCancel}
+          onStatusUpdate={handleStatusUpdate}
+        />
+      )}
     </>
   );
 }

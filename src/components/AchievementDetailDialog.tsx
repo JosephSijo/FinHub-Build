@@ -11,38 +11,120 @@ interface AchievementDetailDialogProps {
   achievementId: string | null;
 }
 
+const GRAFFITI_COLORS = ['#3B82F6', '#6366F1', '#8B5CF6', '#D946EF', '#F43F5E', '#FB8C00', '#FACC15', '#22C55E'];
+const GRAFFITI_SHAPES = ['rect', 'triangle', 'splat'];
+
+function GraffitiBurst({ side }: { side: 'left' | 'right' }) {
+  const particles = Array.from({ length: 24 }).map((_, i) => ({
+    id: i,
+    color: GRAFFITI_COLORS[Math.floor(Math.random() * GRAFFITI_COLORS.length)],
+    shape: GRAFFITI_SHAPES[Math.floor(Math.random() * GRAFFITI_SHAPES.length)],
+    size: Math.random() * 12 + 8,
+    delay: Math.random() * 0.5,
+    duration: Math.random() * 1.5 + 2.5, // Slower (2.5s to 4s)
+    angle: side === 'left' ? (Math.random() * 70 - 20) : (Math.random() * 70 + 130),
+    distance: Math.random() * 350 + 250, // More travel
+    rotation: Math.random() * 720, // More spinning
+  }));
+
+  return (
+    <div className={`absolute bottom-0 ${side === 'left' ? 'left-0' : 'right-0'} pointer-events-none z-20`}>
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute"
+          initial={{
+            x: 0,
+            y: 0,
+            scale: 0,
+            rotate: 0,
+            opacity: 1
+          }}
+          animate={{
+            x: Math.cos(p.angle * (Math.PI / 180)) * p.distance,
+            y: -Math.sin(p.angle * (Math.PI / 180)) * p.distance,
+            scale: [0, 1, 0.5, 0],
+            rotate: p.rotation + 360,
+            opacity: [1, 1, 1, 0],
+          }}
+          transition={{
+            duration: p.duration,
+            delay: p.delay,
+            ease: [0.23, 1, 0.32, 1], // Strong burst feel
+          }}
+        >
+          {p.shape === 'rect' && (
+            <div
+              style={{
+                width: p.size,
+                height: p.size * 1.5,
+                backgroundColor: p.color,
+                borderRadius: '2px',
+                transform: 'rotate(15deg)'
+              }}
+            />
+          )}
+          {p.shape === 'triangle' && (
+            <div
+              style={{
+                width: 0,
+                height: 0,
+                borderLeft: `${p.size / 2}px solid transparent`,
+                borderRight: `${p.size / 2}px solid transparent`,
+                borderBottom: `${p.size}px solid ${p.color}`,
+              }}
+            />
+          )}
+          {p.shape === 'splat' && (
+            <div
+              style={{
+                width: p.size,
+                height: p.size,
+                backgroundColor: p.color,
+                borderRadius: '50%',
+                boxShadow: `0 0 10px ${p.color}44`,
+              }}
+            />
+          )}
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
 export function AchievementDetailDialog({
   isOpen,
   onClose,
   achievementId
 }: AchievementDetailDialogProps) {
   const [quote, setQuote] = useState(getRandomQuote());
+  const [showBurst, setShowBurst] = useState(false);
 
   useEffect(() => {
     if (isOpen && achievementId) {
       queueMicrotask(() => {
         setQuote(getRandomQuote());
       });
+      setShowBurst(true);
+      const timer = setTimeout(() => setShowBurst(false), 5000); // Stay longer (5s)
 
-      // Paper pieces throwing from both sides (Confetti Canon)
-      const duration = 3 * 1000;
+      // Keep the existing subtle paper confetti as a baseline
+      const duration = 2 * 1000;
       const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
-
-      const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+      const defaults = { startVelocity: 45, spread: 70, ticks: 60, zIndex: 100, colors: ['#FACC15', '#FB8C00', '#F43F5E'] };
 
       const interval: any = setInterval(function () {
         const timeLeft = animationEnd - Date.now();
+        if (timeLeft <= 0) return clearInterval(interval);
 
-        if (timeLeft <= 0) {
-          return clearInterval(interval);
-        }
-
-        const particleCount = 50 * (timeLeft / duration);
-        // since particles fall down, start a bit higher than random
-        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+        confetti({ ...defaults, particleCount: 15, origin: { x: 0, y: 0.8 }, angle: 60 });
+        confetti({ ...defaults, particleCount: 15, origin: { x: 1, y: 0.8 }, angle: 120 });
       }, 250);
+
+      return () => {
+        clearTimeout(timer);
+        clearInterval(interval);
+      };
     }
   }, [isOpen, achievementId]);
 
@@ -54,6 +136,14 @@ export function AchievementDetailDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[320px] sm:w-[480px] bg-slate-950 border-[#38383A] p-0 overflow-hidden rounded-[40px] shadow-2xl transition-all duration-500">
+        {/* Graffiti Burst Layers */}
+        {showBurst && (
+          <>
+            <GraffitiBurst side="left" />
+            <GraffitiBurst side="right" />
+          </>
+        )}
+
         {/* Subtle Ambient Blobs (Toned down) */}
         <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-500 blur-[100px] opacity-10 -mr-24 -mt-24" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500 blur-[80px] opacity-5 -ml-16 -mb-16" />

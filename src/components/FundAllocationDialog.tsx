@@ -70,8 +70,8 @@ export function FundAllocationDialog({
       const liquidAccounts = accounts.filter(a => a.type === 'bank' || a.type === 'cash');
       if (liquidAccounts.length > 0) {
         // Suggest account with enough balance, or highest balance
-        const bestFit = liquidAccounts.find(a => a.balance >= availableToSpend) ||
-          [...liquidAccounts].sort((a, b) => b.balance - a.balance)[0];
+        const bestFit = liquidAccounts.find(a => a.cachedBalance >= availableToSpend) ||
+          [...liquidAccounts].sort((a, b) => b.cachedBalance - a.cachedBalance)[0];
         if (bestFit) {
           queueMicrotask(() => {
             setSelectedAccountId(bestFit.id);
@@ -127,7 +127,7 @@ export function FundAllocationDialog({
       toast.error('Please enter a valid amount');
       return;
     }
-    if (selectedAccount && amountNum > selectedAccount.balance) {
+    if (selectedAccount && amountNum > selectedAccount.cachedBalance) {
       toast.error('Insufficient balance in selected account');
       return;
     }
@@ -228,7 +228,7 @@ export function FundAllocationDialog({
                     <CyberButton
                       onClick={() => {
                         handleAutoFill();
-                        if (selectedAccount && availableToSpend > selectedAccount.balance) {
+                        if (selectedAccount && availableToSpend > selectedAccount.cachedBalance) {
                           toast.warning('Transfer exceeds selected account balance. Source adjusted.');
                         }
                       }}
@@ -252,7 +252,7 @@ export function FundAllocationDialog({
                         <div className="flex items-center justify-between w-full">
                           <span>{account.icon} {account.name}</span>
                           <span className="text-[10px] text-slate-500 ml-4 font-mono">
-                            {formatCurrency(account.balance, currency)}
+                            {formatCurrency(account.cachedBalance, currency)}
                           </span>
                         </div>
                       </SelectItem>
@@ -261,7 +261,7 @@ export function FundAllocationDialog({
                 </Select>
                 {selectedAccount && (
                   <p className="text-[10px] text-slate-500 mt-2 italic px-1">
-                    Available Cash: {formatCurrency(selectedAccount.balance, currency)}
+                    Available Cash: {formatCurrency(selectedAccount.cachedBalance, currency)}
                   </p>
                 )}
               </div>
@@ -336,7 +336,7 @@ export function FundAllocationDialog({
                     step="0.01"
                   />
                 </div>
-                {selectedAccount && amountNum > selectedAccount.balance && (
+                {selectedAccount && amountNum > selectedAccount.cachedBalance && (
                   <div className="flex items-center gap-2 text-sm text-red-600">
                     <AlertCircle className="w-4 h-4" />
                     <span>Amount exceeds available balance</span>
@@ -382,7 +382,7 @@ export function FundAllocationDialog({
                   <div className="mt-4 space-y-2.5">
                     <div className="flex justify-between text-[11px] font-medium">
                       <span className="text-slate-400 uppercase tracking-tighter">Current Balance</span>
-                      <span className="font-mono text-white">{formatCurrency(selectedAccount?.balance || 0, currency)}</span>
+                      <span className="font-mono text-white">{formatCurrency(selectedAccount?.cachedBalance || 0, currency)}</span>
                     </div>
                     <div className="flex justify-between text-[11px] font-bold text-rose-500">
                       <span className="uppercase tracking-tighter">Debit Amount</span>
@@ -392,7 +392,7 @@ export function FundAllocationDialog({
                     <div className="flex justify-between text-xs font-black">
                       <span className="text-slate-500 uppercase tracking-widest">New Balance</span>
                       <span className="text-blue-400 font-mono">
-                        {formatCurrency((selectedAccount?.balance || 0) - amountNum, currency)}
+                        {formatCurrency((selectedAccount?.cachedBalance || 0) - amountNum, currency)}
                       </span>
                     </div>
                   </div>

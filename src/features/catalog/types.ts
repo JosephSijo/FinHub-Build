@@ -1,4 +1,4 @@
-export type CatalogKind = 'bank' | 'subscription' | 'credit_card' | 'merchant' | 'category';
+export type CatalogKind = 'bank' | 'subscription' | 'credit_card' | 'merchant' | 'category' | 'service' | 'loan';
 export type CatalogStatus = 'active' | 'pending' | 'blocked';
 
 export interface CatalogEntity {
@@ -16,6 +16,16 @@ export interface CatalogEntity {
     popularity_score: number;
     usage_count: number;
     status: CatalogStatus;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface UserCatalogMapping {
+    id: string;
+    user_id: string;
+    catalog_entity_id: string | null;
+    user_input_name: string;
+    normalized_name: string;
     created_at: string;
     updated_at: string;
 }

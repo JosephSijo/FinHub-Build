@@ -83,6 +83,7 @@ export const recurringService = {
         let transactionsCreated = 0;
 
         for (const rule of rules) {
+            if (rule.status === 'cancelled') continue;
             transactionsCreated += await this.backfillRule(userId, rule);
         }
 

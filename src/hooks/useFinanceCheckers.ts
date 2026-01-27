@@ -31,7 +31,7 @@ export const useFinanceCheckers = (state: any, actions: any) => {
 
         const { accounts: currentAccounts, goals: currentGoals, emergencyFundAmount: currentEF, liabilities: currentL, debts: currentD } = dataRef.current;
 
-        const totalLiquidBank = currentAccounts.reduce((sum: number, acc: any) => sum + (acc.type === 'bank' || acc.type === 'cash' ? acc.balance : 0), 0);
+        const totalLiquidBank = currentAccounts.reduce((sum: number, acc: any) => sum + (acc.type === 'bank' || acc.type === 'cash' ? acc.cachedBalance : 0), 0);
         const totalReserved = currentGoals.reduce((sum: number, g: any) => sum + g.currentAmount, 0) + currentEF;
         const availableLiquidity = Math.max(0, totalLiquidBank - totalReserved);
 
@@ -102,7 +102,7 @@ export const useFinanceCheckers = (state: any, actions: any) => {
                 if (achievement) {
                     addNotifications({
                         id: `achievement_${id}_${Date.now()}`,
-                        type: 'achievement', priority: 'high', category: 'system',
+                        type: 'achievement', priority: 'high', category: 'achievements',
                         title: 'New Achievement!', message: `You've unlocked: ${achievement.name}`,
                         timestamp: new Date(), read: false, achievementId: id
                     });
