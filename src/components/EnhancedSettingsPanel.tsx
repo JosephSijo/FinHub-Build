@@ -24,7 +24,7 @@ import {
   AlertDialogTrigger,
 } from './ui/alert-dialog';
 import { UserSettings, CURRENCY_SYMBOLS } from '../types';
-import { getAllAchievements } from '../utils/achievements';
+import { getAllAchievements, getLevelInfo } from '../utils/achievements';
 import { resolveApiKey, validateApiKey } from '../services/ai';
 import { toast } from 'sonner';
 import { useFinance } from '../context/FinanceContext';
@@ -778,14 +778,59 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
 
               <div className="h-px bg-white/5" />
 
-              {/* Achievements */}
+              {/* Achievements Engine */}
               <div className="space-y-6">
-                <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 flex items-center gap-2">
-                  <Trophy className="w-3.5 h-3.5 text-amber-500" />
-                  {COPY.settings.achievementLevel} ({settings.unlockedAchievements.length}/{allAchievements.length})
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 flex items-center gap-2">
+                    <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                    {COPY.settings.achievementLevel}
+                  </Label>
+                  <span className="text-[10px] font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                    {settings.unlockedAchievements.length}/{allAchievements.length}
+                  </span>
+                </div>
 
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                <div className="bg-slate-900/40 p-6 rounded-[32px] border border-white/5 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500 blur-3xl opacity-5 -mr-12 -mt-12" />
+
+                  {(() => {
+                    const levelInfo = getLevelInfo(settings.unlockedAchievements.length);
+                    return (
+                      <div className="space-y-4 relative z-10">
+                        <div className="flex items-end justify-between">
+                          <div>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Rank Status</p>
+                            <h4 className="text-xl font-black text-white tracking-tight">{levelInfo.title}</h4>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Level</p>
+                            <p className="text-2xl font-black text-amber-500">{levelInfo.level}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-slate-600">
+                            <span>Progress</span>
+                            <span>{Math.round(levelInfo.progress)}%</span>
+                          </div>
+                          <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 p-0.5">
+                            <div
+                              className="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(245,158,11,0.3)]"
+                              style={{ width: `${levelInfo.progress}%` }}
+                            />
+                          </div>
+                          {levelInfo.nextLevelAt && (
+                            <p className="text-[8px] font-bold text-slate-600 uppercase tracking-wide text-center pt-1">
+                              {levelInfo.nextLevelAt - settings.unlockedAchievements.length} more to level up
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 pt-2">
                   {allAchievements.map((achievement) => {
                     const isUnlocked = unlockedIds.has(achievement.id);
                     return (
@@ -801,6 +846,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                           ? 'border-amber-500/50 bg-amber-500/10 grayscale-0 hover:scale-110 hover:shadow-lg hover:shadow-amber-500/20 active:scale-95'
                           : 'border-white/5 bg-white/5 grayscale opacity-20 cursor-not-allowed'
                           }`}
+                        title={isUnlocked ? achievement.name : 'Locked'}
                       >
                         {achievement.icon}
                       </button>

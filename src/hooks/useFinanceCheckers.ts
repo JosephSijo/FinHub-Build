@@ -87,10 +87,10 @@ export const useFinanceCheckers = (state: any, actions: any) => {
             totalAccounts: currentA.length,
             savingsRate,
             monthlySpendingRatio,
-            notificationsEnabled: true,
-            aiInteractions: 1,
-            profileComplete: !!currentS.name && !!currentS.photoURL,
-            dailyLogin: true, // If they are checking this, they are logged in
+            notificationsEnabled: !!currentS.notificationsEnabled,
+            aiInteractions: currentS.aiInteractions || 0,
+            profileComplete: !!currentS.name && (!!currentS.photoURL || currentS.photoURL === ''),
+            dailyLogin: true,
             currentStreak: currentS.currentStreak || 1
         };
 
@@ -115,6 +115,21 @@ export const useFinanceCheckers = (state: any, actions: any) => {
             }));
         }
     }, [setSettings]);
+
+    useEffect(() => {
+        // Trigger check when data counts change
+        const timer = setTimeout(() => {
+            checkForAchievements();
+        }, 500); // Small debounce
+        return () => clearTimeout(timer);
+    }, [
+        state.expenses?.length,
+        state.incomes?.length,
+        state.goals?.length,
+        state.debts?.length,
+        state.accounts?.length,
+        checkForAchievements
+    ]);
 
     return useMemo(() => ({ checkSmartDues, checkForAchievements }), [checkSmartDues, checkForAchievements]);
 };

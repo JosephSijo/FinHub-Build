@@ -9,10 +9,11 @@ interface AIChatOverlayProps {
     onClose: () => void;
     context: AIContext;
     settings: any;
+    onUpdateSettings: (settings: any) => void;
     isOffline?: boolean;
 }
 
-export const AIChatOverlay: React.FC<AIChatOverlayProps> = React.memo(({ isOpen, onClose, context, settings, isOffline = false }) => {
+export const AIChatOverlay: React.FC<AIChatOverlayProps> = React.memo(({ isOpen, onClose, context, settings, onUpdateSettings, isOffline = false }) => {
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState<{ text: string, type: 'ai' | 'user' }[]>([
         { text: "Hello! I've analyzed your cash flow. How can I assist with your goals?", type: 'ai' }
@@ -33,6 +34,11 @@ export const AIChatOverlay: React.FC<AIChatOverlayProps> = React.memo(({ isOpen,
         setInput('');
         setMessages(prev => [...prev, { text: userMsg, type: 'user' }]);
         setIsLoading(true);
+
+        // Track interaction for achievements
+        onUpdateSettings({
+            aiInteractions: (settings.aiInteractions || 0) + 1
+        });
 
         try {
             if (isOffline) {

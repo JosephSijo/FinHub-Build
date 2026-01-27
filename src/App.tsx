@@ -715,6 +715,7 @@ export default function App() {
                 onClose={() => setIsAIAssistantOpen(false)}
                 context={aiContext}
                 settings={settings}
+                onUpdateSettings={updateSettings}
                 isOffline={isOffline}
               />
 

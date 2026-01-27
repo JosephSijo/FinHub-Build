@@ -7,7 +7,7 @@ export interface SAIResponse {
 
 const OPENAI_API_URL = import.meta.env.VITE_OPENAI_API_URL || 'https://api.openai.com/v1/chat/completions';
 const ANTHROPIC_API_URL = import.meta.env.VITE_ANTHROPIC_API_URL || 'https://api.anthropic.com/v1/messages';
-const GEMINI_BASE_URL = 'https://generative-language.googleapis.com/v1beta/models';
+const GEMINI_BASE_URL = import.meta.env.DEV ? '/api-gemini/v1beta/models' : 'https://generative-language.googleapis.com/v1beta/models';
 const DEEPSEEK_API_URL = import.meta.env.VITE_DEEPSEEK_API_URL || 'https://api.deepseek.com/chat/completions';
 const PERPLEXITY_API_URL = import.meta.env.VITE_PERPLEXITY_API_URL || 'https://api.perplexity.ai/chat/completions';
 

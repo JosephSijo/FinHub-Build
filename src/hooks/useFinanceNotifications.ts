@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { toast } from 'sonner';
 import { Notification } from '../types';
 
 export const useFinanceNotifications = (setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>) => {
@@ -48,6 +49,20 @@ export const useFinanceNotifications = (setNotifications: React.Dispatch<React.S
                                 category: notif.category
                             }
                         }]
+                    });
+                }
+            });
+        } else {
+            // Web/Browser Toasts
+            toAdd.forEach(notif => {
+                if (notif.type === 'achievement') {
+                    toast.success(notif.title, {
+                        description: notif.message,
+                        duration: 5000,
+                    });
+                } else if (notif.priority === 'high') {
+                    toast.info(notif.title, {
+                        description: notif.message,
                     });
                 }
             });

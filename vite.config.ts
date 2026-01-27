@@ -94,15 +94,22 @@ export default defineConfig({
     port: 3100,
     open: true,
     allowedHosts: true,
+    proxy: {
+      '/api-gemini': {
+        target: 'https://generative-language.googleapis.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api-gemini/, '')
+      }
+    },
     headers: {
       'X-Content-Type-Options': 'nosniff',
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.worldbank.org https://api.exchangerate-api.com https://api.openai.com https://api.anthropic.com https://*.googleapis.com https://api.deepseek.com https://api.perplexity.ai; img-src 'self' data: https://*.supabase.co https://placehold.co https://grainy-gradients.vercel.app; frame-ancestors 'none'; worker-src 'self' blob:;",
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.worldbank.org https://api.exchangerate-api.com https://v6.exchangerate-api.com https://api.openai.com https://api.anthropic.com https://*.googleapis.com https://generative-language.googleapis.com https://api.deepseek.com https://api.perplexity.ai; img-src 'self' data: https://*.supabase.co https://placehold.co https://grainy-gradients.vercel.app; frame-ancestors 'none'; worker-src 'self' blob:;",
     }
   },
   preview: {
     headers: {
       'X-Content-Type-Options': 'nosniff',
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.worldbank.org https://api.exchangerate-api.com https://api.openai.com https://api.anthropic.com https://*.googleapis.com https://api.deepseek.com https://api.perplexity.ai; img-src 'self' data: https://*.supabase.co https://placehold.co https://grainy-gradients.vercel.app; frame-ancestors 'none'; worker-src 'self' blob:;",
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.worldbank.org https://api.exchangerate-api.com https://v6.exchangerate-api.com https://api.openai.com https://api.anthropic.com https://*.googleapis.com https://generative-language.googleapis.com https://api.deepseek.com https://api.perplexity.ai; img-src 'self' data: https://*.supabase.co https://placehold.co https://grainy-gradients.vercel.app; frame-ancestors 'none'; worker-src 'self' blob:;",
       'Cache-Control': 'public, max-age=31536000, immutable'
     }
   }

@@ -243,6 +243,53 @@ export function getTotalCount(): number {
   return ACHIEVEMENTS.length;
 }
 
+export interface LevelInfo {
+  level: number;
+  title: string;
+  nextLevelAt: number | null;
+  progress: number;
+}
+
+export function getLevelInfo(unlockedCount: number): LevelInfo {
+  const levels = [
+    { threshold: 0, title: 'Seedling' },
+    { threshold: 2, title: 'Sprout' },
+    { threshold: 5, title: 'Sapling' },
+    { threshold: 10, title: 'Budding Saver' },
+    { threshold: 15, title: 'Thrifty Bloom' },
+    { threshold: 20, title: 'Grown Guru' },
+    { threshold: 25, title: 'Wealth Master' },
+    { threshold: 30, title: 'Financial Legend' },
+  ];
+
+  let currentLevel = 0;
+  for (let i = levels.length - 1; i >= 0; i--) {
+    if (unlockedCount >= levels[i].threshold) {
+      currentLevel = i;
+      break;
+    }
+  }
+
+  const nextLevel = levels[currentLevel + 1];
+  const currentThreshold = levels[currentLevel].threshold;
+
+  let progress = 0;
+  if (nextLevel) {
+    const range = nextLevel.threshold - currentThreshold;
+    const currentInRange = unlockedCount - currentThreshold;
+    progress = Math.min(100, (currentInRange / range) * 100);
+  } else {
+    progress = 100;
+  }
+
+  return {
+    level: currentLevel + 1,
+    title: levels[currentLevel].title,
+    nextLevelAt: nextLevel ? nextLevel.threshold : null,
+    progress
+  };
+}
+
 export function getAllAchievements(): Achievement[] {
   return ACHIEVEMENTS;
 }

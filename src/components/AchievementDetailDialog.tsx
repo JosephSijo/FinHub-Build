@@ -20,16 +20,29 @@ export function AchievementDetailDialog({
 
   useEffect(() => {
     if (isOpen && achievementId) {
-      // Use queueMicrotask to defer state update and avoid "cascading render" warnings
       queueMicrotask(() => {
         setQuote(getRandomQuote());
       });
-      confetti({
-        particleCount: 150,
-        spread: 100,
-        origin: { y: 0.6 },
-        colors: ['#FFD700', '#FFA500', '#FF6347', '#9370DB', '#3CB371']
-      });
+
+      // Paper pieces throwing from both sides (Confetti Canon)
+      const duration = 3 * 1000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+      const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+      const interval: any = setInterval(function () {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+          return clearInterval(interval);
+        }
+
+        const particleCount = 50 * (timeLeft / duration);
+        // since particles fall down, start a bit higher than random
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+      }, 250);
     }
   }, [isOpen, achievementId]);
 
@@ -40,32 +53,51 @@ export function AchievementDetailDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[270px] sm:w-full sm:max-w-md bg-slate-950 border-[#38383A] p-0 overflow-hidden rounded-[32px] shadow-2xl transition-all duration-500">
-        {/* Global Ambient Blobs */}
-        <div className="absolute top-0 right-0 w-32 h-32 sm:w-64 sm:h-64 bg-yellow-500 blur-[60px] sm:blur-[120px] opacity-10 -mr-16 -mt-16 sm:-mr-32 sm:-mt-32" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-48 sm:h-48 bg-indigo-500 blur-[50px] sm:blur-[100px] opacity-5 -ml-12 -mb-12 sm:-ml-24 sm:-mb-24" />
+      <DialogContent className="w-[320px] sm:w-[480px] bg-slate-950 border-[#38383A] p-0 overflow-hidden rounded-[40px] shadow-2xl transition-all duration-500">
+        {/* Subtle Ambient Blobs (Toned down) */}
+        <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-500 blur-[100px] opacity-10 -mr-24 -mt-24" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500 blur-[80px] opacity-5 -ml-16 -mb-16" />
 
-        <DialogHeader className="px-6 sm:px-10 pt-8 sm:pt-12 pb-0 relative z-10">
-          <DialogTitle className="text-center text-xl sm:text-3xl font-black text-white tracking-tight transition-all">
+        <DialogHeader className="px-8 pt-12 pb-0 relative z-10 text-center">
+          <DialogTitle className="text-center text-2xl sm:text-3xl font-black text-white tracking-tight transition-all">
             Achievement Unlocked
           </DialogTitle>
-          <DialogDescription className="text-center text-[8px] sm:text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] sm:tracking-[0.3em] mt-1 sm:mt-2 transition-all">
-            Achievement Unlocked
+          <DialogDescription className="text-center text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mt-2 transition-all">
+            Milestone Reached
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 sm:space-y-10 py-8 sm:py-12 px-6 sm:px-10 relative z-10">
-          <div className="relative flex justify-center">
+        <div className="space-y-8 py-10 px-8 relative z-10">
+          <div className="relative flex justify-center h-48 items-center">
+            {/* Subtle Graffiti/Ambient Layer (Subtle as requested) */}
+            <div className="absolute inset-0 z-0 flex justify-center items-center pointer-events-none">
+              <motion.div
+                className="absolute w-32 h-32 bg-yellow-400/20 blur-[40px] rounded-full"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1.5, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 1 }}
+              />
+              <motion.div
+                className="absolute w-24 h-24 bg-indigo-500/15 blur-[35px] rounded-full -ml-12 -mt-10"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 2, opacity: 1 }}
+                transition={{ delay: 0.3, duration: 1.2 }}
+              />
+            </div>
+
             {/* Icon Container Layer */}
             <motion.div
               className="relative z-10"
-              initial={{ scale: 0, rotateY: 0 }}
+              initial={{ scale: 0.4, opacity: 0, y: 20 }}
               animate={{
                 scale: 1,
-                rotateY: [0, 1080],
+                opacity: 1,
+                y: 0,
+                rotateY: [0, 360],
                 transition: {
-                  scale: { duration: 0.8, ease: "backOut" },
-                  rotateY: { duration: 4, ease: "easeInOut" }
+                  opacity: { duration: 0.4 },
+                  scale: { duration: 0.6, ease: [0.34, 1.56, 0.64, 1] },
+                  rotateY: { duration: 1.5, ease: "easeInOut", delay: 0.1 }
                 }
               }}
             >
@@ -77,51 +109,29 @@ export function AchievementDetailDialog({
                     opacity: [0.2, 0.4, 0.2]
                   }}
                   transition={{
-                    duration: 3,
+                    duration: 2.5,
                     repeat: Infinity,
                     ease: "easeInOut"
                   }}
                 />
-                <div className="relative w-32 h-32 sm:w-44 sm:h-44 bg-gradient-to-br from-yellow-400 via-orange-500 to-yellow-600 rounded-[32px] sm:rounded-[48px] flex items-center justify-center shadow-[0_15px_40px_rgba(234,179,8,0.25)] border-4 border-white/20 transition-all">
-                  <span className="text-5xl sm:text-7xl drop-shadow-2xl transition-all">{achievement.icon}</span>
-                  <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none rounded-[28px] sm:rounded-[44px]" />
+                <div className="relative w-28 h-28 sm:w-36 sm:h-36 bg-gradient-to-br from-yellow-300 via-orange-500 to-yellow-600 rounded-[32px] sm:rounded-[40px] flex items-center justify-center shadow-[0_20px_50px_rgba(234,179,8,0.3)] border-4 border-white/30 transition-all">
+                  <span className="text-5xl sm:text-6xl drop-shadow-2xl transition-all">{achievement.icon}</span>
+                  <div className="absolute inset-0 bg-gradient-to-tr from-white/30 to-transparent pointer-events-none rounded-[28px] sm:rounded-[36px]" />
                 </div>
               </div>
             </motion.div>
-
-            {/* Graffiti Effect (Moved two layers up -> Forward in DOM + Pointer Events None) */}
-            <div className="absolute inset-0 z-20 flex justify-center items-center pointer-events-none">
-              <motion.div
-                className="absolute w-32 h-32 sm:w-48 sm:h-48 bg-yellow-500/40 blur-[40px] sm:blur-[60px] rounded-full"
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1.4, opacity: 1 }}
-                transition={{ delay: 0.3, duration: 1.2, ease: "easeOut" }}
-              />
-              <motion.div
-                className="absolute w-24 h-24 sm:w-36 sm:h-36 bg-indigo-500/30 blur-[30px] sm:blur-[45px] rounded-full -ml-8 -mt-6 sm:-ml-12 sm:-mt-10"
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1.8, opacity: 0.8 }}
-                transition={{ delay: 0.4, duration: 1.2, ease: "easeOut" }}
-              />
-              <motion.div
-                className="absolute w-20 h-20 sm:w-32 sm:h-32 bg-rose-500/30 blur-[25px] sm:blur-[40px] rounded-full ml-10 mt-8 sm:ml-16 sm:mt-12"
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1.6, opacity: 0.8 }}
-                transition={{ delay: 0.5, duration: 1.2, ease: "easeOut" }}
-              />
-            </div>
           </div>
 
           <motion.div
-            className="text-center space-y-2 sm:space-y-4"
+            className="text-center space-y-4 pt-4"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
           >
-            <h3 className="text-lg sm:text-3xl font-black bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-200 bg-clip-text text-transparent tracking-tight transition-all">
+            <h3 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-white via-yellow-400 to-white bg-clip-text text-transparent tracking-tight transition-all">
               {achievement.name}
             </h3>
-            <p className="text-slate-400 font-bold text-[11px] sm:text-sm leading-relaxed max-w-[200px] sm:max-w-[280px] mx-auto transition-all">
+            <p className="text-slate-400 font-bold text-xs sm:text-sm leading-relaxed max-w-[240px] sm:max-w-[300px] mx-auto transition-all">
               {achievement.description}
             </p>
           </motion.div>
@@ -132,10 +142,10 @@ export function AchievementDetailDialog({
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
           >
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-yellow-500/50 blur-[1px] animate-pulse" />
-              <div className="h-px w-12 sm:w-20 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            <div className="flex items-center gap-4">
+              <div className="h-px w-20 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+              <div className="w-2 h-2 rounded-full bg-yellow-500/50 blur-[1px] animate-pulse" />
+              <div className="h-px w-20 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
             </div>
           </motion.div>
 
