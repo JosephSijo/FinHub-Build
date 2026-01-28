@@ -66,8 +66,9 @@ const TransactionList = lazy(() => import("./components/TransactionList").then(m
 const GoalsTracker = lazy(() => import("./components/GoalsTracker").then(module => ({ default: module.GoalsTracker })));
 const EmergencyFundsTab = lazy(() => import("./components/EmergencyFundsTab").then(module => ({ default: module.EmergencyFundsTab })));
 const InvestmentsTab = lazy(() => import("./components/InvestmentsTab").then(module => ({ default: module.InvestmentsTab })));
+const AnalyticsView = lazy(() => import("./components/AnalyticsView").then(module => ({ default: module.AnalyticsView })));
 
-type View = "dashboard" | "transactions" | "goals" | "investments" | "accounts" | "emergency" | "more" | "recurring" | "budgets" | "bills_debts";
+type View = "dashboard" | "transactions" | "goals" | "investments" | "accounts" | "emergency" | "more" | "recurring" | "budgets" | "bills_debts" | "analytics";
 type TransactionType = "expense" | "income" | "debt";
 
 export default function App() {
@@ -584,6 +585,25 @@ export default function App() {
                               setTransactionFormType(type);
                               setIsTransactionFormOpen(true);
                             }}
+                          />
+                        </div>
+                      )}
+
+                      {view === "analytics" && (
+                        <div className="pt-4">
+                          <AnalyticsView
+                            expenses={expenses}
+                            incomes={incomes}
+                            currency={settings.currency}
+                            accounts={accounts}
+                            liabilities={liabilities}
+                            goals={goals}
+                            debts={debts}
+                            savingsRate={healthScore.savingsRate * 100} // Convert to percentage
+                            dtiRatio={healthScore.debtRatio}
+                            outflowRatio={healthScore.spendingRatio}
+                            healthScore={healthScore.score}
+                            onBack={() => setView('dashboard')}
                           />
                         </div>
                       )}
