@@ -1,5 +1,6 @@
 import { AIContext, UserSettings } from '../../types';
 import { formatContextForPrompt } from '../../utils/aiUtils';
+import { api } from '../../utils/api';
 import { AIPersona } from './prompts';
 import { generateCompletion, SAIResponse } from './providers';
 
@@ -65,9 +66,9 @@ User Query: ${userPrompt}
   `.trim();
 
     // 3. Call Backend Proxy (Preferred) or Provider directly
+    // 3. Call Backend Proxy (Preferred) or Provider directly
     if (activeProvider === 'gemini') {
         try {
-            const { api } = await import('../../utils/api');
             const response = await api.chat(userPrompt, context);
             if (!response.error) return response;
             console.warn("Backend AI failed, falling back to local...", response.error);

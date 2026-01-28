@@ -5,6 +5,7 @@ import { STORAGE_KEYS } from '../utils/constants';
 import { suggestionsService } from '../features/smartSuggestions/service';
 import { supabase } from '../lib/supabase';
 import { UserSettings } from '../types';
+import { recurringService } from '../features/recurringEngine/service';
 
 export const useFinanceSyncActions = (state: any, actions: any) => {
     const {
@@ -61,7 +62,7 @@ export const useFinanceSyncActions = (state: any, actions: any) => {
 
     const fetchFromApi = useCallback(async () => {
         try {
-            try { await api.processRecurring(userId); } catch (e) { console.error("Skip recurring process", e) }
+            try { await recurringService.backfillAll(userId); } catch (e) { console.error("Skip recurring process", e) }
 
             const [
                 settingsRes, accountsRes, expensesRes, incomesRes, debtsRes,

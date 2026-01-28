@@ -29,7 +29,7 @@ export const suggestionsService = {
             );
 
             // 2. Fetch transactions for analysis
-            const txnResponse = await fetch(`${SUPABASE_REST}/transactions?user_id=eq.${userId}&order=txn_date.desc&limit=100`, { headers });
+            const txnResponse = await fetch(`${SUPABASE_REST}/transactions?user_id=eq.${userId}&order=transaction_date.desc&limit=100`, { headers });
             const transactions = await txnResponse.json();
 
             // 3. Apply rules

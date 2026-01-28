@@ -1,7 +1,6 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { formatCurrency } from '@/utils/numberFormat';
 
 export interface TrendMonitorProps {
@@ -49,22 +48,20 @@ export const TrendMonitor: React.FC<TrendMonitorProps> = ({
 
                 {/* Donut */}
                 <div className="relative w-24 h-24 flex-shrink-0">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={data}
-                                innerRadius={35}
-                                outerRadius={45}
-                                paddingAngle={5}
-                                dataKey="value"
-                                stroke="none"
-                            >
-                                {data.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                            </Pie>
-                        </PieChart>
-                    </ResponsiveContainer>
+                    <PieChart width={96} height={96}>
+                        <Pie
+                            data={data}
+                            innerRadius={35}
+                            outerRadius={45}
+                            paddingAngle={5}
+                            dataKey="value"
+                            stroke="none"
+                        >
+                            {data.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                        </Pie>
+                    </PieChart>
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <span className={`text-xs font-black ${isUp ? 'text-rose-400' : 'text-emerald-400'}`}>
                             {isUp ? '+' : ''}{percentDiff}%

@@ -955,17 +955,7 @@ export const api = {
     return { success: !error };
   },
 
-  async processRecurring(userId: string) {
-    // This is called on load to run backfills
-    try {
-      const { recurringService } = await import('@/features/recurringEngine/service');
-      await recurringService.backfillAll(userId);
-      return { success: true };
-    } catch (error) {
-      console.error("Backfill on load failed", error);
-      return { success: false };
-    }
-  },
+
 
   async getSubscriptionSpend(userId: string, subscriptionId: string) {
     const { data, error } = await supabase.from('transactions')
