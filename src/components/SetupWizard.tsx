@@ -38,7 +38,7 @@ export function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
     const [formData, setFormData] = useState({
         accountName: '',
         accountType: 'bank' as 'bank' | 'cash' | 'credit_card',
-        balance: '',
+        cachedBalance: '',
         incomeSource: '',
         incomeAmount: '',
         expenseName: '',
@@ -52,7 +52,7 @@ export function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
     };
 
     const handleCreateAccount = async () => {
-        if (!formData.accountName || !formData.balance) {
+        if (!formData.accountName || !formData.cachedBalance) {
             toast.error("Please provide account details");
             return;
         }
@@ -61,7 +61,7 @@ export function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
             await createAccount({
                 name: formData.accountName,
                 type: formData.accountType,
-                balance: parseFloat(formData.balance),
+                cachedBalance: parseFloat(formData.cachedBalance),
                 color: '#3b82f6',
                 icon: formData.accountType === 'bank' ? '🏦' : formData.accountType === 'cash' ? '💵' : '💳'
             });
@@ -235,8 +235,8 @@ export function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
                                     <div className="space-y-2">
                                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Current Balance</Label>
                                         <NumberInput
-                                            value={formData.balance}
-                                            onChange={val => setFormData({ ...formData, balance: val })}
+                                            value={formData.cachedBalance}
+                                            onChange={val => setFormData({ ...formData, cachedBalance: val })}
                                             placeholder="0.00"
                                             className="h-14 bg-white/5 border-white/5 rounded-2xl text-white font-bold"
                                         />

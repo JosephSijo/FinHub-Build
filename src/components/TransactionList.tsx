@@ -70,7 +70,7 @@ const TransactionListComponent: React.FC<TransactionListProps> = ({
 
     const totalLiquidity = accounts
       .filter(acc => acc.type === 'bank' || acc.type === 'cash')
-      .reduce((sum, acc) => sum + acc.balance, 0);
+      .reduce((sum, acc) => sum + acc.cachedBalance, 0);
 
     return {
       monthExpenses,

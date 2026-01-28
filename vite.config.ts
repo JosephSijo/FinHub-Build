@@ -95,10 +95,10 @@ export default defineConfig({
     open: true,
     allowedHosts: true,
     proxy: {
-      '/api-gemini': {
-        target: 'https://generative-language.googleapis.com',
+      '/api': {
+        target: 'http://localhost:3000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api-gemini/, '')
+        secure: false,
       }
     },
     headers: {

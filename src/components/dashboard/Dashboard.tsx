@@ -32,7 +32,7 @@ export const Dashboard = () => {
         ...debts
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 
-    const totalLiquidity = accounts.reduce((sum, acc) => sum + (acc.type !== 'credit_card' ? acc.balance : 0), 0);
+    const totalLiquidity = accounts.reduce((sum, acc) => sum + (acc.type !== 'credit_card' ? acc.cachedBalance : 0), 0);
 
     return (
         <div className="min-h-screen bg-transparent p-4">

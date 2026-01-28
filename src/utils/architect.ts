@@ -87,7 +87,7 @@ export const calculateCoreHealthMetrics = (context: AIContext): CoreHealthMetric
     // Available Cash (M1 Assets)
     const availableCash = accounts
         .filter(acc => acc.type === 'bank' || acc.type === 'cash')
-        .reduce((sum, acc) => sum + acc.balance, 0);
+        .reduce((sum, acc) => sum + acc.cachedBalance, 0);
 
     // Logic: (Available_Cash - (Total_Debt_Service + Insurance_Premiums)) / Remaining_Days
     const today = new Date();
@@ -136,7 +136,7 @@ export const analyzeFinancialHealth = (context: AIContext): FinancialAdvisorAnal
     };
 
     const MIN_SAFETY_FUND = 500;
-    const totalLiquidity = accounts.reduce((sum: number, a: Account) => sum + (a.type !== 'credit_card' ? a.balance : 0), 0);
+    const totalLiquidity = accounts.reduce((sum: number, a: Account) => sum + (a.type !== 'credit_card' ? a.cachedBalance : 0), 0);
     const avgMonthlyExpense = clamp(totalExpenses || 20000, 1, 10000000);
 
     // High Interest = effective_rate >= 0.10 or interestRate > 10
@@ -198,7 +198,7 @@ export const analyzeFinancialHealth = (context: AIContext): FinancialAdvisorAnal
 
 
     // 4. The Inflation Alert
-    const totalLiquidAssets = accounts.reduce((sum: number, a: Account) => sum + (a.type !== 'credit_card' ? a.balance : 0), 0);
+    const totalLiquidAssets = accounts.reduce((sum: number, a: Account) => sum + (a.type !== 'credit_card' ? a.cachedBalance : 0), 0);
     const inflationHedgingValue = (investments || []).reduce((sum: number, inv: any) => {
         const isShield = ['stock', 'mutual_fund', 'sip', 'crypto', 'physical_asset'].includes(inv.type);
         return sum + (isShield ? (inv.quantity * (inv.currentPrice || inv.buyPrice)) : 0);

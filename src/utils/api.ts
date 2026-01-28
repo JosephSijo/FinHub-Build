@@ -184,14 +184,15 @@ export const api = {
       currency_code: data.currency || 'INR',
       base_currency_code: data.baseCurrency || 'INR',
       base_amount: baseAmount,
+      exchange_rate: fxRate,
       transaction_date: data.date,
       description: data.description,
       account_id: data.accountId,
       category_id: categoryId,
       tags: data.tags || [],
       catalog_entity_id: data.catalogEntityId || null,
-      entity_id: data.liabilityId || data.goalId || data.investmentId || null,
-      entity_kind: data.liabilityId ? 'loan' : (data.goalId ? 'goal' : (data.investmentId ? 'investment' : null))
+      // entity_id: data.liabilityId || data.goalId || data.investmentId || null,
+      // entity_kind: data.liabilityId ? 'loan' : (data.goalId ? 'goal' : (data.investmentId ? 'investment' : null))
     };
 
     if (data.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.id)) {
@@ -201,6 +202,16 @@ export const api = {
     const { data: txn, error } = await supabase.from('transactions')
       .upsert(payload, { onConflict: 'id' })
       .select().single();
+
+    if (error) {
+      console.error('Supabase Transaction Upsert Error (createExpense):', {
+        error,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        payload
+      });
+    }
 
     return {
       success: !error,
@@ -222,7 +233,7 @@ export const api = {
     if (data.description) updates.description = data.description;
     if (data.date) {
       updates.transaction_date = data.date;
-      updates.fx_date = data.date.split('T')[0];
+      // updates.fx_date = data.date.split('T')[0];
     }
     if (data.tags) updates.tags = data.tags;
     if (data.category) {
@@ -290,14 +301,15 @@ export const api = {
       currency_code: data.currency || 'INR',
       base_currency_code: data.baseCurrency || 'INR',
       base_amount: baseAmount,
+      exchange_rate: fxRate,
       transaction_date: data.date,
       description: data.source || data.description || 'Income', // Fixed: description instead of source
       account_id: data.accountId,
       category_id: categoryId,
       tags: data.tags || [],
       catalog_entity_id: data.catalogEntityId || null,
-      entity_id: data.goalId || data.investmentId || null,
-      entity_kind: data.goalId ? 'goal' : (data.investmentId ? 'investment' : null)
+      // entity_id: data.goalId || data.investmentId || null,
+      // entity_kind: data.goalId ? 'goal' : (data.investmentId ? 'investment' : null)
     };
 
     if (data.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.id)) {
@@ -307,6 +319,16 @@ export const api = {
     const { data: txn, error } = await supabase.from('transactions')
       .upsert(payload, { onConflict: 'id' })
       .select().single();
+
+    if (error) {
+      console.error('Supabase Transaction Upsert Error (createIncome):', {
+        error,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        payload
+      });
+    }
 
     return {
       success: !error,
@@ -388,7 +410,7 @@ export const api = {
       type: 'transfer',
       amount: data.amount,
       transaction_date: data.date,
-      fx_date: data.date.split('T')[0],
+      // fx_date: data.date.split('T')[0],
       description: data.description,
       account_id: data.sourceId,
       to_account_id: data.destinationId,
@@ -402,6 +424,16 @@ export const api = {
     const { data: txn, error } = await supabase.from('transactions')
       .insert([payload])
       .select().single();
+
+    if (error) {
+      console.error('Supabase Transaction Insert Error (createTransfer):', {
+        error,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        payload
+      });
+    }
 
     return { success: !error, transaction: txn };
   },

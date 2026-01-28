@@ -68,40 +68,41 @@ Built with **React 19**, **Vite 7**, and **Tailwind CSS 4**.
 
 ---
 
-## 📦 Installation
+## � Quick Start
 
 1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-username/FinHub-Build.git
+   cd FinHub-Build
+   ```
 
-    ```bash
-    git clone https://github.com/your-org/finhub.git
-    cd finhub
-    ```
+2. **Setup Environment Variables**:
+   ```bash
+   # Create .env from example
+   copy .env.example .env     # Windows
+   # or
+   cp .env.example .env       # Mac/Linux
+   ```
+   > [!IMPORTANT]
+   > Open `.env` and add your **Supabase Keys** and **Gemini API Key**.
 
-2. **Use the correct Node version**:
-    If you use `nvm`, run:
+3. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
 
-    ```bash
-    nvm use
-    ```
+4. **Launch Application**:
+   ```bash
+   npm run dev
+   ```
 
-3. **Set up environment variables**:
-
-    ```bash
-    cp .env.example .env
-    # Add your API keys to the .env file
-    ```
-
-4. **Install dependencies**:
-
-    ```bash
-    npm install
-    ```
-
-5. **Start development server**:
-
-    ```bash
-    npm run dev
-    ```
+## 📱 Mobile (Android)
+FinHub is Capacitor-ready. To sync changes to Android:
+```bash
+npm run build
+npx cap sync
+npx cap open android
+```
 
 ## 🛠️ Development
 

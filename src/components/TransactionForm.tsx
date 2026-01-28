@@ -411,7 +411,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                         <div className="flex items-center justify-between w-full">
                           <span className="font-bold">{account.name}</span>
                           <span className="text-[10px] text-slate-500 ml-4 font-mono">
-                            {formatCurrency(account.balance, currency)}
+                            {formatCurrency(account.cachedBalance, currency)}
                           </span>
                         </div>
                       </SelectItem>
@@ -692,7 +692,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
               const creditLimit = selectedAccount.creditLimit || 0;
               const safeLimit = (creditLimit * (selectedAccount.safeLimitPercentage || 30)) / 100;
-              const currentSpent = Math.abs(selectedAccount.balance);
+              const currentSpent = Math.abs(selectedAccount.cachedBalance);
               const amount = parseFloat(formData.amount || '0');
               const projectedSpent = currentSpent + amount;
               const isBreaching = projectedSpent > safeLimit && creditLimit > 0;

@@ -157,7 +157,7 @@ export const generateBrainSummary = (context: AIContext, currency: string, curre
     const contextStr = `Context: "The user is looking at the ${viewName} screen."`;
 
     // 2. Insight: Financial Status Analysis
-    const totalAssets = context.accounts.reduce((sum, a) => sum + (a.balance || 0), 0);
+    const totalAssets = context.accounts.reduce((sum, a) => sum + (a.cachedBalance || 0), 0);
     const investmentValue = context.investments.reduce((sum, inv) => sum + ((inv.currentPrice || inv.buyPrice) * inv.quantity), 0);
     const netWorth = totalAssets + investmentValue;
 

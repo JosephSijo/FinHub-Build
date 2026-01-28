@@ -48,7 +48,7 @@ export const useExpenseActions = (state: any, actions: any) => {
 
         try {
             // 1. Calculate Available to Spend (Global Check)
-            const totalBankBalance = currentAccounts.reduce((sum: number, acc: any) => sum + (acc.type !== 'credit_card' ? acc.balance : 0), 0);
+            const totalBankBalance = currentAccounts.reduce((sum: number, acc: any) => sum + (acc.type !== 'credit_card' ? acc.cachedBalance : 0), 0);
             const reservedFundsTotal = currentGoals.reduce((sum: number, g: any) => sum + g.currentAmount, 0) + currentEF;
             const totalCommitments = currentL.reduce((sum: number, l: any) => sum + l.emiAmount, 0);
             const availableToSpend = Math.max(0, totalBankBalance - reservedFundsTotal - totalCommitments);
@@ -116,7 +116,7 @@ export const useExpenseActions = (state: any, actions: any) => {
                 const creditLimit = targetAccount.creditLimit || 0;
                 const safePercentage = targetAccount.safeLimitPercentage || 30;
                 const safeLimit = (creditLimit * safePercentage) / 100;
-                const currentUsage = Math.abs(targetAccount.balance);
+                const currentUsage = Math.abs(targetAccount.cachedBalance);
                 const projectedUsage = currentUsage + data.amount;
 
                 if (projectedUsage > safeLimit && creditLimit > 0) {
